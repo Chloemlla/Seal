@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.TextSnippet
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Cancel
@@ -75,6 +74,7 @@ import com.chloemlla.seal.util.toFileSizeText
 import com.chloemlla.seal.util.toLocalizedString
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 
 @Composable
 private fun ShareButton(modifier: Modifier = Modifier, onClick: () -> Unit) {

@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SyncAlt
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -56,6 +55,7 @@ import com.chloemlla.seal.util.YT_DLP_UPDATE_INTERVAL
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.iterator
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 
 @Composable
 private fun DialogSingleChoiceItem(
@@ -175,7 +175,7 @@ fun YtdlpUpdateChannelDialog(modifier: Modifier = Modifier, onDismissRequest: ()
                             readOnly = true,
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                                    .menuAnchor(ExposedDropdownExposedDropdownMenuAnchorType.PrimaryNotEditable),
                             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)

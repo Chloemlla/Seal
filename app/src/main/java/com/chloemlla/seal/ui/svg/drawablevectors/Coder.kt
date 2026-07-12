@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.vector.ImageVector.Builder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import com.chloemlla.seal.ui.svg.DynamicColorImageVectors
-import com.chloemlla.seal.ui.theme.FixedAccentColors
+import com.chloemlla.seal.ui.common.LocalFixedColorRoles
 
 @Composable
 fun DynamicColorImageVectors.coder(): ImageVector {
@@ -1078,7 +1078,7 @@ fun DynamicColorImageVectors.coder(): ImageVector {
                 close()
             }
             path(
-                fill = SolidColor(FixedAccentColors.tertiaryFixedDim),
+                fill = SolidColor(LocalFixedColorRoles.current.tertiaryFixedDim),
                 stroke = null,
                 strokeLineWidth = 0.0f,
                 strokeLineCap = Butt,

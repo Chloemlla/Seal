@@ -3,7 +3,6 @@ package com.chloemlla.seal.ui.page.settings.about
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Description
@@ -29,16 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.UrlAnnotation
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -53,6 +49,11 @@ import com.chloemlla.seal.ui.component.PreferenceSwitchWithDivider
 import com.chloemlla.seal.util.AUTO_UPDATE
 import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.ToastUtil
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
+import androidx.compose.ui.text.TextLinkStyles
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 private const val releaseURL = "https://github.com/JunkFood02/Seal/releases"
 private const val repoUrl = "https://github.com/JunkFood02/Seal"
@@ -78,8 +79,7 @@ fun AboutPage(
             canScroll = { true },
         )
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
-    //    val configuration = LocalConfiguration.current
+        //    val configuration = LocalConfiguration.current
     //    val screenDensity = configuration.densityDpi / 160f
     //    val screenHeight = (configuration.screenHeightDp.toFloat() * screenDensity).roundToInt()
     //    val screenWidth = (configuration.screenWidthDp.toFloat() * screenDensity).roundToInt()
@@ -194,13 +194,13 @@ fun AboutPage(
                         description = versionName,
                         icon = Icons.Outlined.Info,
                     ) {
-                        clipboardManager.setText(AnnotatedString(info))
+                        context.copyToClipboard(info)
                         ToastUtil.makeToast(R.string.info_copied)
                     }
                 }
                 item {
                     PreferenceItem(title = "Package name", description = context.packageName) {
-                        clipboardManager.setText(AnnotatedString(context.packageName))
+                        context.copyToClipboard(context.packageName)
                         ToastUtil.makeToast(R.string.info_copied)
                     }
                 }
@@ -209,7 +209,6 @@ fun AboutPage(
     )
 }
 
-@OptIn(ExperimentalTextApi::class)
 @Composable
 @Preview
 fun AutoUpdateUnavailableDialog(onDismissRequest: () -> Unit = {}) {
@@ -218,19 +217,35 @@ fun AutoUpdateUnavailableDialog(onDismissRequest: () -> Unit = {}) {
     val hyperLinkText = stringResource(id = R.string.switch_to_github_builds)
     val text = stringResource(id = R.string.auto_update_disabled_msg, "F-Droid", hyperLinkText)
 
+    val linkUrl = "https://github.com/JunkFood02/Seal/releases/latest"
     val annotatedString = buildAnnotatedString {
         append(text)
         val startIndex = text.indexOf(hyperLinkText)
         val endIndex = startIndex + hyperLinkText.length
-        addUrlAnnotation(
-            UrlAnnotation("https://github.com/JunkFood02/Seal/releases/latest"),
-            start = startIndex,
-            end = endIndex,
-        )
         addStyle(
             SpanStyle(
                 color = MaterialTheme.colorScheme.tertiary,
                 textDecoration = TextDecoration.Underline,
+            ),
+            start = startIndex,
+            end = endIndex,
+        )
+        addLink(
+            LinkAnnotation.Url(
+                url = linkUrl,
+                styles =
+                    TextLinkStyles(
+                        style =
+                            SpanStyle(
+                                color = MaterialTheme.colorScheme.tertiary,
+                                textDecoration = TextDecoration.Underline,
+                            )
+                    ),
+                linkInteractionListener =
+                    LinkInteractionListener {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        uriHandler.openUri(linkUrl)
+                    },
             ),
             start = startIndex,
             end = endIndex,
@@ -249,17 +264,11 @@ fun AutoUpdateUnavailableDialog(onDismissRequest: () -> Unit = {}) {
             )
         },
         text = {
-            ClickableText(
+            Text(
                 text = annotatedString,
-                onClick = { index ->
-                    annotatedString.getUrlAnnotations(index, index).firstOrNull()?.let {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        uriHandler.openUri(it.item.url)
-                    }
-                },
                 style =
                     MaterialTheme.typography.bodyMedium.copy(
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
             )
         },

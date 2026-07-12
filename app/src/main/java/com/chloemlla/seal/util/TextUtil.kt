@@ -15,10 +15,13 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Deprecated("Use extension functions of Context to show a toast")
+/**
+ * App-scoped toast helpers for non-[Context] call sites.
+ * Prefer [Context.makeToast] when a [Context] is available.
+ */
 object ToastUtil {
     fun makeToast(text: String) {
-        Toast.makeText(context.applicationContext, text, Toast.LENGTH_SHORT).show()
+        context.makeToast(text)
     }
 
     fun makeToastSuspend(text: String) {
@@ -26,8 +29,7 @@ object ToastUtil {
     }
 
     fun makeToast(stringId: Int) {
-        Toast.makeText(context.applicationContext, context.getString(stringId), Toast.LENGTH_SHORT)
-            .show()
+        context.makeToast(stringId)
     }
 }
 

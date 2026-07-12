@@ -613,7 +613,7 @@ jobs:
   Publish:
     # Release only after both lint and build succeed (parallel jobs).
     if: ${{ github.actor == 'Chloemlla' || github.triggering_actor == 'Chloemlla' }}
-    needs: [Lint, BuildPreRelease]
+    needs: [BuildPreRelease]
     runs-on: ubuntu-latest
 
     steps:

@@ -67,7 +67,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -108,6 +107,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 fun DownloadedVideoInfo.filterByType(
     videoFilter: Boolean = false,
@@ -155,8 +156,7 @@ fun VideoListPage(viewModel: VideoListViewModel = koinViewModel(), onNavigateBac
     val softKeyboardController = LocalSoftwareKeyboardController.current
     val view = LocalView.current
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
-
+    
     val fileSizeMap by
         viewModel.fileSizeMapFlow.collectAsStateWithLifecycle(initialValue = emptyMap())
     val sheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden)
@@ -609,7 +609,7 @@ fun VideoListPage(viewModel: VideoListViewModel = koinViewModel(), onNavigateBac
             destination ->
             list.backupToString(type).let {
                 when (destination) {
-                    Clipboard -> clipboardManager.setText(AnnotatedString(it))
+                    Clipboard -> context.copyToClipboard(it)
                     File -> {
                         backupString = it
                         exportLauncher.launch(
@@ -638,7 +638,7 @@ fun VideoListPage(viewModel: VideoListViewModel = koinViewModel(), onNavigateBac
             scope.launch {
                 when (destination) {
                     Clipboard -> {
-                        clipboardManager.getText()?.text?.let { str ->
+                        context.readClipboardText()?.let { str ->
                             viewModel.importBackupFromText(str) {
                                 viewModel.showImportedSnackbar(hostState, context, it)
                             }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -37,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.chloemlla.seal.R
 import com.chloemlla.seal.ui.page.settings.general.ytdlpReference
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 
 @Composable
 fun OutlinedButtonWithIcon(
@@ -152,7 +152,7 @@ fun FilledConfirmButton(
 fun LinkButton(
     modifier: Modifier = Modifier,
     text: String = stringResource(R.string.yt_dlp_docs),
-    icon: ImageVector = Icons.Outlined.OpenInNew,
+    icon: ImageVector = Icons.AutoMirrored.Outlined.OpenInNew,
     link: String = ytdlpReference,
 ) {
     val uriHandler = LocalUriHandler.current

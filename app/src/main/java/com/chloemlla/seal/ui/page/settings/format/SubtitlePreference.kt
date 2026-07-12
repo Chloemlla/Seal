@@ -48,6 +48,7 @@ import com.chloemlla.seal.util.PreferenceUtil.updateBoolean
 import com.chloemlla.seal.util.SPONSORBLOCK
 import com.chloemlla.seal.util.SUBTITLE
 import com.chloemlla.seal.util.SUBTITLE_LANGUAGE
+import androidx.compose.material3.HorizontalDivider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

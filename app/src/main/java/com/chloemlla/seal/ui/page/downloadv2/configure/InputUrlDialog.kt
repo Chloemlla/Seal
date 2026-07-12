@@ -58,7 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -76,6 +75,9 @@ import com.chloemlla.seal.ui.component.SealDialog
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel.Action
 import com.chloemlla.seal.ui.theme.ErrorTonalPalettes
 import com.chloemlla.seal.util.findURLsFromString
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 @Composable
 fun InputUrlPage(
@@ -84,12 +86,11 @@ fun InputUrlPage(
     onConfigUpdate: (Config) -> Unit,
     onActionPost: (Action) -> Unit,
 ) {
-    val clipboardManager = LocalClipboardManager.current
-    val urlList = remember { mutableStateListOf<String>() }
+        val urlList = remember { mutableStateListOf<String>() }
     val savedLinks = remember(config) { mutableStateListOf<String>() }
 
     LaunchedEffect(Unit) {
-        clipboardManager.getText()?.let {
+        context.readClipboardText()?.let {
             urlList.clear()
             urlList.addAll(findURLsFromString(it.toString()).toSet())
         }

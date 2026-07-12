@@ -23,6 +23,7 @@ import com.chloemlla.seal.ui.component.ConfirmButton
 import com.chloemlla.seal.ui.component.DismissButton
 import com.chloemlla.seal.ui.component.SealDialog
 import com.chloemlla.seal.ui.page.settings.general.DialogCheckBoxItem
+import androidx.compose.material3.HorizontalDivider
 
 @Composable
 fun DirectoryPreferenceDialog(

@@ -105,7 +105,7 @@ object UpdateUtil {
         val info =
             PackageManagerCompat.getPackageArchiveInfo(context, apkFile) ?: return false
         val expected = context.packageName.removeSuffix(".debug").removeSuffix(".preview")
-        val actual = info.packageName?.removeSuffix(".debug")?.removeSuffix(".preview")
+        val actual = info.packageName.removeSuffix(".debug").removeSuffix(".preview")
         val ok = actual == expected || actual == context.packageName
         if (!ok) {
             Log.e(TAG, "APK package mismatch: actual=$actual expected=$expected")

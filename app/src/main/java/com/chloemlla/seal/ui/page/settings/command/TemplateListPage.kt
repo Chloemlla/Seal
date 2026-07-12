@@ -16,12 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.AssignmentReturn
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.ContentPasteGo
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -52,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
@@ -86,6 +83,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.AssignmentReturn
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 private const val TAG = "TemplateListPage"
 
@@ -101,8 +102,7 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
     val scope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
     val view = LocalView.current
-    val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
+        val context = LocalContext.current
     var showHelpDialog by remember { mutableStateOf(false) }
 
     var isMultiSelectEnabled by remember { mutableStateOf(false) }
@@ -150,7 +150,7 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.HelpOutline,
+                            imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                             contentDescription = stringResource(id = R.string.how_does_it_work),
                         )
                     }
@@ -178,20 +178,19 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
                                             )
                                         }
                                         scope.launch {
-                                            clipboardManager.setText(
-                                                AnnotatedString(BackupUtil.exportTemplatesToJson())
+                                            context.copyToClipboard(BackupUtil.exportTemplatesToJson()
                                             )
                                             expanded = false
                                         }
                                     },
                                 )
                                 DropdownMenuItem(
-                                    leadingIcon = { Icon(Icons.Outlined.AssignmentReturn, null) },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.AssignmentReturn, null) },
                                     text = { Text(stringResource(R.string.import_from_clipboard)) },
                                     onClick = {
                                         scope.launch {
                                             expanded = false
-                                            clipboardManager.getText()?.text?.let {
+                                            context.readClipboardText()?.let {
                                                 if (it.isNotEmpty()) {
                                                     val res =
                                                         DatabaseUtil.importTemplatesFromJson(it)
@@ -268,13 +267,11 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
                                     )
                                 }
                                 scope.launch {
-                                    clipboardManager.setText(
-                                        AnnotatedString(
+                                    context.copyToClipboard(
                                             BackupUtil.exportTemplatesToJson(
                                                 templates = selectedTemplates,
                                                 shortcuts = emptyList(),
                                             )
-                                        )
                                     )
                                 }
                             },

@@ -48,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -78,9 +77,13 @@ import com.chloemlla.seal.ui.page.settings.command.CommandTemplateDialog
 import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.PreferenceUtil.updateInt
 import com.chloemlla.seal.util.TEMPLATE_ID
-import com.chloemlla.seal.util.matchUrlFromString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.chloemlla.seal.util.findURLsFromString
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -126,8 +129,7 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
             }
         },
     ) { paddings ->
-        val clipboardManager = LocalClipboardManager.current
-        LazyColumn(
+                LazyColumn(
             modifier = Modifier.padding(paddings),
             contentPadding = PaddingValues(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -167,8 +169,7 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
         SealModalBottomSheetM2(
             sheetState = sheetState,
             sheetContent = {
-                val clipboardManager = LocalClipboardManager.current
-
+                
                 var showTemplateSelectionDialog by remember { mutableStateOf(false) }
                 var showTemplateCreatorDialog by remember { mutableStateOf(false) }
                 var showTemplateEditorDialog by remember { mutableStateOf(false) }
@@ -186,7 +187,7 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
 
                 LaunchedEffect(sheetState.targetValue) {
                     if (sheetState.targetValue == ModalBottomSheetValue.Expanded)
-                        url = matchUrlFromString(clipboardManager.getText()?.text.toString(), true)
+                        url = findURLsFromString(clipboardManager.getText(, true).joinToString(separator = "\n")?.text.toString(), true)
                 }
 
                 Column(Modifier.fillMaxWidth()) {

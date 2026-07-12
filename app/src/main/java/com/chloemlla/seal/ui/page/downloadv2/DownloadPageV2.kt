@@ -70,7 +70,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -127,6 +126,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 private const val TAG = "DownloadPageV2"
 
@@ -165,9 +166,6 @@ enum class Filter {
             Finished -> {
                 state is Completed
             }
-            else -> {
-                true
-            }
         }
     }
 }
@@ -203,8 +201,7 @@ fun DownloadPageV2(
     val view = LocalView.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
-    val uriHandler = LocalUriHandler.current
+        val uriHandler = LocalUriHandler.current
 
     DownloadPageImplV2(
         modifier = modifier,
@@ -221,13 +218,12 @@ fun DownloadPageV2(
             UiAction.Delete -> downloader.remove(task)
             UiAction.Resume -> downloader.restart(task)
             is UiAction.CopyErrorReport -> {
-                clipboardManager.setText(
-                    AnnotatedString(getErrorReport(action.throwable, task.url))
+                context.copyToClipboard(getErrorReport(action.throwable, task.url)
                 )
                 context.makeToast(R.string.error_copied)
             }
             UiAction.CopyVideoURL -> {
-                clipboardManager.setText(AnnotatedString(task.url))
+                context.copyToClipboard(task.url)
                 context.makeToast(R.string.link_copied)
             }
             is UiAction.OpenFile -> {

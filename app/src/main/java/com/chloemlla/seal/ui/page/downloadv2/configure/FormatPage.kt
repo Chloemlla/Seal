@@ -111,6 +111,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
+import androidx.compose.material3.HorizontalDivider
 
 private const val TAG = "FormatPage"
 

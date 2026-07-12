@@ -21,7 +21,6 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -40,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -48,6 +46,10 @@ import androidx.compose.ui.unit.sp
 import com.chloemlla.seal.Downloader
 import com.chloemlla.seal.R
 import com.chloemlla.seal.ui.component.ButtonChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 private const val TAG = "TaskLogPage"
 
@@ -57,8 +59,7 @@ fun TaskLogPage(onNavigateBack: () -> Unit, taskHashCode: Int) {
     Log.d(TAG, "TaskLogPage: $taskHashCode")
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val task = Downloader.mutableTaskList.values.find { it.hashCode() == taskHashCode } ?: return
-    val clipboardManager = LocalClipboardManager.current
-    var expandLog by remember { mutableStateOf(false) }
+        var expandLog by remember { mutableStateOf(false) }
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -83,7 +84,7 @@ fun TaskLogPage(onNavigateBack: () -> Unit, taskHashCode: Int) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp).navigationBarsPadding(),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Divider(modifier = Modifier.fillMaxWidth())
+                HorizontalDivider(modifier = Modifier.fillMaxWidth())
                 Row(
                     Modifier.fillMaxWidth()
                         .horizontalScroll(rememberScrollState())

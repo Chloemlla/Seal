@@ -77,7 +77,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -144,6 +143,9 @@ import com.chloemlla.seal.util.USE_CUSTOM_AUDIO_PRESET
 import com.chloemlla.seal.util.VIDEO_FORMAT
 import com.chloemlla.seal.util.VIDEO_QUALITY
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 @Composable
 private fun DownloadType.label(): String =
@@ -279,8 +281,7 @@ fun DownloadDialog(
 @Composable
 private fun ErrorPage(modifier: Modifier = Modifier, state: Error, onActionPost: (Action) -> Unit) {
     val view = LocalView.current
-    val clipboardManager = LocalClipboardManager.current
-    val url =
+        val url =
         state.action.run {
             when (this) {
                 is Action.FetchFormats -> url
@@ -319,11 +320,9 @@ private fun ErrorPage(modifier: Modifier = Modifier, state: Error, onActionPost:
             Button(
                 onClick = {
                     view.longPressHapticFeedback()
-                    clipboardManager.setText(
-                        AnnotatedString(
+                    context.copyToClipboard(
                             App.getVersionReport() + "\nURL: ${url}\n${state.throwable.message}"
                         )
-                    )
                     ToastUtil.makeToast(R.string.error_copied)
                 }
             ) {

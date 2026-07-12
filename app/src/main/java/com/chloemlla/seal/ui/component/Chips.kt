@@ -32,7 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chloemlla.seal.R
-import com.chloemlla.seal.ui.theme.FixedAccentColors
+import com.chloemlla.seal.ui.common.LocalFixedColorRoles
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -208,10 +208,10 @@ fun SingleSelectChip(
     trailingIcon: @Composable (() -> Unit)? = null,
     colors: SelectableChipColors =
         FilterChipDefaults.filterChipColors(
-            selectedContainerColor = FixedAccentColors.secondaryFixed,
-            selectedLabelColor = FixedAccentColors.onSecondaryFixed,
-            selectedLeadingIconColor = FixedAccentColors.onSecondaryFixed,
-            selectedTrailingIconColor = FixedAccentColors.onSecondaryFixed,
+            selectedContainerColor = LocalFixedColorRoles.current.secondaryFixed,
+            selectedLabelColor = LocalFixedColorRoles.current.onSecondaryFixed,
+            selectedLeadingIconColor = LocalFixedColorRoles.current.onSecondaryFixed,
+            selectedTrailingIconColor = LocalFixedColorRoles.current.onSecondaryFixed,
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             iconColor = MaterialTheme.colorScheme.onSurface,
             labelColor = MaterialTheme.colorScheme.onSurface,

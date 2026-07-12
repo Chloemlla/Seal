@@ -54,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -83,6 +82,10 @@ import com.chloemlla.seal.util.ToastUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 private const val TAG = "SponsorPage"
 
@@ -400,8 +403,7 @@ fun SponsorDialogContent(
 @Composable
 private fun LinkItem(modifier: Modifier = Modifier, icon: ImageVector, link: String) {
     val uriHandler = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
-    val linkCopiedText = stringResource(id = R.string.link_copied)
+        val linkCopiedText = stringResource(id = R.string.link_copied)
     Row(
         modifier =
             modifier
@@ -410,7 +412,7 @@ private fun LinkItem(modifier: Modifier = Modifier, icon: ImageVector, link: Str
                     uriHandler
                         .runCatching { openUri(link) }
                         .onFailure {
-                            clipboardManager.setText(AnnotatedString(link))
+                            context.copyToClipboard(link)
                             ToastUtil.makeToast(linkCopiedText)
                         }
                 }

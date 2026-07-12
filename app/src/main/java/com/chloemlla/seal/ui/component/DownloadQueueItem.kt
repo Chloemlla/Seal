@@ -55,7 +55,7 @@ import com.chloemlla.seal.R
 import com.chloemlla.seal.ui.common.AsyncImageImpl
 import com.chloemlla.seal.ui.common.LocalDarkTheme
 import com.chloemlla.seal.ui.common.LocalWindowWidthState
-import com.chloemlla.seal.ui.theme.PreviewThemeLight
+import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.ui.theme.harmonizeWith
 import com.chloemlla.seal.ui.theme.harmonizeWithPrimary
 import com.kyant.monet.LocalTonalPalettes
@@ -66,7 +66,7 @@ import com.kyant.monet.dynamicColorScheme
 // @Preview
 fun PlaylistPreview() {
     var selected by remember { mutableStateOf(false) }
-    Column() { PreviewThemeLight { PlaylistItem(selected = selected) { selected = !selected } } }
+    Column() { SealTheme { PlaylistItem(selected = selected) { selected = !selected } } }
 }
 
 @Composable
@@ -130,7 +130,7 @@ fun PlaylistItem(
 @Composable
 @Preview
 fun TaskItemPreview() {
-    PreviewThemeLight {
+    SealTheme {
         Surface {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { CustomCommandTaskItem(status = TaskStatus.RUNNING) }
@@ -257,7 +257,7 @@ fun CustomCommandTaskItem(
                                 CircularProgressIndicator(
                                     modifier = Modifier.padding(8.dp).size(24.dp),
                                     strokeWidth = 5.dp,
-                                    progress = animatedProgress,
+                                    progress = { animatedProgress },
                                     color = accentColor,
                                 )
                         }

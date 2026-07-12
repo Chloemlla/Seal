@@ -55,6 +55,7 @@ import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.setLanguage
 import com.chloemlla.seal.util.toDisplayName
 import java.util.Locale
+import androidx.compose.material3.HorizontalDivider
 
 @Composable
 fun LanguagePage(onNavigateBack: () -> Unit = {}) {
@@ -269,7 +270,7 @@ private fun LanguagePagePreview() {
             onNavigateToSystemLocaleSettings = { /*TODO*/ },
             selectedLocale = language,
         ) {
-            language = it
+            language = it ?: Locale.JAPANESE
         }
     }
 }

@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,6 +78,8 @@ import com.chloemlla.seal.util.VIDEO_FORMAT
 import com.chloemlla.seal.util.VIDEO_QUALITY
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material3.TooltipAnchorPosition
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -354,7 +355,7 @@ fun PlaylistSelectionPageImpl(
                     val index = indexFromZero + 1
                     TooltipBox(
                         state = rememberTooltipState(),
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                         tooltip = { PlainTooltip { Text(text = entry.title ?: index.toString()) } },
                     ) {
                         PlaylistItem(

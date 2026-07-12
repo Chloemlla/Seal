@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -52,6 +51,8 @@ import com.chloemlla.seal.ui.component.SealModalBottomSheetM2
 import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.util.FileUtil
 import com.chloemlla.seal.util.ToastUtil
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 @Composable
 fun VideoDetailDrawer(
@@ -141,8 +142,7 @@ fun VideoDetailDrawerImpl(
     onOpenLink: () -> Unit = {},
     onShareFile: () -> Unit = {},
 ) {
-    val clipboardManager = LocalClipboardManager.current
-    val context = LocalContext.current
+        val context = LocalContext.current
     SealModalBottomSheetM2(
         sheetState = sheetState,
         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -168,7 +168,7 @@ fun VideoDetailDrawerImpl(
             Row(modifier = Modifier.padding(vertical = 6.dp).fillMaxWidth()) {
                 LongTapTextButton(
                     onClick = {
-                        clipboardManager.setText(AnnotatedString(url))
+                        context.copyToClipboard(url)
                         ToastUtil.makeToast(context.getString(R.string.link_copied))
                     },
                     onClickLabel = stringResource(id = R.string.copy_link),

@@ -25,7 +25,6 @@ import androidx.compose.material.icons.outlined.MoneyOff
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.PlaylistAddCheck
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.PrintDisabled
 import androidx.compose.material.icons.outlined.RemoveDone
@@ -105,6 +104,8 @@ import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAddCheck
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -346,7 +347,7 @@ fun GeneralDownloadPreferences(onNavigateBack: () -> Unit, navigateToTemplate: (
                             downloadPlaylist = !downloadPlaylist
                             PreferenceUtil.updateValue(PLAYLIST, downloadPlaylist)
                         },
-                        icon = Icons.Outlined.PlaylistAddCheck,
+                        icon = Icons.AutoMirrored.Outlined.PlaylistAddCheck,
                         enabled = !isCustomCommandEnabled,
                         description = stringResource(R.string.download_playlist_desc),
                         isChecked = downloadPlaylist,

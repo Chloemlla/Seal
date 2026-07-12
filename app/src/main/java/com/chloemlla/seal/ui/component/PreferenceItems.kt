@@ -57,12 +57,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chloemlla.seal.R
-import com.chloemlla.seal.ui.theme.FixedAccentColors
 import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.ui.theme.applyOpacity
 import com.chloemlla.seal.ui.theme.harmonizeWithPrimary
 import com.kyant.monet.LocalTonalPalettes
 import com.kyant.monet.TonalPalettes.Companion.toTonalPalettes
+import com.chloemlla.seal.ui.common.LocalFixedColorRoles
 
 private const val horizontal = 8
 private const val vertical = 12
@@ -566,8 +566,8 @@ fun PreferencesHintCardPreview() {
             title = "Explore new features",
             icon = Icons.Outlined.TipsAndUpdates,
             description = "Find out what's new in this version",
-            containerColor = FixedAccentColors.primaryFixed,
-            contentColor = FixedAccentColors.onPrimaryFixed,
+            containerColor = LocalFixedColorRoles.current.primaryFixed,
+            contentColor = LocalFixedColorRoles.current.onPrimaryFixed,
         )
     }
 }
@@ -577,8 +577,8 @@ fun PreferencesHintCard(
     title: String = "Title ".repeat(2),
     description: String? = "Description text ".repeat(3),
     icon: ImageVector? = Icons.Outlined.Translate,
-    containerColor: Color = FixedAccentColors.secondaryFixed,
-    contentColor: Color = FixedAccentColors.onSecondaryFixed,
+    containerColor: Color = LocalFixedColorRoles.current.secondaryFixed,
+    contentColor: Color = LocalFixedColorRoles.current.onSecondaryFixed,
     onClick: () -> Unit = {},
 ) {
     Row(

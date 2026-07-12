@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.annotation.CheckResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import com.chloemlla.seal.App.Companion.applicationScope
@@ -115,7 +114,7 @@ object Downloader {
         }
 
         fun onCopyLog(clipboardManager: ClipboardManager) {
-            clipboardManager.setText(AnnotatedString(output))
+            context.copyToClipboard(output)
         }
 
         fun onRestart() {
@@ -125,7 +124,7 @@ object Downloader {
         }
 
         fun onCopyError(clipboardManager: ClipboardManager) {
-            clipboardManager.setText(AnnotatedString(currentLine))
+            context.copyToClipboard(currentLine)
             ToastUtil.makeToast(R.string.error_copied)
         }
 
@@ -204,7 +203,7 @@ object Downloader {
 
     fun updateTaskOutput(template: CommandTemplate, url: String, line: String, progress: Float) {
         val key = makeKey(url, template.name)
-        val oldValue = mutableTaskList[key] ?: return
+        val oldValue = mutableTaskList[key] ?: return@run
         val newValue =
             oldValue.run {
                 copy(
@@ -249,7 +248,7 @@ object Downloader {
                 notificationId = key.toNotificationId(),
                 report = errorReport,
             )
-            val oldValue = mutableTaskList[key] ?: return
+            val oldValue = mutableTaskList[key] ?: return@run
             mutableTaskList[key] =
                 oldValue.copy(
                     state = CustomCommandTask.State.Error(errorReport),

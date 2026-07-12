@@ -74,7 +74,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -106,7 +105,6 @@ import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialog
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel.Action
 import com.chloemlla.seal.ui.page.downloadv2.configure.FormatPage
-import com.chloemlla.seal.ui.theme.PreviewThemeLight
 import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.util.CELLULAR_DOWNLOAD
 import com.chloemlla.seal.util.CONFIGURE
@@ -123,6 +121,10 @@ import com.chloemlla.seal.util.matchUrlFromClipboard
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -159,8 +161,7 @@ fun DownloadPage(
             }
         } else null
 
-    val clipboardManager = LocalClipboardManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
+        val keyboardController = LocalSoftwareKeyboardController.current
     val useDialog = LocalWindowWidthState.current != WindowWidthSizeClass.Compact
     val view = LocalView.current
     var showDownloadDialog by rememberSaveable { mutableStateOf(false) }
@@ -271,7 +272,7 @@ fun DownloadPage(
             showDownloadProgress = taskState.taskId.isNotEmpty(),
             pasteCallback = {
                 matchUrlFromClipboard(
-                        string = clipboardManager.getText().toString(),
+                        string = context.readClipboardText().orEmpty(),
                         isMatchingMultiLink = CUSTOM_COMMAND.getBoolean(),
                     )
                     .let { homePageViewModel.updateUrl(it) }
@@ -360,8 +361,7 @@ fun DownloadPageImpl(
     content: @Composable () -> Unit,
 ) {
     val view = LocalView.current
-    val clipboardManager = LocalClipboardManager.current
-
+    
     val showCancelButton =
         downloaderState is Downloader.State.DownloadingPlaylist ||
             downloaderState is Downloader.State.DownloadingVideo
@@ -374,7 +374,7 @@ fun DownloadPageImpl(
                 navigationIcon = {
                     TooltipBox(
                         state = rememberTooltipState(),
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                         tooltip = {
                             PlainTooltip { Text(text = stringResource(id = R.string.settings)) }
                         },
@@ -405,7 +405,7 @@ fun DownloadPageImpl(
                         TooltipBox(
                             state = rememberTooltipState(),
                             positionProvider =
-                                TooltipDefaults.rememberTooltipPositionProvider(),
+                                TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                             tooltip = {
                                 PlainTooltip {
                                     Text(text = stringResource(id = R.string.running_tasks))
@@ -428,7 +428,7 @@ fun DownloadPageImpl(
                     }
                     TooltipBox(
                         state = rememberTooltipState(),
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                         tooltip = {
                             PlainTooltip {
                                 Text(text = stringResource(id = R.string.downloads_history))
@@ -529,12 +529,10 @@ fun DownloadPageImpl(
                 AnimatedVisibility(visible = errorState != Downloader.ErrorState.None) {
                     ErrorMessage(title = errorState.title, errorReport = errorState.report) {
                         view.longPressHapticFeedback()
-                        clipboardManager.setText(
-                            AnnotatedString(
+                        context.copyToClipboard(
                                 App.getVersionReport() +
                                     "\nURL: ${errorState.url}\n${errorState.report}"
                             )
-                        )
                         ToastUtil.makeToast(R.string.error_copied)
                     }
                 }
@@ -778,7 +776,7 @@ fun FABs(
 @Composable
 @Preview
 fun DownloadPagePreview() {
-    PreviewThemeLight {
+    SealTheme {
         Column() {
             DownloadPageImpl(
                 downloaderState = Downloader.State.DownloadingVideo,

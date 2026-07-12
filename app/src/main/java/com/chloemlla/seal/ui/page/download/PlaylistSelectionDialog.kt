@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PlaylistAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -28,6 +27,7 @@ import com.chloemlla.seal.ui.component.DismissButton
 import com.chloemlla.seal.util.PlaylistResult
 import com.chloemlla.seal.util.ToastUtil
 import com.chloemlla.seal.util.isNumberInRange
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -53,7 +53,7 @@ fun PlaylistSelectionDialog(
     }
     AlertDialog(
         onDismissRequest = { onDismissRequest() },
-        icon = { Icon(Icons.Outlined.PlaylistAdd, null) },
+        icon = { Icon(Icons.AutoMirrored.Outlined.PlaylistAdd, null) },
         title = { Text(stringResource(R.string.download_range_selection)) },
         text = {
             Column {

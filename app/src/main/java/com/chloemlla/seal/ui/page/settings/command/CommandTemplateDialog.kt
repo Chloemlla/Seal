@@ -34,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -57,6 +56,8 @@ import com.chloemlla.seal.ui.component.SealTextField
 import com.chloemlla.seal.ui.component.ShortcutChip
 import com.chloemlla.seal.util.DatabaseUtil
 import kotlinx.coroutines.launch
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 @Preview
 @Composable
@@ -67,8 +68,7 @@ fun CommandTemplateDialog(
     confirmationCallback: (Int) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
-    val scope = rememberCoroutineScope()
+        val scope = rememberCoroutineScope()
     var templateText by remember { mutableStateOf(commandTemplate.template) }
     var templateName by remember { mutableStateOf(commandTemplate.name) }
     var isError by remember { mutableStateOf(false) }

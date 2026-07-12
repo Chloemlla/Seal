@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -29,6 +28,10 @@ import com.chloemlla.seal.ui.common.LocalDarkTheme
 import com.chloemlla.seal.ui.common.SettingsProvider
 import com.chloemlla.seal.ui.component.FilledButtonWithIcon
 import com.chloemlla.seal.ui.theme.SealTheme
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 class CrashReportActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,9 +45,8 @@ class CrashReportActivity : ComponentActivity() {
                     darkTheme = LocalDarkTheme.current.isDarkTheme(),
                     isHighContrastModeEnabled = LocalDarkTheme.current.isHighContrastModeEnabled,
                 ) {
-                    val clipboardManager = LocalClipboardManager.current
-                    CrashReportPage(errorMessage = errorMessage) {
-                        clipboardManager.setText(AnnotatedString(errorMessage))
+                                        CrashReportPage(errorMessage = errorMessage) {
+                        context.copyToClipboard(errorMessage)
                         this.finishAffinity()
                     }
                 }

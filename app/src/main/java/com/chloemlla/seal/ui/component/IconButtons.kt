@@ -11,17 +11,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.chloemlla.seal.R
 import com.chloemlla.seal.ui.common.HapticFeedback.slightHapticFeedback
+import androidx.compose.ui.platform.LocalContext
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.readClipboardText
 
 @Composable
 fun PasteFromClipBoardButton(onPaste: (String) -> Unit = {}) {
-    val clipboardManager = LocalClipboardManager.current
-    PasteButton(onClick = { clipboardManager.getText()?.let { onPaste(it.toString()) } })
+        PasteButton(onClick = { context.readClipboardText()?.let { onPaste(it) } })
 }
 
 @Composable

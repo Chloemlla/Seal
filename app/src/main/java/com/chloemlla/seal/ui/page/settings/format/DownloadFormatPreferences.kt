@@ -9,7 +9,6 @@ import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.SpatialAudioOff
 import androidx.compose.material.icons.outlined.Subtitles
 import androidx.compose.material.icons.outlined.Sync
@@ -68,6 +67,7 @@ import com.chloemlla.seal.util.SUBTITLE
 import com.chloemlla.seal.util.VIDEO_CLIP
 import com.chloemlla.seal.util.VIDEO_FORMAT
 import com.chloemlla.seal.util.VIDEO_QUALITY
+import androidx.compose.material.icons.automirrored.outlined.Sort
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -270,7 +270,7 @@ fun DownloadFormatPreferences(onNavigateBack: () -> Unit, navigateToSubtitlePage
                 item {
                     PreferenceSwitchWithDivider(
                         title = stringResource(id = R.string.format_sorting),
-                        icon = Icons.Outlined.Sort,
+                        icon = Icons.AutoMirrored.Outlined.Sort,
                         description = stringResource(id = R.string.format_sorting_desc),
                         enabled = !isCustomCommandEnabled,
                         isChecked = isFormatSortingEnabled,

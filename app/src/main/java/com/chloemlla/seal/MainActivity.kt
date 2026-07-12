@@ -21,7 +21,6 @@ import com.chloemlla.seal.util.setLanguage
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import org.koin.compose.KoinContext
 
 class MainActivity : AppCompatActivity() {
     private val dialogViewModel: DownloadDialogViewModel by viewModel()
@@ -38,15 +37,13 @@ class MainActivity : AppCompatActivity() {
 
         context = this.baseContext
         setContent {
-            KoinContext {
-                val windowSizeClass = calculateWindowSizeClass(this)
-                SettingsProvider(windowWidthSizeClass = windowSizeClass.widthSizeClass) {
-                    SealTheme(
-                        darkTheme = LocalDarkTheme.current.isDarkTheme(),
-                        isHighContrastModeEnabled = LocalDarkTheme.current.isHighContrastModeEnabled,
-                    ) {
-                        AppEntry(dialogViewModel = dialogViewModel)
-                    }
+            val windowSizeClass = calculateWindowSizeClass(this)
+            SettingsProvider(windowWidthSizeClass = windowSizeClass.widthSizeClass) {
+                SealTheme(
+                    darkTheme = LocalDarkTheme.current.isDarkTheme(),
+                    isHighContrastModeEnabled = LocalDarkTheme.current.isHighContrastModeEnabled,
+                ) {
+                    AppEntry(dialogViewModel = dialogViewModel)
                 }
             }
         }
