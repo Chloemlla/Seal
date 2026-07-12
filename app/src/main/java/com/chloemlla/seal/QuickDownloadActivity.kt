@@ -34,6 +34,7 @@ import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel.S
 import com.chloemlla.seal.ui.page.downloadv2.configure.FormatPage
 import com.chloemlla.seal.ui.page.downloadv2.configure.PlaylistSelectionPage
 import com.chloemlla.seal.ui.theme.SealTheme
+import com.chloemlla.seal.util.DownloadType
 import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.setLanguage
@@ -155,7 +156,12 @@ class QuickDownloadActivity : ComponentActivity() {
                                 DownloadDialog(
                                     state = state,
                                     sheetState = sheetState,
-                                    config = Config(),
+                                    config =
+                                        Config(
+                                            downloadType =
+                                                if (preferences.extractAudio) DownloadType.Audio
+                                                else DownloadType.Video,
+                                        ),
                                     preferences = preferences,
                                     onPreferencesUpdate = { preferences = it },
                                     onActionPost = { viewModel.postAction(it) },

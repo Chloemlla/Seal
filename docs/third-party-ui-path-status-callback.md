@@ -335,3 +335,15 @@ adb 补充（仅验证广播 action；真实 callingPackage 仍以 App 启动为
 |------|------|
 | 2026-07-12 | 初版：记录 UI 路径缺 watchTask 根因与 Seal 适配方案；联调对象 PiliPlus |
 | 2026-07-12 | 代码落地：ExternalSession + UI 入队 watch + accepted；文档与 TODO 同步 |
+
+---
+
+## 附：extract_audio 与 UI 类型（2026-07-12 修复）
+
+**现象**：第三方传 `extract_audio=true`（如下载音频），Seal 配置页仍默认「视频」。
+
+**原因**：`QuickDownloadActivity` 虽把 `extractAudio` 写入 `preferences`，但 `DownloadDialog(config = Config())` 的 `downloadType` 仍读用户全局预设（多为 Video），UI 选择组不跟 preferences.extractAudio。
+
+**修复**：`Config(downloadType = if (preferences.extractAudio) Audio else Video)`。
+
+**文件**：`QuickDownloadActivity.kt`
