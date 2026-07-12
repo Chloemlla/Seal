@@ -92,7 +92,8 @@ English
 
 - Easy to use and user-friendly.
 
-- Third-party apps can **delegate** downloads to Seal via Intents (share / open URL / `com.chloemlla.seal.action.DOWNLOAD`). See [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md); Chinese call guide: [docs/third-party-call-guide.md](docs/third-party-call-guide.md).
+- Third-party apps can **delegate** downloads to Seal via Intents (share / open URL / `com.chloemlla.seal.action.DOWNLOAD`) with L2/L3 status feedback. See [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md); Chinese call guide: [docs/third-party-call-guide.md](docs/third-party-call-guide.md).
+- Targets **Android API 37**, uses scoped storage by default (no `MANAGE_EXTERNAL_STORAGE` dependency for normal downloads), and ships the latest **Stable** yt-dlp binary at build time.
 
 - [Material Design 3](https://m3.material.io/) style UI, with dynamic color theme.
 
@@ -118,14 +119,119 @@ For most devices, it is recommended to install the **arm64-v8a** version of the 
 > This fork uses package id `com.chloemlla.seal` and is **not** published under the upstream F-Droid listing (`com.junkfood.seal`).  
 > Upstream project: [JunkFood02/Seal](https://github.com/JunkFood02/Seal)
 
+## 🚀 Chloemlla fork improvements
+
+This `main` branch is the **Chloemlla** fork of Seal. Beyond retargeting the package id and release channels, it includes a large set of platform, security, integration, CI, and UX changes relative to the upstream project.
+
+### Identity and packaging
+
+- Application package renamed to **`com.chloemlla.seal`** (debug `*.debug`, preview `*.preview`).
+- FileProvider authority is **`${applicationId}.provider`**.
+- README, badges, release links, and docs retargeted to [Chloemlla/Seal](https://github.com/Chloemlla/Seal).
+- **Not** published as the upstream F-Droid package (`com.junkfood.seal`).
+
+### Android platform
+
+- **Compile / target SDK 37** (Android 16 line), with minSdk kept at 24.
+- AGP / Gradle / Kotlin toolchain modernized for this target:
+  - Android Gradle Plugin **9.2.x**
+  - Gradle wrapper **9.4.1**
+  - Kotlin **2.3.x** + KSP **2.3.x**
+  - Built-in Kotlin support (legacy `kotlin-android` plugin removed)
+  - JVM targets aligned to **21**
+- Major dependency BOM / library stack upgrade (Compose, lifecycle, Room, OkHttp, etc.), with pins for packages that lag the BOM.
+- AGP 9 compatibility work:
+  - `buildFeatures.resValues` enabled where `resValue` is used
+  - legacy `applicationVariants` APK-rename APIs removed
+  - `extractNativeLibs` moved out of the manifest into packaging options
+  - freeCompilerArgs migrated to the `compilerOptions` DSL
+
+### Storage and permissions
+
+- Dropped reliance on **`MANAGE_EXTERNAL_STORAGE`** for default download paths.
+- Scoped-storage oriented defaults with safer path resolution / writable-directory checks.
+- Download history “delete local file” path hardened:
+  - absolute paths, `file://`, and `content://` document URIs
+  - missing file treated as already deleted
+  - same-basename sidecar cleanup (subtitles, thumbnails, `.info.json`, etc.)
+  - MediaStore refresh after filesystem deletes
+  - history row is always removed first; partial file failures surface a toast
+  - clearer checkbox copy (“Also delete local media file” / “同时删除本地源文件”)
+
+### Security and privacy hardening
+
+- Remediated critical/high findings from the internal audit notes (`docs/aduit.md`):
+  - reduced risky surfaces around token handling and overly broad external control
+  - safer third-party entry validation
+  - custom-command / external-intent boundaries clarified (Seal remains the only yt-dlp owner)
+- External callers are governed by explicit user settings (master switch, auto-start, optional package whitelist).
+
+### Third-party download delegation (L1–L3)
+
+Other apps may **only delegate** work to Seal. There is no embeddable download SDK and no remote control API.
+
+| Level | Capability | Status |
+|------|------------|--------|
+| **L1** | Share / open URL → configure UI | Available |
+| **L2** | Parameterized `DOWNLOAD` intent + optional auto-start | Available |
+| **L3** | Activity result + directed status broadcast + content URI | Available |
+| **L4** | Bound service / provider query API | Not implemented |
+
+Highlights:
+
+- Action: `com.chloemlla.seal.action.DOWNLOAD`
+- Status: `com.chloemlla.seal.action.DOWNLOAD_STATUS`
+- Protocol versioning (`protocol_version`, currently `1`)
+- User-controlled settings under **Settings → Interface & interaction → External downloads**
+- UI-path external downloads are watched so L3 status still reports completion/failure/cancel
+- Docs:
+  - [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md)
+  - [docs/third-party-call-guide.md](docs/third-party-call-guide.md) (中文调用说明)
+  - [docs/third-party-delegate-integration-TODO.md](docs/third-party-delegate-integration-TODO.md)
+
+### yt-dlp packaging and defaults
+
+- Build-time task **`downloadStableYtDlp`** fetches the latest **Stable** yt-dlp release and packages it as `res/raw/ytdlp`, overriding the older binary shipped inside `youtubedl-android`.
+- Version stamp lives at `app/ytdlp.version` (**outside** `res/raw`) so Android resource merging does not treat `ytdlp` / `ytdlp.version` as duplicate `R.raw.ytdlp` names.
+- Download temps are kept outside `res/raw`; stray collision files under raw are purged before packaging.
+- Default in-app yt-dlp update channel set to **Stable** (was Nightly).
+- Bundled version exposed via `BuildConfig.YT_DLP_BUNDLED_VERSION` for diagnostics.
+
+### CI / pre-release workflow
+
+Workflow: [`.github/workflows/build-pre-release.yaml`](.github/workflows/build-pre-release.yaml)
+
+- Android Lint extracted into a **parallel job** alongside the release build.
+- Publish is gated with `needs: [Lint, BuildPreRelease]` so a lint failure cannot race past a release.
+- Signed APKs transferred via artifacts into the Publish job.
+- Full build-error report packaging + artifact upload on failure (logs, lint/test reports, environment diagnostics, failure summary).
+- Movable **`latest`** git tag force-updated for consumers that pin that ref.
+- Gradle console noise reduced (e.g. dropped overly verbose `--info` cache spam).
+- Local drop folder for CI reports ignored (`1/`).
+
+### UI / product polish
+
+- Portrait ActionSheet overflow: less-important actions fold into a **More** menu so primary actions stay reachable.
+- Lint cleanups around locale observation (`LocalConfiguration`) and other Compose/resource correctness issues.
+- Assorted compile fixes after the stack upgrade (clipboard Context usage, Material M2 / DocumentFile deps restoration where still required, etc.).
+
+### Developer notes
+
+- Local full Flutter/Gradle builds are not required for every documentation change; release validation is expected through GitHub Actions.
+- Generated yt-dlp artifacts (`app/src/main/res/raw/ytdlp`, `app/ytdlp.version`, temps) are gitignored.
+- For agents/contributors working in this repo, see [`AGENTS.md`](AGENTS.md).
+
+---
+
 ## 🔌 Third-party integration
 
-Other apps may only **delegate** downloads to Seal (Seal always runs yt-dlp and owns the queue/files).
+Other apps may only **delegate** downloads to Seal (Seal always runs yt-dlp and owns the queue/files). See the full **Chloemlla fork improvements** section above for L1–L3 capability details.
 
 - Integration overview: [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md)
 - Chinese caller guide: [docs/third-party-call-guide.md](docs/third-party-call-guide.md)
 - Action: `com.chloemlla.seal.action.DOWNLOAD`
 - Status broadcast: `com.chloemlla.seal.action.DOWNLOAD_STATUS`
+- Protocol version: `1` (send `protocol_version`)
 
 ## 💬 Contact
 

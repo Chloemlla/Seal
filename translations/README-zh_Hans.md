@@ -9,22 +9,25 @@
 ### 一个简单的 Android 视频/音频下载器，使用 Jetpack Compose 进行开发
 
 <p align="center">
-<a href="https://github.com/JunkFood02/Seal/blob/main/README.md">English</a>
+<a href="../README.md">English</a>
 &nbsp;&nbsp;|&nbsp;&nbsp;
 简体中文
 </p>
 
 [![F-Droid](https://img.shields.io/f-droid/v/com.junkfood.seal?color=b4eb12&label=F-Droid&logo=fdroid&logoColor=1f78d2)](https://f-droid.org/en/packages/com.junkfood.seal)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/JunkFood02/Seal?color=black&label=Stable&logo=github)](https://github.com/JunkFood02/Seal/releases/latest/)
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/JunkFood02/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/JunkFood02/Seal/releases/)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/JunkFood02/Seal?color=black&label=Stable&logo=github)](https://github.com/Chloemlla/Seal/releases/latest/)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/JunkFood02/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/Chloemlla/Seal/releases/)
 [![Keep a Changelog](https://img.shields.io/badge/Changelog-lightgray?style=flat&color=gray&logo=keep-a-changelog)](https://github.com/JunkFood02/Seal/blob/main/CHANGELOG.md)
-[![GitHub all releases](https://img.shields.io/github/downloads/JunkFood02/Seal/total?label=Downloads&logo=github)](https://github.com/JunkFood02/Seal/releases/)
+[![GitHub all releases](https://img.shields.io/github/downloads/JunkFood02/Seal/total?label=Downloads&logo=github)](https://github.com/Chloemlla/Seal/releases/)
 [![GitHub Repo stars](https://img.shields.io/github/stars/JunkFood02/Seal?color=informational&label=Stars)](https://github.com/JunkFood02/Seal/stargazers)
 [![Supported Sites](https://img.shields.io/badge/Supported-Sites-9cf.svg?style=flat)](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Seal-blue?style=flat&logo=telegram)](https://t.me/seal_app)
 [![Matrix Space](https://img.shields.io/badge/Matrix-Seal-Black?style=flat&color=black&logo=matrix)](https://matrix.to/#/#seal-space:matrix.org)
 
 </div>
+> **说明：** 本仓库为 [Chloemlla/Seal](https://github.com/Chloemlla/Seal) 分支（应用包名 `com.chloemlla.seal`），不是上游 F-Droid 的 `com.junkfood.seal`。  
+> 本分支相对上游的完整改进清单见英文主文档：[README.md → Chloemlla fork improvements](../README.md#-chloemlla-fork-improvements)。
+
 ## 屏幕截图
 
 <div>
@@ -68,7 +71,7 @@
 alt="Get it on F-Droid"
 height="80">](https://f-droid.org/packages/com.junkfood.seal/)
 
-你也可以从 [releases](https://github.com/JunkFood02/Seal/releases) 获取最新的 apk
+你也可以从 [releases](https://github.com/Chloemlla/Seal/releases) 获取最新的 apk
 
 ## 贡献
 
@@ -78,7 +81,7 @@ height="80">](https://f-droid.org/packages/com.junkfood.seal/)
 
 [![Translate status](https://hosted.weblate.org/widgets/seal/-/multi-auto.svg)](https://hosted.weblate.org/engage/seal/)
 
-对于错误报告、功能请求或其他改进的想法，请先在 Issue 和 Discussion 中进行搜索（包括已关闭的 Issue）。如果没有出现重复，欢迎 [发起讨论](https://github.com/JunkFood02/Seal/discussions) 或 [提交问题](https://github.com/JunkFood02/Seal/issues/new)。
+对于错误报告、功能请求或其他改进的想法，请先在 Issue 和 Discussion 中进行搜索（包括已关闭的 Issue）。如果没有出现重复，欢迎 [发起讨论](https://github.com/Chloemlla/Seal/discussions) 或 [提交问题](https://github.com/Chloemlla/Seal/issues/new)。
 
 Seal 被设计为 yt-dlp 的一个简单的 GUI 封装，所以我们不会接受 yt-dlp 不支持的功能请求。
 
