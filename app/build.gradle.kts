@@ -134,7 +134,6 @@ android {
     }
 
     lint { disable.addAll(listOf("MissingTranslation", "ExtraTranslation", "MissingQuantity")) }
-    }
 
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
