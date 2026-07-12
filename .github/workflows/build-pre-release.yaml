@@ -133,7 +133,7 @@ jobs:
             echo "=== gradle assembleGenericRelease ==="
           } | tee "$LOG_FILE"
           # Full console + file capture for later failure packaging
-          ./gradlew --no-daemon --stacktrace --info assembleGenericRelease 2>&1 | tee -a "$LOG_FILE"
+          ./gradlew --no-daemon --stacktrace assembleGenericRelease 2>&1 | tee -a "$LOG_FILE"
 
       - name: Android Lint
         id: lint
@@ -156,7 +156,7 @@ jobs:
           } | tee "$LOG_FILE"
           # Continue on lint failure so the following print/upload steps always dump all findings.
           set +e
-          ./gradlew --no-daemon --stacktrace --info lintGenericRelease 2>&1 | tee -a "$LOG_FILE"
+          ./gradlew --no-daemon --stacktrace lintGenericRelease 2>&1 | tee -a "$LOG_FILE"
           lint_exit=${PIPESTATUS[0]}
           set -e
           echo "lint_exit=$lint_exit" | tee -a "$LOG_FILE"
