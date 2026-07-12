@@ -26,7 +26,6 @@ import com.google.accompanist.web.AccompanistWebChromeClient
 import com.google.accompanist.web.AccompanistWebViewClient
 import com.google.accompanist.web.WebView
 import com.google.accompanist.web.rememberWebViewState
-import com.google.android.material.R
 import com.chloemlla.seal.util.PreferenceUtil.updateString
 import com.chloemlla.seal.util.USER_AGENT_STRING
 import com.chloemlla.seal.util.connectWithDelimiter
@@ -102,7 +101,7 @@ fun WebViewPage(cookiesViewModel: CookiesViewModel, onDismissRequest: () -> Unit
                 },
                 actions = {
                     TextButton(onClick = onDismissRequest) {
-                        Text(text = stringResource(id = R.string.abc_action_mode_done))
+                        Text(text = stringResource(id = androidx.appcompat.R.string.abc_action_mode_done))
                     }
                 },
             )

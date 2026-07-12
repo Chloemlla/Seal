@@ -183,7 +183,7 @@ class App : Application() {
         }
 
         val privateDownloadDir: String
-            get() = getPreferredPrivateDownloadDirectory().absolutePath
+            get() = context.getPreferredPrivateDownloadDirectory().absolutePath
 
         fun updateDownloadDir(uri: Uri, directoryType: Directory) {
             when (directoryType) {

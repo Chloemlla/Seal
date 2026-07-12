@@ -47,6 +47,8 @@ ktfmt = "0.26.0"
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCore" }
 android-material = { group = "com.google.android.material", name = "material", version.ref = "androidMaterial" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "androidxAppCompat" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version = "1.1.0" }
+
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidxActivity" }
 
 androidx-lifecycle-runtimeCompose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
@@ -117,28 +119,36 @@ room = { id = "androidx.room", version.ref = "room" }
 ktfmt-gradle = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
 
 
+
 [bundles]
 accompanist = [
     "accompanist-permissions",
     "accompanist-webview",
 ]
 
-androidxCompose = ["androidx-compose-ui",
+androidxCompose = [
+    "androidx-compose-ui",
     "androidx-compose-ui-tooling-preview",
+    "androidx-compose-material",
     "androidx-compose-material-iconsExtended",
     "androidx-compose-material3",
     "androidx-compose-material3-windowSizeClass",
     "androidx-compose-foundation",
     "androidx-navigation-compose",
     "androidx-compose-animation",
-    "androidx-constraintlayout-compose"
+    "androidx-constraintlayout-compose",
 ]
 
-youtubedlAndroid = ["youtubedl-android-library",
+youtubedlAndroid = [
+    "youtubedl-android-library",
     "youtubedl-android-ffmpeg",
-    "youtubedl-android-aria2c"]
+    "youtubedl-android-aria2c",
+]
 
-core = ["androidx-activity-compose",
+core = [
+    "androidx-activity-compose",
     "android-material",
     "androidx-appcompat",
-    "androidx-core-ktx"]
+    "androidx-core-ktx",
+    "androidx-documentfile",
+]

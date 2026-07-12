@@ -140,7 +140,11 @@ android {
 
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
-        jniLibs.useLegacyPackaging = true
+        jniLibs {
+            useLegacyPackaging = true
+            // youtubedl-android ships zip payloads named *.zip.so; llvm-strip cannot process them
+            keepDebugSymbols += setOf("**/libaria2c.zip.so", "**/libffmpeg.zip.so", "**/libpython.zip.so")
+        }
     }
     androidResources { generateLocaleConfig = true }
 
