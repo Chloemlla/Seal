@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
@@ -225,7 +226,11 @@ fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (String) -> 
                 PreferenceItem(
                     title = stringResource(R.string.language),
                     icon = Icons.Outlined.Language,
-                    description = Locale.getDefault().toDisplayName(),
+                    description = run {
+                        // Observe configuration so language changes recompose this preference.
+                        val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+                        locale.toDisplayName()
+                    },
                 ) {
                     onNavigateTo(Route.LANGUAGES)
                 }
