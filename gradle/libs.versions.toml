@@ -1,43 +1,42 @@
 [versions]
-accompanist = "0.34.0"
-androidGradlePlugin = "8.10.1"
-androidxComposeBom = "2025.03.01"
-androidxCore = "1.15.0"
-androidMaterial = "1.12.0"
-androidxAppCompat = "1.7.0"
-androidxActivity = "1.10.1"
+accompanist = "0.37.3"
+androidGradlePlugin = "8.13.2"
+androidxComposeBom = "2026.06.01"
+androidxCore = "1.18.0"
+androidMaterial = "1.14.0"
+androidxAppCompat = "1.7.1"
+androidxActivity = "1.13.0"
 graphics = "1.0.1"
-constraintLayout = "1.1.0"
+constraintLayout = "1.1.1"
 
-androidxLifecycle = "2.8.7"
-androidxNavigation = "2.8.9"
+androidxLifecycle = "2.11.0"
+androidxNavigation = "2.9.8"
 
-androidxEspresso = "3.5.0"
-androidxTestExt = "1.1.4"
+androidxEspresso = "3.7.0"
+androidxTestExt = "1.3.0"
 
-
-coil = "2.5.0"
+coil = "2.7.0"
 
 junit4 = "4.13.2"
 
-kotlin = "2.0.20"
+kotlin = "2.2.21"
 
-coroutines = "1.9.0"
-datetime = "0.6.1"
-serialization = "1.7.2"
-okhttp = "5.0.0-alpha.10"
+coroutines = "1.10.2"
+datetime = "0.7.1"
+serialization = "1.9.0"
+okhttp = "5.4.0"
 
-room = "2.6.1"
-ksp = "2.0.20-1.0.25"
+room = "2.8.4"
+ksp = "2.2.21-2.0.5"
 
-youtubedlAndroid = "0.17.3"
+youtubedlAndroid = "0.18.1"
 
-mmkv = "1.3.12"
-# pin to v1.3.x for 32-bit support
+mmkv = "1.3.16"
+# pin to v1.3.x for 32-bit support (2.x drops 32-bit)
 
-koin = "4.0.0"
+koin = "4.2.2"
 
-ktfmt = "0.20.1"
+ktfmt = "0.26.0"
 
 [libraries]
 
@@ -51,10 +50,8 @@ androidx-lifecycle-runtimeCompose = { group = "androidx.lifecycle", name = "life
 
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 accompanist-webview = { group = "com.google.accompanist", name = "accompanist-webview", version.ref = "accompanist" }
-accompanist-pager-indicators = { group = "com.google.accompanist", name = "accompanist-pager-indicators", version.ref = "accompanist" }
 
-#androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom-alpha", version.ref = "androidxComposeBom" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-material-iconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
@@ -100,10 +97,6 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
-#youtubedl-android-library = { group = "com.github.yausername.youtubedl_android", name = "library", version.ref = "youtubedlAndroid" }
-#youtubedl-android-ffmpeg = { group = "com.github.yausername.youtubedl_android", name = "ffmpeg", version.ref = "youtubedlAndroid" }
-#youtubedl-android-aria2c = { group = "com.github.yausername.youtubedl_android", name = "aria2c", version.ref = "youtubedlAndroid" }
-
 youtubedl-android-library = { group = "io.github.junkfood02.youtubedl-android", name = "library", version.ref = "youtubedlAndroid" }
 youtubedl-android-ffmpeg = { group = "io.github.junkfood02.youtubedl-android", name = "ffmpeg", version.ref = "youtubedlAndroid" }
 youtubedl-android-aria2c = { group = "io.github.junkfood02.youtubedl-android", name = "aria2c", version.ref = "youtubedlAndroid" }
@@ -126,7 +119,6 @@ ktfmt-gradle = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
 accompanist = [
     "accompanist-permissions",
     "accompanist-webview",
-    "accompanist-pager-indicators",
 ]
 
 androidxCompose = ["androidx-compose-ui",

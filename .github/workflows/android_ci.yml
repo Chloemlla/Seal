@@ -23,7 +23,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android API 37 platform
-        run: sdkmanager "platforms;android-37" "build-tools;35.0.0" || sdkmanager "platforms;android-37"
+        run: sdkmanager "platforms;android-37" "build-tools;35.0.0" "build-tools;36.0.0" || sdkmanager "platforms;android-37"
 
       - uses: gradle/actions/setup-gradle@v3
       - name: Grant execute permission for gradlew

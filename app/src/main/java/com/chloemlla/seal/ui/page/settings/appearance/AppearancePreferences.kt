@@ -1,6 +1,7 @@
 package com.chloemlla.seal.ui.page.settings.appearance
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,7 +51,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
-import com.google.accompanist.pager.HorizontalPagerIndicator
 import com.google.android.material.color.DynamicColors
 import com.chloemlla.seal.R
 import com.chloemlla.seal.download.Task
@@ -181,18 +181,27 @@ fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (String) -> 
                     }
                 }
 
-                HorizontalPagerIndicator(
-                    pagerState = pagerState,
-                    pageCount = pageCount,
+                Row(
                     modifier =
                         Modifier.clearAndSetSemantics {}
                             .align(Alignment.CenterHorizontally)
                             .padding(vertical = 12.dp),
-                    activeColor = MaterialTheme.colorScheme.primary,
-                    inactiveColor = MaterialTheme.colorScheme.outlineVariant,
-                    indicatorHeight = 6.dp,
-                    indicatorWidth = 6.dp,
-                )
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    repeat(pageCount) { index ->
+                        val active = pagerState.currentPage == index
+                        Box(
+                            modifier =
+                                Modifier.size(6.dp)
+                                    .background(
+                                        color =
+                                            if (active) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outlineVariant,
+                                        shape = CircleShape,
+                                    )
+                        )
+                    }
+                }
                 if (DynamicColors.isDynamicColorAvailable()) {
                     PreferenceSwitch(
                         title = stringResource(id = R.string.dynamic_color),

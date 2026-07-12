@@ -15,7 +15,6 @@ import androidx.documentfile.provider.DocumentFile
 import com.chloemlla.seal.App.Companion.context
 import com.chloemlla.seal.R
 import java.io.File
-import okhttp3.internal.closeQuietly
 
 const val AUDIO_REGEX = "(mp3|aac|opus|m4a)$"
 const val THUMBNAIL_REGEX = "\\.(jpg|png)$"
@@ -154,9 +153,9 @@ object FileUtil {
                     val inputStream = it.inputStream()
                     val outputStream =
                         context.contentResolver.openOutputStream(destUri) ?: return@forEach
-                    inputStream.copyTo(outputStream)
-                    inputStream.closeQuietly()
-                    outputStream.closeQuietly()
+                    inputStream.use { input ->
+                        outputStream.use { output -> input.copyTo(output) }
+                    }
                     uriList.add(destUri.toString())
                 }
                 uriList
