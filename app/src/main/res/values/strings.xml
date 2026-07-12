@@ -130,7 +130,8 @@
     <string name="subdirectory">Save to subdirectory</string>
     <string name="subdirectory_desc">Save files in folders named as respective fields</string>
     <string name="permission_issue">Storage permission issue</string>
-    <string name="permission_issue_desc">Directories outside Download/ and Documents/ are not supported</string>
+    <string name="storage_model_hint">Downloads default to the app folder (no all-files permission). Use folder picker for Download/Documents or SD card via SAF.</string>
+    <string name="permission_issue_desc">Only Download/, Documents/, or the app-specific folder are supported without all-files access. Invalid folders were reset to the app folder.</string>
     <string name="battery_configuration">Battery configuration</string>
     <string name="battery_configuration_desc">Ignore battery optimization for this app to download in the background</string>
     <string name="service_title">Seal is downloading…</string>

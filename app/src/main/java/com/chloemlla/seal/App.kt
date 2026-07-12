@@ -26,10 +26,11 @@ import com.chloemlla.seal.util.AUDIO_DIRECTORY
 import com.chloemlla.seal.util.COMMAND_DIRECTORY
 import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.FileUtil
-import com.chloemlla.seal.util.FileUtil.createEmptyFile
 import com.chloemlla.seal.util.FileUtil.getCookiesFile
-import com.chloemlla.seal.util.FileUtil.getExternalDownloadDirectory
-import com.chloemlla.seal.util.FileUtil.getExternalPrivateDownloadDirectory
+import com.chloemlla.seal.util.FileUtil.getAppSpecificAudioDownloadDirectory
+import com.chloemlla.seal.util.FileUtil.getPreferredDownloadDirectory
+import com.chloemlla.seal.util.FileUtil.getPreferredPrivateDownloadDirectory
+import com.chloemlla.seal.util.StorageAccess
 import com.chloemlla.seal.util.NotificationUtil
 import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.PreferenceUtil.getString
@@ -100,11 +101,37 @@ class App : Application() {
             }
         }
 
-        videoDownloadDir = VIDEO_DIRECTORY.getString(getExternalDownloadDirectory().absolutePath)
+        val preferredDownloadDir = getPreferredDownloadDirectory()
+        val preferredAudioDir =
+            File(preferredDownloadDir, "Audio").also { runCatching { it.mkdirs() } }
 
-        audioDownloadDir = AUDIO_DIRECTORY.getString(File(videoDownloadDir, "Audio").absolutePath)
+        videoDownloadDir =
+            StorageAccess.resolveUsableDirectory(
+                VIDEO_DIRECTORY.getString(preferredDownloadDir.absolutePath),
+                preferredDownloadDir,
+            )
+        if (videoDownloadDir != VIDEO_DIRECTORY.getString(preferredDownloadDir.absolutePath)) {
+            PreferenceUtil.encodeString(VIDEO_DIRECTORY, videoDownloadDir)
+        }
+
+        audioDownloadDir =
+            StorageAccess.resolveUsableDirectory(
+                AUDIO_DIRECTORY.getString(preferredAudioDir.absolutePath),
+                getAppSpecificAudioDownloadDirectory(),
+            )
+        if (audioDownloadDir != AUDIO_DIRECTORY.getString(preferredAudioDir.absolutePath)) {
+            PreferenceUtil.encodeString(AUDIO_DIRECTORY, audioDownloadDir)
+        }
+
         if (!PreferenceUtil.containsKey(COMMAND_DIRECTORY)) {
             COMMAND_DIRECTORY.updateString(videoDownloadDir)
+        } else {
+            val commandDir = COMMAND_DIRECTORY.getString(videoDownloadDir)
+            val resolvedCommand =
+                StorageAccess.resolveUsableDirectory(commandDir, File(videoDownloadDir))
+            if (resolvedCommand != commandDir) {
+                COMMAND_DIRECTORY.updateString(resolvedCommand)
+            }
         }
         if (Build.VERSION.SDK_INT >= 26) NotificationUtil.createNotificationChannel()
 
@@ -161,11 +188,7 @@ class App : Application() {
         }
 
         val privateDownloadDir: String
-            get() =
-                getExternalPrivateDownloadDirectory().run {
-                    createEmptyFile(".nomedia")
-                    absolutePath
-                }
+            get() = getPreferredPrivateDownloadDirectory().absolutePath
 
         fun updateDownloadDir(uri: Uri, directoryType: Directory) {
             when (directoryType) {
@@ -183,6 +206,7 @@ class App : Application() {
 
                 Directory.CUSTOM_COMMAND -> {
                     val path = FileUtil.getRealPath(uri)
+                    PreferenceUtil.encodeString(COMMAND_DIRECTORY, path)
                 }
 
                 Directory.SDCARD -> {

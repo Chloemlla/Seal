@@ -8,7 +8,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
@@ -91,11 +90,15 @@ import com.chloemlla.seal.ui.component.PreferenceSwitch
 import com.chloemlla.seal.ui.component.PreferenceSwitchWithDivider
 import com.chloemlla.seal.ui.component.PreferencesHintCard
 import com.chloemlla.seal.ui.component.SealDialog
+import com.chloemlla.seal.util.AUDIO_DIRECTORY
 import com.chloemlla.seal.util.COMMAND_DIRECTORY
+import com.chloemlla.seal.util.VIDEO_DIRECTORY
 import com.chloemlla.seal.util.CUSTOM_COMMAND
 import com.chloemlla.seal.util.CUSTOM_OUTPUT_TEMPLATE
 import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.FileUtil
+import com.chloemlla.seal.util.FileUtil.getAppSpecificAudioDownloadDirectory
+import com.chloemlla.seal.util.FileUtil.getPreferredDownloadDirectory
 import com.chloemlla.seal.util.FileUtil.getConfigDirectory
 import com.chloemlla.seal.util.FileUtil.getExternalTempDir
 import com.chloemlla.seal.util.OUTPUT_TEMPLATE
@@ -121,8 +124,13 @@ private val PublicDocumentDirectory =
     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).path
 private const val ytdlpFilesystemReference = "https://github.com/yt-dlp/yt-dlp#filesystem-options"
 
-private fun String.isValidDirectory(): Boolean {
-    return isEmpty() || contains(PublicDownloadsDirectory) || contains(PublicDocumentDirectory)
+private fun String.isValidDirectory(context: android.content.Context): Boolean {
+    if (isEmpty()) return true
+    val appRoot = context.getExternalFilesDir(null)?.absolutePath.orEmpty()
+    return contains(PublicDownloadsDirectory) ||
+        contains(PublicDocumentDirectory) ||
+        (appRoot.isNotEmpty() && contains(appRoot)) ||
+        com.chloemlla.seal.util.StorageAccess.isWritableDirectory(this)
 }
 
 enum class Directory {
@@ -180,11 +188,9 @@ fun DownloadDirectoryPreferences(onNavigateBack: () -> Unit) {
     val storagePermission =
         rememberPermissionState(permission = Manifest.permission.WRITE_EXTERNAL_STORAGE)
     val showDirectoryAlert =
-        Build.VERSION.SDK_INT >= 30 &&
-            !Environment.isExternalStorageManager() &&
-            (!audioDirectoryText.isValidDirectory() ||
-                !videoDirectoryText.isValidDirectory() ||
-                !customCommandDirectory.isValidDirectory())
+        !audioDirectoryText.isValidDirectory(context) ||
+            !videoDirectoryText.isValidDirectory(context) ||
+            !customCommandDirectory.isValidDirectory(context)
 
     val launcher =
         rememberLauncherForActivityResult(
@@ -226,9 +232,13 @@ fun DownloadDirectoryPreferences(onNavigateBack: () -> Unit) {
 
     fun openDirectoryChooser(directory: Directory = Directory.VIDEO) {
         editingDirectory = directory
-        if (Build.VERSION.SDK_INT > 29 || storagePermission.status == PermissionStatus.Granted)
+        // SAF needs no storage runtime permission on modern Android.
+        // WRITE_EXTERNAL_STORAGE only for legacy API <= 28 when writing public dirs.
+        if (Build.VERSION.SDK_INT >= 29 || storagePermission.status == PermissionStatus.Granted) {
             launcher.launch(null)
-        else storagePermission.launchPermissionRequest()
+        } else {
+            storagePermission.launchPermissionRequest()
+        }
     }
 
     Scaffold(
@@ -262,18 +272,19 @@ fun DownloadDirectoryPreferences(onNavigateBack: () -> Unit) {
                         description = stringResource(R.string.permission_issue_desc),
                         icon = Icons.Filled.SdCardAlert,
                     ) {
-                        if (
-                            Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()
-                        ) {
-                            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                data = Uri.parse("package:" + context.packageName)
-                                if (resolveActivity(context.packageManager) != null)
-                                    context.startActivity(this)
-                            }
-                        }
+                        val preferredRoot = context.getPreferredDownloadDirectory().absolutePath
+                        val preferredAudio = context.getAppSpecificAudioDownloadDirectory().absolutePath
+                        videoDirectoryText = preferredRoot
+                        audioDirectoryText = preferredAudio
+                        customCommandDirectory = preferredRoot
+                        App.videoDownloadDir = preferredRoot
+                        App.audioDownloadDir = preferredAudio
+                        PreferenceUtil.encodeString(VIDEO_DIRECTORY, preferredRoot)
+                        PreferenceUtil.encodeString(AUDIO_DIRECTORY, preferredAudio)
+                        COMMAND_DIRECTORY.updateString(preferredRoot)
                     }
                 }
+            item { PreferenceInfo(text = stringResource(R.string.storage_model_hint)) }
             item { PreferenceSubtitle(text = stringResource(R.string.general_settings)) }
             if (!isCustomCommandEnabled) {
                 item {

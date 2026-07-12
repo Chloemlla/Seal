@@ -186,7 +186,8 @@ fun DownloadPage(
         }
 
     val checkPermissionOrDownload = {
-        if (Build.VERSION.SDK_INT > 29 || storagePermission.status == PermissionStatus.Granted) {
+        // Scoped storage: no WRITE_EXTERNAL_STORAGE on API 29+.
+        if (Build.VERSION.SDK_INT >= 29 || storagePermission.status == PermissionStatus.Granted) {
             checkNetworkOrDownload()
         } else {
             storagePermission.launchPermissionRequest()

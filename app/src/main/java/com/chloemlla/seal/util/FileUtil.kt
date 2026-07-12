@@ -182,9 +182,17 @@ object FileUtil {
     fun Context.getCookiesFile() = File(getConfigDirectory(), "cookies.txt")
 
     fun getExternalTempDir() =
-        File(getExternalDownloadDirectory(), "tmp").apply {
-            mkdirs()
-            createEmptyFile(".nomedia")
+        run {
+            val base =
+                if (StorageAccess.isWritableDirectory(getExternalDownloadDirectory().absolutePath)) {
+                    getExternalDownloadDirectory()
+                } else {
+                    context.getAppSpecificDownloadDirectory()
+                }
+            File(base, "tmp").apply {
+                mkdirs()
+                createEmptyFile(".nomedia")
+            }
         }
 
     fun Context.getSdcardTempDir(child: String?): File =
@@ -194,15 +202,55 @@ object FileUtil {
 
     fun Context.getInternalTempDir() = File(filesDir, "tmp")
 
+    /**
+     * Best-effort public Downloads/Seal directory. May be unwritable without legacy storage access.
+     */
     internal fun getExternalDownloadDirectory() =
         File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Seal")
-            .also { it.mkdir() }
+            .also {
+                runCatching { it.mkdirs() }
+            }
 
+    /** Legacy public hidden folder; prefer [Context.getAppSpecificPrivateDownloadDirectory]. */
     internal fun getExternalPrivateDownloadDirectory() =
         File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             PRIVATE_DIRECTORY_SUFFIX,
         )
+
+    /** Always-writable app-specific download root (scoped storage safe). */
+    fun Context.getAppSpecificDownloadDirectory(): File =
+        (getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: filesDir.resolve("downloads"))
+            .also { it.mkdirs() }
+
+    fun Context.getAppSpecificPrivateDownloadDirectory(): File =
+        getAppSpecificDownloadDirectory()
+            .resolve("private")
+            .also {
+                it.mkdirs()
+                runCatching { File(it, ".nomedia").createNewFile() }
+            }
+
+    fun Context.getAppSpecificAudioDownloadDirectory(): File =
+        getAppSpecificDownloadDirectory().resolve("Audio").also { it.mkdirs() }
+
+    /**
+     * Prefer public Downloads/Seal when writable; otherwise app-specific external files.
+     */
+    fun Context.getPreferredDownloadDirectory(): File {
+        val publicDir = getExternalDownloadDirectory()
+        return if (StorageAccess.isWritableDirectory(publicDir.absolutePath)) publicDir
+        else getAppSpecificDownloadDirectory()
+    }
+
+    fun Context.getPreferredPrivateDownloadDirectory(): File {
+        val publicPrivate = getExternalPrivateDownloadDirectory()
+        return if (StorageAccess.isWritableDirectory(publicPrivate.absolutePath)) {
+            publicPrivate.also { runCatching { File(it, ".nomedia").createNewFile() } }
+        } else {
+            getAppSpecificPrivateDownloadDirectory()
+        }
+    }
 
     fun File.createEmptyFile(fileName: String): Result<File> =
         this.runCatching {
@@ -214,14 +262,17 @@ object FileUtil {
     fun writeContentToFile(content: String, file: File): File = file.apply { writeText(content) }
 
     fun getRealPath(treeUri: Uri): String {
-        val path: String = treeUri.path.toString()
-        Log.d(TAG, path)
-        if (!path.contains("primary:")) {
-            ToastUtil.makeToast("This directory is not supported")
-            return getExternalDownloadDirectory().absolutePath
+        Log.d(TAG, treeUri.toString())
+        val absolute =
+            StorageAccess.treeUriToPrimaryAbsolutePath(
+                treeUri,
+                Environment.getExternalStorageDirectory().absolutePath,
+            )
+        if (absolute == null) {
+            ToastUtil.makeToast(context.getString(R.string.permission_issue_desc))
+            return context.getPreferredDownloadDirectory().absolutePath
         }
-        val last: String = path.split("primary:").last()
-        return Environment.getExternalStorageDirectory().absolutePath + "/$last"
+        return absolute
     }
 
     private const val TAG = "FileUtil"
