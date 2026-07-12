@@ -135,6 +135,63 @@ jobs:
           # Full console + file capture for later failure packaging
           ./gradlew --no-daemon --stacktrace --info assembleGenericRelease 2>&1 | tee -a "$LOG_FILE"
 
+      - name: Android Lint
+        id: lint
+        shell: bash
+        run: |
+          set -o pipefail
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR"
+          LOG_FILE="$REPORT_DIR/gradle-lintGenericRelease.log"
+          {
+            echo "=== seal pre-release android lint ==="
+            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "sha=$GITHUB_SHA"
+            echo "ref=$GITHUB_REF"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "actor=$GITHUB_ACTOR"
+            echo "version=${SEAL_VERSION_NAME:-unknown}-${SEAL_SHORT_HASH:-unknown}"
+            echo "=== gradle lintGenericRelease ==="
+          } | tee "$LOG_FILE"
+          # Continue on lint failure so the following print/upload steps always dump all findings.
+          set +e
+          ./gradlew --no-daemon --stacktrace --info lintGenericRelease 2>&1 | tee -a "$LOG_FILE"
+          lint_exit=${PIPESTATUS[0]}
+          set -e
+          echo "lint_exit=$lint_exit" | tee -a "$LOG_FILE"
+          echo "lint_exit=$lint_exit" >> "$GITHUB_ENV"
+          if [[ "$lint_exit" -ne 0 ]]; then
+            echo "Android Lint failed (exit=$lint_exit); full reports will still be printed/uploaded."
+            exit "$lint_exit"
+          fi
+
+      - name: Print full Android Lint reports
+        if: always() && (steps.lint.outcome == 'success' || steps.lint.outcome == 'failure')
+        shell: bash
+        run: |
+          set +e
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR/logs"
+          LOG_FILE="$REPORT_DIR/print-lint-reports.log"
+          chmod +x .github/scripts/print-lint-reports.sh
+          bash .github/scripts/print-lint-reports.sh 2>&1 | tee "$LOG_FILE"
+          cp -a "$LOG_FILE" "$REPORT_DIR/logs/" 2>/dev/null || true
+
+      - name: Upload Android Lint reports
+        if: always() && (steps.lint.outcome == 'success' || steps.lint.outcome == 'failure')
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-release-android-lint-reports-${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            **/build/reports/lint-results-*.*
+            **/build/intermediates/lint_intermediate_text_report/**/lint-results-*.txt
+            **/build/reports/lint-results-*.html
+            ${{ env.SEAL_REPORT_DIR }}/gradle-lintGenericRelease.log
+            ${{ env.SEAL_REPORT_DIR }}/print-lint-reports.log
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Verify signed APKs
         id: verify
         env:
@@ -277,6 +334,12 @@ jobs:
           if [[ -f "$REPORT_DIR/verify-signed-apks.log" ]]; then
             cp -a "$REPORT_DIR/verify-signed-apks.log" "$REPORT_DIR/logs/" 2>/dev/null || true
           fi
+          if [[ -f "$REPORT_DIR/gradle-lintGenericRelease.log" ]]; then
+            cp -a "$REPORT_DIR/gradle-lintGenericRelease.log" "$REPORT_DIR/logs/" 2>/dev/null || true
+          fi
+          if [[ -f "$REPORT_DIR/print-lint-reports.log" ]]; then
+            cp -a "$REPORT_DIR/print-lint-reports.log" "$REPORT_DIR/logs/" 2>/dev/null || true
+          fi
 
           {
             echo "=== failure excerpts ==="
@@ -284,6 +347,8 @@ jobs:
             echo
             for log in \
               "$REPORT_DIR/gradle-assembleGenericRelease.log" \
+              "$REPORT_DIR/gradle-lintGenericRelease.log" \
+              "$REPORT_DIR/print-lint-reports.log" \
               "$REPORT_DIR/verify-signed-apks.log" \
               "$REPORT_DIR/logs"/*.log
             do
