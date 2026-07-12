@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -51,10 +52,141 @@ class QuickDownloadActivity : ComponentActivity() {
     private var callerRequestId: String? = null
     private var resultDelivered: Boolean = false
 
+    /** UI binding for the latest external request (singleInstance may reuse process). */
+    private val uiRequestState = mutableStateOf<UiRequest?>(null)
+
+    data class UiRequest(
+        val urls: List<String>,
+        val extractAudio: Boolean?,
+        val downloadSubtitle: Boolean?,
+        val generation: Long,
+    )
+
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!bindExternalIntent(intent)) {
+            return
+        }
 
+        enableEdgeToEdge()
+        window.run {
+            setBackgroundDrawable(ColorDrawable(0))
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+            )
+        }
+
+        if (Build.VERSION.SDK_INT < 33) {
+            runBlocking { setLanguage(PreferenceUtil.getLocaleFromPreference()) }
+        }
+
+        val viewModel: DownloadDialogViewModel = getViewModel()
+
+        setContent {
+            SettingsProvider(calculateWindowSizeClass(this).widthSizeClass) {
+                SealTheme(
+                    darkTheme = LocalDarkTheme.current.isDarkTheme(),
+                    isHighContrastModeEnabled = LocalDarkTheme.current.isHighContrastModeEnabled,
+                ) {
+                    val request = uiRequestState.value
+                    if (request == null) return@SealTheme
+
+                    // Rebuild preferences / type when a new external request arrives.
+                    var preferences by remember(request.generation) {
+                        mutableStateOf(
+                            DownloadUtil.DownloadPreferences.createFromPreferences().let { base ->
+                                base.copy(
+                                    extractAudio = request.extractAudio ?: base.extractAudio,
+                                    downloadSubtitle =
+                                        request.downloadSubtitle ?: base.downloadSubtitle,
+                                )
+                            }
+                        )
+                    }
+                    val initialType =
+                        when (request.extractAudio) {
+                            true -> DownloadType.Audio
+                            false -> DownloadType.Video
+                            null ->
+                                if (preferences.extractAudio) DownloadType.Audio
+                                else DownloadType.Video
+                        }
+
+                    val sheetValue = viewModel.sheetValueFlow.collectAsStateWithLifecycle().value
+                    val state = viewModel.sheetStateFlow.collectAsStateWithLifecycle().value
+                    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                    val selectionState =
+                        viewModel.selectionStateFlow.collectAsStateWithLifecycle().value
+                    var showDialog by remember(request.generation) { mutableStateOf(false) }
+
+                    LaunchedEffect(request.generation) {
+                        viewModel.postAction(Action.ShowSheet(request.urls))
+                    }
+
+                    LaunchedEffect(sheetValue, selectionState, request.generation) {
+                        if (sheetValue == DownloadDialogViewModel.SheetValue.Expanded) {
+                            showDialog = true
+                        } else if (sheetValue == DownloadDialogViewModel.SheetValue.Hidden) {
+                            launch { sheetState.hide() }
+                                .invokeOnCompletion {
+                                    showDialog = false
+                                    if (selectionState == SelectionState.Idle) {
+                                        this@QuickDownloadActivity.finish()
+                                    }
+                                }
+                        }
+                    }
+
+                    if (showDialog) {
+                        DownloadDialog(
+                            state = state,
+                            sheetState = sheetState,
+                            config = Config(downloadType = initialType),
+                            preferences = preferences,
+                            onPreferencesUpdate = { preferences = it },
+                            onActionPost = { viewModel.postAction(it) },
+                        )
+                    }
+
+                    when (selectionState) {
+                        is SelectionState.FormatSelection ->
+                            FormatPage(
+                                state = selectionState,
+                                onDismissRequest = {
+                                    viewModel.postAction(Action.Reset)
+                                    this@QuickDownloadActivity.finish()
+                                },
+                            )
+                        SelectionState.Idle -> {}
+                        is SelectionState.PlaylistSelection -> {
+                            PlaylistSelectionPage(
+                                state = selectionState,
+                                onDismissRequest = {
+                                    viewModel.postAction(Action.Reset)
+                                    this@QuickDownloadActivity.finish()
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // singleInstance reuses this Activity; re-bind so extract_audio is reapplied.
+        resultDelivered = false
+        bindExternalIntent(intent)
+    }
+
+    /**
+     * @return false when Activity already finished / should not continue setup.
+     */
+    private fun bindExternalIntent(intent: Intent?): Boolean {
         when (
             val handleResult =
                 ExternalDownloadEntry.handle(
@@ -66,132 +198,40 @@ class QuickDownloadActivity : ComponentActivity() {
                 )
         ) {
             ExternalDownloadEntry.HandleResult.RejectedAndFinished,
-            ExternalDownloadEntry.HandleResult.AutoStartedAndFinished -> return
+            ExternalDownloadEntry.HandleResult.AutoStartedAndFinished -> return false
             ExternalDownloadEntry.HandleResult.NotExternal -> {
                 finish()
-                return
+                return false
             }
             is ExternalDownloadEntry.HandleResult.ShowUi -> {
                 callerPackage = handleResult.accepted.callerPackage
                 callerRequestId = handleResult.accepted.request.callerRequestId
+                val req = handleResult.accepted.request
                 ExternalDownloadCoordinator.beginExternalSession(
                     callerPackage = callerPackage,
                     callerRequestId = callerRequestId,
+                    extractAudio = req.extractAudio,
                 )
-                val urls = handleResult.accepted.request.urls
+                val urls = req.urls
                 if (urls.isEmpty()) {
                     ExternalDownloadCoordinator.endExternalSession()
                     finish()
-                    return
+                    return false
                 }
-
                 App.startService()
-
-                enableEdgeToEdge()
-
-                window.run {
-            setBackgroundDrawable(ColorDrawable(0))
-            setLayout(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-            )
-        }
-
-                if (Build.VERSION.SDK_INT < 33) {
-                    runBlocking { setLanguage(PreferenceUtil.getLocaleFromPreference()) }
-                }
-
-                val viewModel: DownloadDialogViewModel = getViewModel()
-                val preferencesOverride =
-                    DownloadUtil.DownloadPreferences.createFromPreferences().let { base ->
-                        base.copy(
-                            extractAudio =
-                                handleResult.accepted.request.extractAudio ?: base.extractAudio,
-                            downloadSubtitle =
-                                handleResult.accepted.request.downloadSubtitle
-                                    ?: base.downloadSubtitle,
-                        )
-                    }
-
                 deliverNeedsUiResult()
-                viewModel.postAction(Action.ShowSheet(urls))
-
-                setContent {
-                    SettingsProvider(calculateWindowSizeClass(this).widthSizeClass) {
-                        SealTheme(
-                            darkTheme = LocalDarkTheme.current.isDarkTheme(),
-                            isHighContrastModeEnabled =
-                                LocalDarkTheme.current.isHighContrastModeEnabled,
-                        ) {
-                            var preferences by remember { mutableStateOf(preferencesOverride) }
-
-                            val sheetValue =
-                                viewModel.sheetValueFlow.collectAsStateWithLifecycle().value
-
-                            val state = viewModel.sheetStateFlow.collectAsStateWithLifecycle().value
-
-                            val sheetState =
-                                rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-                            val selectionState =
-                                viewModel.selectionStateFlow.collectAsStateWithLifecycle().value
-
-                            var showDialog by remember { mutableStateOf(false) }
-
-                            LaunchedEffect(sheetValue, selectionState) {
-                                if (sheetValue == DownloadDialogViewModel.SheetValue.Expanded) {
-                                    showDialog = true
-                                } else if (sheetValue == DownloadDialogViewModel.SheetValue.Hidden) {
-                                    launch { sheetState.hide() }
-                                        .invokeOnCompletion {
-                                            showDialog = false
-                                            if (selectionState == SelectionState.Idle) {
-                                                this@QuickDownloadActivity.finish()
-                                            }
-                                        }
-                                }
-                            }
-
-                            if (showDialog) {
-                                DownloadDialog(
-                                    state = state,
-                                    sheetState = sheetState,
-                                    config =
-                                        Config(
-                                            downloadType =
-                                                if (preferences.extractAudio) DownloadType.Audio
-                                                else DownloadType.Video,
-                                        ),
-                                    preferences = preferences,
-                                    onPreferencesUpdate = { preferences = it },
-                                    onActionPost = { viewModel.postAction(it) },
-                                )
-                            }
-
-                            when (selectionState) {
-                                is SelectionState.FormatSelection ->
-                                    FormatPage(
-                                        state = selectionState,
-                                        onDismissRequest = {
-                                            viewModel.postAction(Action.Reset)
-                                            this.finish()
-                                        },
-                                    )
-
-                                SelectionState.Idle -> {}
-                                is SelectionState.PlaylistSelection -> {
-                                    PlaylistSelectionPage(
-                                        state = selectionState,
-                                        onDismissRequest = {
-                                            viewModel.postAction(Action.Reset)
-                                            this.finish()
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                uiRequestState.value =
+                    UiRequest(
+                        urls = urls,
+                        extractAudio = req.extractAudio,
+                        downloadSubtitle = req.downloadSubtitle,
+                        generation = System.currentTimeMillis(),
+                    )
+                Log.i(
+                    TAG,
+                    "ShowUi extractAudio=${req.extractAudio} urls=${urls.size} reqId=$callerRequestId",
+                )
+                return true
             }
         }
     }

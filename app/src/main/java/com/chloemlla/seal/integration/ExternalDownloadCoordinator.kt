@@ -37,6 +37,8 @@ object ExternalDownloadCoordinator {
     data class ExternalSession(
         val callerPackage: String,
         val callerRequestId: String?,
+        /** From external extract_audio extra; null means caller did not specify. */
+        val extractAudio: Boolean? = null,
         @Volatile var enqueuedDuringSession: Boolean = false,
     )
 
@@ -50,15 +52,27 @@ object ExternalDownloadCoordinator {
         var job: Job? = null,
     )
 
-    fun beginExternalSession(callerPackage: String?, callerRequestId: String?) {
+    fun beginExternalSession(
+        callerPackage: String?,
+        callerRequestId: String?,
+        extractAudio: Boolean? = null,
+    ) {
         val pkg = callerPackage?.trim().orEmpty()
         externalSession =
             if (pkg.isEmpty()) {
                 null
             } else {
-                ExternalSession(callerPackage = pkg, callerRequestId = callerRequestId)
+                ExternalSession(
+                    callerPackage = pkg,
+                    callerRequestId = callerRequestId,
+                    extractAudio = extractAudio,
+                )
             }
-        Log.i(TAG, "beginExternalSession pkg=${externalSession?.callerPackage} reqId=$callerRequestId")
+        Log.i(
+            TAG,
+            "beginExternalSession pkg=${externalSession?.callerPackage} " +
+                "reqId=$callerRequestId extractAudio=$extractAudio",
+        )
     }
 
     fun endExternalSession(notifyCanceledIfEmpty: Boolean = false, context: Context? = null) {

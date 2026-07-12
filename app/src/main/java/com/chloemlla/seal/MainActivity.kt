@@ -74,6 +74,7 @@ class MainActivity : AppCompatActivity() {
                 ExternalDownloadCoordinator.beginExternalSession(
                     callerPackage = result.accepted.callerPackage,
                     callerRequestId = result.accepted.request.callerRequestId,
+                    extractAudio = result.accepted.request.extractAudio,
                 )
                 dialogViewModel.postAction(
                     DownloadDialogViewModel.Action.ShowSheet(result.accepted.request.urls)

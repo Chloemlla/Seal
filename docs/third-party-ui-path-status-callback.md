@@ -413,3 +413,16 @@ adb logcat -s ExternalDownloadCoord:I ExternalDownloadStatus:I SealDownloadStatu
 若只有 1 没有 2/3：用户未确认，或 session 在确认前被 `endExternalSession` 清掉。  
 若有 2/3 没有 4：下载队列未到终态，或进程被杀；看 Seal 下载列表。  
 若有 4 但 PiliPlus 无 UI：检查 PiliPlus 是否安装了本轮 Dart 防护，以及 `readyForStatus` 是否调用。
+
+### 附：extract_audio UI 类型二次加固（2026-07-12）
+
+**仍可能选中视频的原因**：
+
+1. `QuickDownloadActivity` 为 `singleInstance`，二次委托若不走 `onNewIntent` 会沿用旧 UI 状态
+2. 系统若把 `DOWNLOAD` 交给 `MainActivity`，主页 `DownloadDialog` 原先用 `Config()` 读全局上次类型（多为 Video）
+
+**修复**：
+
+- `QuickDownloadActivity`：`onNewIntent` 重新 bind，`UiRequest.generation` 重建 preferences + `DownloadType.Audio/Video`
+- `ExternalSession.extractAudio` 记录外部请求
+- `DownloadPageV2` / `DownloadPage` 展开 sheet 时读取 session，强制 Audio/Video

@@ -100,6 +100,7 @@ import com.chloemlla.seal.ui.component.ClearButton
 import com.chloemlla.seal.ui.component.NavigationBarSpacer
 import com.chloemlla.seal.ui.component.OutlinedButtonWithIcon
 import com.chloemlla.seal.ui.component.VideoCard
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.ui.page.downloadv2.configure.Config
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialog
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel
@@ -111,6 +112,7 @@ import com.chloemlla.seal.util.CONFIGURE
 import com.chloemlla.seal.util.CUSTOM_COMMAND
 import com.chloemlla.seal.util.DEBUG
 import com.chloemlla.seal.util.DISABLE_PREVIEW
+import com.chloemlla.seal.util.DownloadType
 import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.NOTIFICATION
 import com.chloemlla.seal.util.PreferenceUtil
@@ -294,6 +296,7 @@ fun DownloadPage(
         var preferences by remember {
             mutableStateOf(DownloadUtil.DownloadPreferences.createFromPreferences())
         }
+        var dialogConfig by remember { mutableStateOf(Config()) }
         val sheetValue = dialogViewModel.sheetValueFlow.collectAsStateWithLifecycle().value
         val state = dialogViewModel.sheetStateFlow.collectAsStateWithLifecycle().value
 
@@ -304,6 +307,25 @@ fun DownloadPage(
 
         LaunchedEffect(sheetValue) {
             if (sheetValue == DownloadDialogViewModel.SheetValue.Expanded) {
+                val session = ExternalDownloadCoordinator.currentSession()
+                val base = DownloadUtil.DownloadPreferences.createFromPreferences()
+                val extract = session?.extractAudio
+                preferences =
+                    base.copy(
+                        extractAudio = extract ?: base.extractAudio,
+                    )
+                dialogConfig =
+                    Config(
+                        downloadType =
+                            when (extract) {
+                                true -> DownloadType.Audio
+                                false -> DownloadType.Video
+                                null ->
+                                    PreferenceUtil.getDownloadType()
+                                        ?: if (base.extractAudio) DownloadType.Audio
+                                        else DownloadType.Video
+                            }
+                    )
                 showDialog = true
             } else {
                 launch { sheetState.hide() }.invokeOnCompletion { showDialog = false }
@@ -315,7 +337,7 @@ fun DownloadPage(
             DownloadDialog(
                 state = state,
                 sheetState = sheetState,
-                config = Config(),
+                config = dialogConfig,
                 preferences = preferences,
                 onPreferencesUpdate = { preferences = it },
                 onActionPost = { dialogViewModel.postAction(it) },
