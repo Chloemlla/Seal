@@ -5,12 +5,14 @@ import android.net.Uri
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.chloemlla.seal.App
 import com.chloemlla.seal.R
 import com.chloemlla.seal.database.backup.BackupUtil
 import com.chloemlla.seal.database.backup.BackupUtil.decodeToBackup
 import com.chloemlla.seal.database.objects.DownloadedVideoInfo
 import com.chloemlla.seal.util.DatabaseUtil
 import com.chloemlla.seal.util.FileUtil.getFileSize
+import com.chloemlla.seal.util.ToastUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,8 +91,21 @@ class VideoListViewModel : ViewModel() {
     }
 
     fun deleteDownloadHistory(infoList: List<DownloadedVideoInfo>, deleteFile: Boolean) {
+        if (infoList.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
-            DatabaseUtil.deleteInfoList(infoList = infoList, deleteFile = deleteFile)
+            val result = DatabaseUtil.deleteInfoList(infoList = infoList, deleteFile = deleteFile)
+            if (deleteFile) {
+                val failed = result.failedFileDeletes
+                if (failed.isNotEmpty()) {
+                    val msg =
+                        App.context.getString(
+                            R.string.delete_file_failed,
+                            failed.size,
+                            infoList.size,
+                        )
+                    ToastUtil.makeToastSuspend(msg)
+                }
+            }
         }
     }
 

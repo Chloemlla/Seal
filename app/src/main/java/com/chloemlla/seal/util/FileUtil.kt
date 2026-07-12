@@ -97,10 +97,223 @@ object FileUtil {
             }
         }
 
-    fun deleteFile(path: String) =
-        path.runCatching {
-            if (!File(path).delete()) DocumentFile.fromSingleUri(context, Uri.parse(this))?.delete()
+    data class MediaDeleteResult(
+        val path: String,
+        val primaryDeletedOrMissing: Boolean,
+        val deletedPaths: List<String> = emptyList(),
+        val failedPaths: List<String> = emptyList(),
+    ) {
+        val isFullySuccessful: Boolean
+            get() = primaryDeletedOrMissing && failedPaths.isEmpty()
+    }
+
+    /**
+     * Delete a downloaded media path and common same-basename sidecars.
+     *
+     * Supports absolute filesystem paths and content/document URIs.
+     * Missing files are treated as success (already gone).
+     */
+    fun deleteFile(path: String, deleteRelated: Boolean = true): MediaDeleteResult {
+        if (path.isBlank()) {
+            return MediaDeleteResult(path = path, primaryDeletedOrMissing = true)
         }
+
+        val deleted = linkedSetOf<String>()
+        val failed = linkedSetOf<String>()
+
+        fun record(target: String, ok: Boolean) {
+            if (ok) deleted += target else failed += target
+        }
+
+        val primaryOk = deleteSinglePath(path)
+        record(path, primaryOk)
+
+        if (deleteRelated) {
+            for (related in findRelatedMediaPaths(path)) {
+                if (related == path) continue
+                record(related, deleteSinglePath(related))
+            }
+        }
+
+        val scanTargets =
+            (deleted + failed)
+                .filter { !it.startsWith("content:", ignoreCase = true) }
+                .distinct()
+        if (scanTargets.isNotEmpty()) {
+            runCatching {
+                MediaScannerConnection.scanFile(
+                    context,
+                    scanTargets.toTypedArray(),
+                    null,
+                    null,
+                )
+            }
+        }
+
+        return MediaDeleteResult(
+            path = path,
+            primaryDeletedOrMissing = primaryOk,
+            deletedPaths = deleted.toList(),
+            failedPaths = failed.toList(),
+        )
+    }
+
+    private fun deleteSinglePath(path: String): Boolean {
+        if (path.isBlank()) return true
+
+        // 1) Absolute / local filesystem path
+        runCatching {
+            val file = File(path)
+            if (file.exists()) {
+                if (file.isDirectory) {
+                    return file.deleteRecursively()
+                }
+                if (file.delete()) return true
+                val canonical = runCatching { file.canonicalFile }.getOrNull()
+                if (canonical != null && canonical != file && canonical.exists()) {
+                    if (canonical.delete()) return true
+                }
+                return false
+            } else if (
+                !path.startsWith("content:", ignoreCase = true) &&
+                    !path.startsWith("file:", ignoreCase = true)
+            ) {
+                // Non-URI path that does not exist: already gone.
+                return true
+            }
+        }
+
+        // 2) file:// URI
+        runCatching {
+            val uri = Uri.parse(path)
+            if (uri.scheme.equals("file", ignoreCase = true)) {
+                val filePath = uri.path ?: return@runCatching
+                val file = File(filePath)
+                if (!file.exists()) return true
+                return if (file.isDirectory) file.deleteRecursively() else file.delete()
+            }
+        }
+
+        // 3) content:// document URI
+        val contentResult =
+            runCatching {
+                val uri = Uri.parse(path)
+                if (!uri.scheme.equals("content", ignoreCase = true)) {
+                    return@runCatching null
+                }
+
+                val deletedByContract =
+                    runCatching { DocumentsContract.deleteDocument(context.contentResolver, uri) }
+                        .getOrNull()
+                if (deletedByContract == true) return@runCatching true
+
+                val doc = DocumentFile.fromSingleUri(context, uri)
+                if (doc == null) {
+                    return@runCatching !documentUriExists(uri)
+                }
+                if (!doc.exists()) return@runCatching true
+                if (doc.delete()) return@runCatching true
+
+                val rows =
+                    runCatching { context.contentResolver.delete(uri, null, null) }.getOrNull()
+                if (rows != null && rows > 0) return@runCatching true
+                return@runCatching !doc.exists()
+            }
+                .getOrNull()
+        if (contentResult != null) return contentResult
+
+        return false
+    }
+
+    private fun documentUriExists(uri: Uri): Boolean =
+        runCatching {
+                context.contentResolver
+                    .query(
+                        uri,
+                        arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID),
+                        null,
+                        null,
+                        null,
+                    )
+                    ?.use { it.moveToFirst() } ?: false
+            }
+            .getOrDefault(false)
+
+    private fun isCompanionFileName(name: String): Boolean {
+        val lower = name.lowercase()
+        if (lower.endsWith(".info.json") || lower.endsWith(".description")) return true
+        val ext = lower.substringAfterLast('.', missingDelimiterValue = "")
+        return ext in
+            setOf(
+                "jpg",
+                "jpeg",
+                "png",
+                "webp",
+                "lrc",
+                "vtt",
+                "srt",
+                "ass",
+                "ssa",
+                "json3",
+                "ttml",
+                "json",
+                "description",
+                "nfo",
+                "txt",
+            ) || ext.startsWith("srv")
+    }
+
+    private fun findRelatedMediaPaths(path: String): List<String> {
+        val related = mutableListOf<String>()
+
+        // Filesystem siblings with same basename.
+        runCatching {
+            val file =
+                when {
+                    path.startsWith("file:", ignoreCase = true) ->
+                        File(Uri.parse(path).path ?: return@runCatching)
+                    path.startsWith("content:", ignoreCase = true) -> return@runCatching
+                    else -> File(path)
+                }
+            val parent = file.parentFile ?: return@runCatching
+            if (!parent.isDirectory) return@runCatching
+            val base = file.nameWithoutExtension
+            if (base.isBlank()) return@runCatching
+            parent.listFiles()?.forEach { candidate ->
+                if (!candidate.isFile) return@forEach
+                if (candidate.absolutePath == file.absolutePath) return@forEach
+                val name = candidate.name
+                if (name == base || name.startsWith("$base.") || name.startsWith("${base}_")) {
+                    if (isCompanionFileName(name)) related += candidate.absolutePath
+                }
+            }
+        }
+
+        // content URI siblings under the same parent document (when available).
+        runCatching {
+            val uri = Uri.parse(path)
+            if (!uri.scheme.equals("content", ignoreCase = true)) return@runCatching
+            val doc = DocumentFile.fromSingleUri(context, uri) ?: return@runCatching
+            val name = doc.name ?: return@runCatching
+            val base = name.substringBeforeLast('.', missingDelimiterValue = name)
+            if (base.isBlank()) return@runCatching
+            val parent = doc.parentFile ?: return@runCatching
+            parent.listFiles().forEach { child ->
+                if (!child.isFile) return@forEach
+                val childName = child.name ?: return@forEach
+                if (child.uri == doc.uri) return@forEach
+                if (
+                    childName == base ||
+                        childName.startsWith("$base.") ||
+                        childName.startsWith("${base}_")
+                ) {
+                    if (isCompanionFileName(childName)) related += child.uri.toString()
+                }
+            }
+        }
+
+        return related.distinct()
+    }
 
     @CheckResult
     fun scanFileToMediaLibraryPostDownload(title: String, downloadDir: String): List<String> =

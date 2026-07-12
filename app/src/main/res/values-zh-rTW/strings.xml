@@ -12,7 +12,8 @@
     <string name="audio">音訊</string>
     <string name="open_url">開啟連結</string>
     <string name="remove">移除</string>
-    <string name="delete_file">刪除檔案</string>
+    <string name="delete_file">同時刪除本機來源檔案</string>
+    <string name="delete_file_failed">已從下載紀錄移除，但有 %1$d/%2$d 個本機檔案刪除失敗</string>
     <string name="about">關於</string>
     <string name="about_page">版本、意見反應、自動更新</string>
     <string name="back">返回</string>

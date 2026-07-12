@@ -59,10 +59,36 @@ object DatabaseUtil {
 
     suspend fun getShortcutList() = dao.getShortcutList()
 
-    suspend fun deleteInfoList(infoList: List<DownloadedVideoInfo>, deleteFile: Boolean = false) {
-        dao.deleteInfoList(infoList)
-        infoList.forEach { info -> if (deleteFile) FileUtil.deleteFile(info.videoPath) }
+    data class DeleteHistoryResult(
+        val removedCount: Int,
+        val fileDeleteResults: List<FileUtil.MediaDeleteResult> = emptyList(),
+    ) {
+        val failedFileDeletes: List<FileUtil.MediaDeleteResult>
+            get() = fileDeleteResults.filter { !it.primaryDeletedOrMissing || it.failedPaths.isNotEmpty() }
     }
+
+    suspend fun deleteInfoList(
+        infoList: List<DownloadedVideoInfo>,
+        deleteFile: Boolean = false,
+    ): DeleteHistoryResult {
+        if (infoList.isEmpty()) return DeleteHistoryResult(removedCount = 0)
+
+        // Always remove history rows first so UI updates even if storage deletion fails.
+        dao.deleteInfoList(infoList)
+
+        val fileResults =
+            if (deleteFile) {
+                infoList.map { info -> FileUtil.deleteFile(info.videoPath, deleteRelated = true) }
+            } else {
+                emptyList()
+            }
+
+        return DeleteHistoryResult(
+            removedCount = infoList.size,
+            fileDeleteResults = fileResults,
+        )
+    }
+
 
     suspend fun getInfoById(id: Int): DownloadedVideoInfo = dao.getInfoById(id)
 

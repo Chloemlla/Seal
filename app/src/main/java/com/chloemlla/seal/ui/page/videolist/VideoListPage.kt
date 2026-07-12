@@ -537,8 +537,12 @@ fun VideoListPage(viewModel: VideoListViewModel = koinViewModel(), onNavigateBac
             onDeleteFileToggled = { deleteFile = it },
             onRemoveConfirm = {
                 viewModel.deleteDownloadHistory(listOf(currentVideoInfo), deleteFile = deleteFile)
+                deleteFile = false
             },
-            onDismissRequest = { showRemoveDialog = false },
+            onDismissRequest = {
+                showRemoveDialog = false
+                deleteFile = false
+            },
         )
     }
 
@@ -574,6 +578,7 @@ fun VideoListPage(viewModel: VideoListViewModel = koinViewModel(), onNavigateBac
                     )
                     showRemoveMultipleItemsDialog = false
                     isSelectEnabled = false
+                    deleteFile = false
                 }
             },
             dismissButton = { DismissButton { showRemoveMultipleItemsDialog = false } },
