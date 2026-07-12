@@ -83,31 +83,28 @@ object DatabaseUtil {
 
                 if (!downloadHistory.isNullOrEmpty()) {
                     dao.insertAll(
-                        downloadHistory
-                            .filterNot { itemList.contains(it) }
-                            .map { it.copy(id = 0) }
+                        com.chloemlla.seal.database.backup.BackupImportSelector
+                            .selectNewHistory(itemList, downloadHistory)
                             .also { cnt += it.size }
                     )
                 }
             }
             if (types.contains(BackupType.CommandTemplate)) {
                 if (templates != null) {
-                    val templateList = getTemplateList()
+                    val existingTemplates = getTemplateList()
                     dao.importTemplates(
-                        templateList
-                            .filterNot { templateList.contains(it) }
-                            .map { it.copy(id = 0) }
+                        com.chloemlla.seal.database.backup.BackupImportSelector
+                            .selectNewTemplates(existingTemplates, templates)
                             .also { cnt += it.size }
                     )
                 }
             }
             if (types.contains(BackupType.CommandShortcut)) {
-                val shortcutList = getShortcutList()
+                val existingShortcuts = getShortcutList()
                 if (shortcuts != null) {
                     dao.insertAllShortcuts(
-                        shortcuts
-                            .filterNot { shortcutList.contains(it) }
-                            .map { it.copy(id = 0) }
+                        com.chloemlla.seal.database.backup.BackupImportSelector
+                            .selectNewShortcuts(existingShortcuts, shortcuts)
                             .also { cnt += it.size }
                     )
                 }

@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
+    <!-- Public Downloads tree (Seal, .Seal private mode, user subdirs) -->
     <external-path
-        name="external_files"
+        name="public_downloads"
+        path="Download/" />
+    <!-- App-specific external files (includes apk/ updates) -->
+    <external-files-path
+        name="external_app_files"
         path="." />
     <cache-path
         name="cache"
+        path="." />
+    <files-path
+        name="internal_files"
         path="." />
 </paths>

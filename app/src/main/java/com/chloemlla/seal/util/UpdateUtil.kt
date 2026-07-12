@@ -104,12 +104,34 @@ object UpdateUtil {
 
     private fun Context.getLatestApk() = File(getExternalFilesDir("apk"), "latest.apk")
 
+    /**
+     * Basic integrity gate: package archive must parse and match this app's applicationId.
+     * Does not replace signature pinning; reduces accidental/wrong-asset installs.
+     */
+    fun verifyDownloadedApk(context: Context = App.context, apkFile: File = context.getLatestApk()): Boolean {
+        if (!apkFile.exists() || apkFile.length() <= 0L) return false
+        val info =
+            context.packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0) ?: return false
+        val expected = context.packageName.removeSuffix(".debug").removeSuffix(".preview")
+        val actual = info.packageName?.removeSuffix(".debug")?.removeSuffix(".preview")
+        val ok = actual == expected || actual == context.packageName
+        if (!ok) {
+            Log.e(TAG, "APK package mismatch: actual=$actual expected=$expected")
+        }
+        return ok
+    }
+
+
     fun installLatestApk(context: Context = App.context) =
         context.run {
             kotlin
                 .runCatching {
+                    val apk = getLatestApk()
+                    check(verifyDownloadedApk(this, apk)) {
+                        "Downloaded APK failed package verification"
+                    }
                     val contentUri =
-                        FileProvider.getUriForFile(this, getFileProvider(), getLatestApk())
+                        FileProvider.getUriForFile(this, getFileProvider(), apk)
                     val intent =
                         Intent(Intent.ACTION_VIEW).apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -153,8 +175,14 @@ object UpdateUtil {
             Log.d(TAG, apkVersion.toString())
 
             if (apkVersion >= release.name.toVersion()) {
-                return@withContext flow<DownloadStatus> {
-                    emit(DownloadStatus.Finished(context.getLatestApk()))
+                val existing = context.getLatestApk()
+                if (!verifyDownloadedApk(context, existing)) {
+                    existing.delete()
+                    // fall through to re-download
+                } else {
+                    return@withContext flow<DownloadStatus> {
+                        emit(DownloadStatus.Finished(existing))
+                    }
                 }
             }
 

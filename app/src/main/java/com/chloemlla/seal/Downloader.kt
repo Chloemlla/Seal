@@ -28,14 +28,19 @@ import java.util.concurrent.CancellationException
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Singleton Downloader for state holder & perform downloads, used by `Activity` & `Service` */
+/**
+ * Legacy singleton downloader (V1).
+ * New UI paths should use [com.chloemlla.seal.download.DownloaderV2].
+ */
+@Deprecated("Prefer DownloaderV2 for new code")
 object Downloader {
 
     private const val TAG = "Downloader"
@@ -313,6 +318,11 @@ object Downloader {
             }
     }
 
+    /**
+     * Legacy single-slot queue. Prefer [com.chloemlla.seal.download.DownloaderV2].
+     * Waits for Idle via StateFlow instead of polling every 3 seconds.
+     */
+    @Deprecated("Use DownloaderV2 enqueue APIs for new download paths")
     fun addToDownloadQueue(
         videoInfo: VideoInfo? = null,
         url: String = videoInfo?.originalUrl ?: "",
@@ -323,17 +333,12 @@ object Downloader {
 
         if (!isDownloaderAvailable()) {
             ToastUtil.makeToast(R.string.task_added)
-            applicationScope
-                .launch(Dispatchers.Default) {
-                    while (!isDownloaderAvailable()) {
-                        delay(3000)
-                    }
-                }
-                .invokeOnCompletion {
-                    videoInfo?.let {
-                        downloadVideoWithInfo(info = videoInfo, preferences = preferences)
-                    } ?: getInfoAndDownload(url, preferences)
-                }
+            applicationScope.launch(Dispatchers.Default) {
+                downloaderState.map { it is State.Idle }.first { it }
+                videoInfo?.let {
+                    downloadVideoWithInfo(info = videoInfo, preferences = preferences)
+                } ?: getInfoAndDownload(url, preferences)
+            }
         } else {
             videoInfo?.let { downloadVideoWithInfo(info = videoInfo, preferences = preferences) }
                 ?: getInfoAndDownload(url, preferences)

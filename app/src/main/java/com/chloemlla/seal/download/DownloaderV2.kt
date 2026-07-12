@@ -186,7 +186,9 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
     }
 
     private var Task.state: Task.State
-        get() = taskStateMap[this]!!
+        get() =
+            taskStateMap[this]
+                ?: error("Task state missing for ${id}; task was removed or never enqueued")
         set(value) {
             taskStateMap[this] = value
         }

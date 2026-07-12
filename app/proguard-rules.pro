@@ -22,7 +22,7 @@
 
 #noinspection ShrinkerUnresolvedReference
 
--dontobfuscate
+# obfuscation enabled for release (audit fix)
 
 -keep class com.yausername.** { *; }
 -keep class org.apache.commons.compress.archivers.zip.** { *; }

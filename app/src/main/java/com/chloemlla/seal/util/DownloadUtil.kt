@@ -401,6 +401,7 @@ object DownloadUtil {
                         val path = getString(getColumnIndexOrThrow(CookieScheme.PATH))
                         val secure = getLong(getColumnIndexOrThrow(CookieScheme.SECURE)) == 1L
                         val hostKey = getString(getColumnIndexOrThrow(CookieScheme.HOST))
+                        if (hostKey.isNullOrEmpty()) continue
 
                         val host = if (hostKey[0] != '.') ".$hostKey" else hostKey
                         cookieList.add(
@@ -807,11 +808,13 @@ object DownloadUtil {
                                 true
                     ) {
                         th.printStackTrace()
-                        onFinishDownloading(
-                            preferences = this,
-                            videoInfo = videoInfo,
-                            downloadPath = pathBuilder.toString(),
-                            sdcardUri = sdcardUri,
+                        // Do not treat partial/uncertain SponsorBlock failures as silent success.
+                        Result.failure(
+                            Throwable(
+                                "SponsorBlock API unavailable; download not marked complete. " +
+                                    "Disable SponsorBlock or retry. Cause: ${th.message}",
+                                th,
+                            )
                         )
                     } else Result.failure(th)
                 }
@@ -880,6 +883,14 @@ object DownloadUtil {
         preferences: DownloadPreferences,
         progressCallback: ((Float, Long, String) -> Unit),
     ): Result<YoutubeDLResponse> {
+        val validation = CommandTemplateSanitizer.validate(template.template)
+        if (!validation.ok) {
+            return Result.failure(
+                IllegalArgumentException(
+                    "Blocked unsafe custom command option(s): ${validation.blockedOptions.joinToString()}"
+                )
+            )
+        }
         val urlList = urlString.split(Regex("[\n ]")).filter { it.isNotBlank() }
 
         val request =
@@ -919,6 +930,16 @@ object DownloadUtil {
         downloadPreferences: DownloadPreferences = DownloadPreferences.createFromPreferences(),
     ) {
         downloadPreferences.run {
+            val validation = CommandTemplateSanitizer.validate(template.template)
+            if (!validation.ok) {
+                val msg =
+                    "Blocked unsafe custom command option(s): ${validation.blockedOptions.joinToString()}"
+                ToastUtil.makeToastSuspend(msg)
+                withContext(Dispatchers.Main) {
+                    onTaskError(msg, template, url)
+                }
+                return
+            }
             val taskId = Downloader.makeKey(url = url, templateName = template.name)
             val notificationId = taskId.toNotificationId()
             val urlList = url.split(Regex("[\n ]")).filter { it.isNotBlank() }

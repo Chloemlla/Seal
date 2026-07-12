@@ -30,7 +30,7 @@
 
     <application
         android:name=".App"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:enableOnBackInvokedCallback="true"
         android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher"
@@ -156,7 +156,9 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <receiver android:name=".NotificationActionReceiver" />
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>
