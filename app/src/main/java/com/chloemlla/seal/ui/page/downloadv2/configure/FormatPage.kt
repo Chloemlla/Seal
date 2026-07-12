@@ -74,9 +74,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chloemlla.seal.App
 import com.chloemlla.seal.R
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.TaskFactory
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.ui.component.ClearButton
 import com.chloemlla.seal.ui.component.ConfirmButton
 import com.chloemlla.seal.ui.component.DismissButton
@@ -164,7 +166,7 @@ fun FormatPage(
                     .run { this - this.filterWithRegex(subtitleLanguageRegex) }
                     .toSet()
 
-            downloader.enqueue(
+            val taskWithState =
                 TaskFactory.createWithConfigurations(
                     videoInfo = videoInfo,
                     formatList = formatList,
@@ -174,6 +176,12 @@ fun FormatPage(
                     selectedSubtitles = selectedSubtitles,
                     selectedAutoCaptions = selectedAutoCaptions,
                 )
+            downloader.enqueue(taskWithState)
+            ExternalDownloadCoordinator.watchEnqueuedTaskIfExternal(
+                context = App.context,
+                downloader = downloader,
+                task = taskWithState.task,
+                alsoNotifyAccepted = true,
             )
 
             if (diffSubtitleLanguages.isNotEmpty()) {

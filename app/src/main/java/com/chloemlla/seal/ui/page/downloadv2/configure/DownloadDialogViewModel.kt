@@ -2,9 +2,11 @@ package com.chloemlla.seal.ui.page.downloadv2.configure
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.chloemlla.seal.App
 import com.chloemlla.seal.database.objects.CommandTemplate
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.Task
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.PlaylistResult
 import com.chloemlla.seal.util.VideoInfo
@@ -178,7 +180,18 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
         urlList: List<String>,
         preferences: DownloadUtil.DownloadPreferences,
     ) {
-        urlList.forEach { downloader.enqueue(Task(url = it, preferences = preferences)) }
+        val tasks =
+            urlList.map { url ->
+                val task = Task(url = url, preferences = preferences)
+                downloader.enqueue(task)
+                task
+            }
+        ExternalDownloadCoordinator.watchEnqueuedTasksIfExternal(
+            context = App.context,
+            downloader = downloader,
+            tasks = tasks,
+            alsoNotifyAccepted = true,
+        )
         hideDialog()
     }
 
@@ -194,6 +207,12 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
                 preferences = preferences,
             )
         downloader.enqueue(task)
+        ExternalDownloadCoordinator.watchEnqueuedTaskIfExternal(
+            context = App.context,
+            downloader = downloader,
+            task = task,
+            alsoNotifyAccepted = true,
+        )
     }
 
     private fun hideDialog() {
@@ -204,6 +223,14 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
             }
 
             else -> {}
+        }
+        // External UI dismissed without format/playlist selection and without enqueue.
+        if (mSelectionStateFlow.value is SelectionState.Idle &&
+            ExternalDownloadCoordinator.currentSession() != null) {
+            ExternalDownloadCoordinator.endExternalSession(
+                notifyCanceledIfEmpty = true,
+                context = App.context,
+            )
         }
     }
 
@@ -232,5 +259,11 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
 
     private fun resetSelectionState() {
         mSelectionStateFlow.update { SelectionState.Idle }
+        if (ExternalDownloadCoordinator.currentSession() != null) {
+            ExternalDownloadCoordinator.endExternalSession(
+                notifyCanceledIfEmpty = true,
+                context = App.context,
+            )
+        }
     }
 }

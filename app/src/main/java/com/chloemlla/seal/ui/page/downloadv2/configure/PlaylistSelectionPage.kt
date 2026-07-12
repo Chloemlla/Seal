@@ -53,7 +53,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chloemlla.seal.R
+import com.chloemlla.seal.App
 import com.chloemlla.seal.download.DownloaderV2
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.download.TaskFactory
 import com.chloemlla.seal.ui.common.HapticFeedback.slightHapticFeedback
 import com.chloemlla.seal.ui.component.PlaylistItem
@@ -151,9 +153,18 @@ fun PlaylistSelectionPage(
                 onDismissRequest = onDismissConfigurationSheet,
                 onDownload = {
                     val preferences = preferences.copy(extractAudio = it == Audio)
-                    taskList
-                        .map { it.copy(task = it.task.copy(preferences = preferences)) }
-                        .forEach(downloader::enqueue)
+                    val tasks =
+                        taskList.map { entry ->
+                            val updated = entry.copy(task = entry.task.copy(preferences = preferences))
+                            downloader.enqueue(updated)
+                            updated.task
+                        }
+                    ExternalDownloadCoordinator.watchEnqueuedTasksIfExternal(
+                        context = App.context,
+                        downloader = downloader,
+                        tasks = tasks,
+                        alsoNotifyAccepted = true,
+                    )
                     onDismissConfigurationSheet()
                     onBack()
                 },

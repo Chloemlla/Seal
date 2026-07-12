@@ -127,7 +127,7 @@ URL 规则（`ExternalDownloadRequestParser.looksLikeHttpUrl`）：
 
 | auto_start | Seal「允许自动开始」 | open_ui | 结果 |
 |------------|----------------------|---------|------|
-| false | * | * | 打开 Seal 配置 UI（`needs_ui`） |
+| false | * | * | 打开 Seal 配置 UI（`needs_ui`）；用户确认下载后发 `accepted` 并 watch 终态 |
 | true | 开 | * | 直接入队（`accepted` + `task_id`/`task_ids`） |
 | true | 关 | true | 降级打开配置 UI（Activity Result 为 `needs_ui` + `error_code=ok`；另可能先发一条带 `auto_start_denied` 的状态广播） |
 | true | 关 | false | 拒绝（`rejected` / `auto_start_denied`） |
@@ -166,9 +166,12 @@ URL 规则（`ExternalDownloadRequestParser.looksLikeHttpUrl`）：
 | `caller_request_id` | 回显 |
 
 > 注意：
-> - `needs_ui` / `accepted` 只代表「Seal 已接住请求」，**不是**下载完成。
+> - `needs_ui` 只表示「Seal 已打开配置 UI」，**不是**入队。
+> - `accepted` 表示任务已进入 Seal 队列（`auto_start` 静默入队，或用户在 UI 里确认下载后都会发；含 `task_id` / `task_ids`）。
 > - 真正的完成 / 失败 / 取消只走 `DOWNLOAD_STATUS` 终态广播。
+> - **`auto_start=false` 的 UI 路径同样支持 L3**：用户确认下载后 Seal 会 watch 任务并发送 `accepted` 与终态 `completed` / `failed` / `canceled`。第三方不应假设「只有 auto-start 才有终态」。
 > - `needs_ui` 的 Activity Result 里 `error_code` 通常是 `ok`；若因 auto-start 被拒而降级 UI，可能另有一条广播带 `error_code=auto_start_denied`。
+> - UI 路径上 `needs_ui` 往往已 `setResult`；后续 `accepted` / 终态以定向广播为准。
 
 ---
 
@@ -486,7 +489,7 @@ A: 默认关。用户需在 Seal 中开启 **Allow external auto-start**。否�
 A: 用户开了白名单且没把你的 package 写进去；或 Seal 解析不到 calling package（白名单开启时 caller 为空也会拒）。
 
 **Q: 为什么只有 needs_ui 没有 completed？**  
-A: 用户可能还在配置页、取消了下载，或你没注册 `DOWNLOAD_STATUS` Receiver。完成态只走广播，且需要 Seal 能解析到 callingPackage 才能 watch 任务并回传。
+A: 常见原因：用户还在配置页、取消了下载、未注册 `DOWNLOAD_STATUS` Receiver，或 Seal 解析不到 `callingPackage`（无法定向广播）。从 2026-07-12 起，UI 路径在用户确认入队后也会 `watchTask` 并回传 `accepted` + 终态；若仍无 `completed`，优先核对 Receiver 与包名变体（debug/dev）。
 
 **Q: callingPackage 为空会怎样？**  
 A: 即时 result 仍可能 `setResult`；**终态广播与 content URI grant 不会发出**。请用 Activity 启动（`startActivity` / Activity Result），不要纯后台瞎发隐式 Intent。

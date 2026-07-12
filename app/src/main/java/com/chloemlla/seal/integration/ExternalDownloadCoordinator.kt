@@ -32,12 +32,130 @@ object ExternalDownloadCoordinator {
     private val watchedTasks = ConcurrentHashMap<String, WatchedTask>()
     private val recentCallerHits = ConcurrentHashMap<String, LongArray>()
 
+    data class ExternalSession(
+        val callerPackage: String,
+        val callerRequestId: String?,
+        @Volatile var enqueuedDuringSession: Boolean = false,
+    )
+
+    @Volatile private var externalSession: ExternalSession? = null
+
     private data class WatchedTask(
         val taskId: String,
         val callerPackage: String?,
         val callerRequestId: String?,
         var job: Job? = null,
     )
+
+    fun beginExternalSession(callerPackage: String?, callerRequestId: String?) {
+        val pkg = callerPackage?.trim().orEmpty()
+        externalSession =
+            if (pkg.isEmpty()) {
+                null
+            } else {
+                ExternalSession(callerPackage = pkg, callerRequestId = callerRequestId)
+            }
+        Log.d(TAG, "beginExternalSession pkg=${externalSession?.callerPackage} reqId=$callerRequestId")
+    }
+
+    fun endExternalSession(notifyCanceledIfEmpty: Boolean = false, context: Context? = null) {
+        val session = externalSession
+        externalSession = null
+        if (
+            notifyCanceledIfEmpty &&
+                session != null &&
+                !session.enqueuedDuringSession &&
+                context != null
+        ) {
+            ExternalDownloadStatusReporter.sendStatus(
+                context = context.applicationContext,
+                targetPackage = session.callerPackage,
+                status = ExternalDownloadProtocol.STATUS_CANCELED,
+                errorCode = ExternalDownloadProtocol.ERROR_CANCELED,
+                callerRequestId = session.callerRequestId,
+            )
+            Log.d(TAG, "endExternalSession canceled (no enqueue) pkg=${session.callerPackage}")
+        } else {
+            Log.d(TAG, "endExternalSession pkg=${session?.callerPackage}")
+        }
+    }
+
+    fun currentSession(): ExternalSession? = externalSession
+
+    /**
+     * UI / ViewModel should call this after [DownloaderV2.enqueue].
+     * No-op when there is no external session (in-app downloads unchanged).
+     */
+    fun watchEnqueuedTaskIfExternal(
+        context: Context,
+        downloader: DownloaderV2,
+        task: Task,
+        alsoNotifyAccepted: Boolean = true,
+    ) {
+        watchEnqueuedTasksIfExternal(
+            context = context,
+            downloader = downloader,
+            tasks = listOf(task),
+            alsoNotifyAccepted = alsoNotifyAccepted,
+        )
+    }
+
+    fun watchEnqueuedTasksIfExternal(
+        context: Context,
+        downloader: DownloaderV2,
+        tasks: List<Task>,
+        alsoNotifyAccepted: Boolean = true,
+    ) {
+        val session = externalSession ?: return
+        if (tasks.isEmpty()) return
+        session.enqueuedDuringSession = true
+        val appContext = context.applicationContext
+        val taskIds = mutableListOf<String>()
+        tasks.forEach { task ->
+            taskIds += task.id
+            watchTask(
+                context = appContext,
+                downloader = downloader,
+                taskId = task.id,
+                callerPackage = session.callerPackage,
+                callerRequestId = session.callerRequestId,
+            )
+        }
+        if (alsoNotifyAccepted) {
+            notifyAccepted(context = appContext, taskIds = taskIds, session = session)
+        }
+        // Session only binds the confirm action; keep watches, stop tagging later in-app enqueues.
+        if (externalSession === session) {
+            externalSession = null
+        }
+    }
+
+    fun notifyAcceptedForSession(context: Context, taskIds: List<String>) {
+        val session = externalSession ?: return
+        if (taskIds.isEmpty()) return
+        session.enqueuedDuringSession = true
+        notifyAccepted(context = context.applicationContext, taskIds = taskIds, session = session)
+    }
+
+    private fun notifyAccepted(
+        context: Context,
+        taskIds: List<String>,
+        session: ExternalSession,
+    ) {
+        ExternalDownloadStatusReporter.sendStatus(
+            context = context,
+            targetPackage = session.callerPackage,
+            status = ExternalDownloadProtocol.STATUS_ACCEPTED,
+            errorCode = ExternalDownloadProtocol.ERROR_OK,
+            taskId = taskIds.firstOrNull(),
+            taskIds = taskIds,
+            callerRequestId = session.callerRequestId,
+        )
+        Log.d(
+            TAG,
+            "notifyAccepted count=${taskIds.size} pkg=${session.callerPackage} reqId=${session.callerRequestId}",
+        )
+    }
 
     fun isRateLimitOk(callerPackage: String?, nowMs: Long = System.currentTimeMillis()): Boolean {
         val key = callerPackage?.ifBlank { null } ?: "unknown"

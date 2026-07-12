@@ -10,6 +10,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import com.chloemlla.seal.App.Companion.context
 import com.chloemlla.seal.download.DownloaderV2
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.integration.ExternalDownloadEntry
 import com.chloemlla.seal.ui.common.LocalDarkTheme
 import com.chloemlla.seal.ui.common.SettingsProvider
@@ -70,6 +71,10 @@ class MainActivity : AppCompatActivity() {
                 )
         ) {
             is ExternalDownloadEntry.HandleResult.ShowUi -> {
+                ExternalDownloadCoordinator.beginExternalSession(
+                    callerPackage = result.accepted.callerPackage,
+                    callerRequestId = result.accepted.request.callerRequestId,
+                )
                 dialogViewModel.postAction(
                     DownloadDialogViewModel.Action.ShowSheet(result.accepted.request.urls)
                 )
@@ -85,5 +90,15 @@ class MainActivity : AppCompatActivity() {
             }
             ExternalDownloadEntry.HandleResult.NotExternal -> Unit
         }
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) {
+            ExternalDownloadCoordinator.endExternalSession(
+                notifyCanceledIfEmpty = true,
+                context = applicationContext,
+            )
+        }
+        super.onDestroy()
     }
 }

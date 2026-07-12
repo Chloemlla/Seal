@@ -116,3 +116,20 @@
 - `PreferenceUtil.kt`（`EXTERNAL_*` keys）
 - `AndroidManifest.xml`
 - `app/src/test/java/com/junkfood/seal/integration/ExternalDownloadIntegrationTest.kt`
+
+---
+
+## UI 路径终态回传缺口（2026-07-12）
+
+> 状态：**已修复**（2026-07-12）  
+> 详见：[`third-party-ui-path-status-callback.md`](./third-party-ui-path-status-callback.md)
+
+- [x] P0：`ShowUi` 建立 external session（callerPackage + callerRequestId）
+- [x] P0：UI 入队（preset / format / command / playlist）后 `watchTask`
+- [x] P0：用户确认入队后补发 `accepted`
+- [x] P1：session 清理；可选取消关闭发 `canceled`
+- [x] P1：单测覆盖 external session 生命周期（JVM）
+- [x] P2：同步 `third-party-call-guide.md` 语义
+
+**影响（修复前）**：第三方在默认 `auto_start=false` 下只能感知打开 UI，无法收到 completed/failed/canceled。  
+**修复后**：UI 确认入队后同样 `watchTask` + `accepted` + 终态广播。

@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chloemlla.seal.download.DownloaderV2
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.integration.ExternalDownloadEntry
 import com.chloemlla.seal.integration.ExternalDownloadProtocol
 import com.chloemlla.seal.integration.ExternalDownloadStatusReporter
@@ -72,8 +73,13 @@ class QuickDownloadActivity : ComponentActivity() {
             is ExternalDownloadEntry.HandleResult.ShowUi -> {
                 callerPackage = handleResult.accepted.callerPackage
                 callerRequestId = handleResult.accepted.request.callerRequestId
+                ExternalDownloadCoordinator.beginExternalSession(
+                    callerPackage = callerPackage,
+                    callerRequestId = callerRequestId,
+                )
                 val urls = handleResult.accepted.request.urls
                 if (urls.isEmpty()) {
+                    ExternalDownloadCoordinator.endExternalSession()
                     finish()
                     return
                 }
@@ -196,5 +202,16 @@ class QuickDownloadActivity : ComponentActivity() {
             callerPackage = callerPackage,
             alsoBroadcast = true,
         )
+    }
+
+    override fun onDestroy() {
+        // Stops binding new UI enqueues; already-watched tasks keep terminal reporting.
+        if (isFinishing) {
+            ExternalDownloadCoordinator.endExternalSession(
+                notifyCanceledIfEmpty = true,
+                context = applicationContext,
+            )
+        }
+        super.onDestroy()
     }
 }
