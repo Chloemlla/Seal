@@ -3,7 +3,7 @@
 > 面向：要在自己 App 里把下载任务**委托给 Seal** 的开发者  
 > 协议版本：`protocol_version = 1`  
 > 模型：**只委托，不内嵌** — Seal 负责队列、yt-dlp、通知与文件落地  
-> 实现参考：`docs/third-party-delegate-integration.md`、`com.junkfood.seal.integration.ExternalDownloadProtocol`
+> 实现参考：`docs/third-party-delegate-integration.md`、`com.chloemlla.seal.integration.ExternalDownloadProtocol`
 
 ---
 
@@ -46,11 +46,11 @@
 
 | 构建 | applicationId |
 |------|----------------|
-| release | `com.junkfood.seal` |
-| debug | `com.junkfood.seal.debug` |
-| preview | `com.junkfood.seal.preview` |
+| release | `com.chloemlla.seal` |
+| debug | `com.chloemlla.seal.debug` |
+| preview | `com.chloemlla.seal.preview` |
 
-下文示例默认使用 release 包名 `com.junkfood.seal`。
+下文示例默认使用 release 包名 `com.chloemlla.seal`。
 
 ---
 
@@ -59,7 +59,7 @@
 | 级别 | 方式 | 何时用 |
 |------|------|--------|
 | L1 | 系统分享 `ACTION_SEND` / 打开链接 `ACTION_VIEW` | 用户主动分享、浏览器 Open with |
-| L2 | 自定义 `com.junkfood.seal.action.DOWNLOAD` + extras | 应用内一键委托、带参数 |
+| L2 | 自定义 `com.chloemlla.seal.action.DOWNLOAD` + extras | 应用内一键委托、带参数 |
 | L3 | 在 L2 基础上接 Activity Result + 状态广播 | 需要知道是否入队、是否下完、文件 URI |
 
 推荐新集成优先使用 **L2/L3 自定义 action**。
@@ -71,7 +71,7 @@
 ### 4.1 Action
 
 ```text
-com.junkfood.seal.action.DOWNLOAD
+com.chloemlla.seal.action.DOWNLOAD
 ```
 
 兼容（仍可用）：
@@ -143,7 +143,7 @@ URL 规则：必须是 `http://` 或 `https://`，且带 host。
 ### Action
 
 ```text
-com.junkfood.seal.action.DOWNLOAD_STATUS
+com.chloemlla.seal.action.DOWNLOAD_STATUS
 ```
 
 Seal 会 `intent.setPackage(你的包名)`，只打给你，不是全局隐式广播。
@@ -163,7 +163,7 @@ Seal 会 `intent.setPackage(你的包名)`，只打给你，不是全局隐式�
 | `error_message` | 可选 |
 | `task_id` / `task_ids` | 任务 id |
 | `caller_request_id` | 回显 |
-| `content_uri` | 完成时可能有，形如 `content://com.junkfood.seal.provider/...` |
+| `content_uri` | 完成时可能有，形如 `content://com.chloemlla.seal.provider/...` |
 | `display_name` / `mime_type` | 可选（当前实现可能为空） |
 | `caller_package` | 目标 package（你的包名） |
 
@@ -200,8 +200,8 @@ Seal 会 `intent.setPackage(你的包名)`，只打给你，不是全局隐式�
 
 ```kotlin
 fun delegateToSeal(url: String) {
-    val intent = Intent("com.junkfood.seal.action.DOWNLOAD").apply {
-        setPackage("com.junkfood.seal")
+    val intent = Intent("com.chloemlla.seal.action.DOWNLOAD").apply {
+        setPackage("com.chloemlla.seal")
         type = "text/plain"
         putExtra("protocol_version", 1)
         putExtra("url", url)
@@ -217,7 +217,7 @@ fun delegateToSeal(url: String) {
 ```kotlin
 fun shareTextToSeal(text: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {
-        setPackage("com.junkfood.seal")
+        setPackage("com.chloemlla.seal")
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
     }
@@ -230,7 +230,7 @@ fun shareTextToSeal(text: String) {
 ```kotlin
 fun openUrlWithSeal(url: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-        setPackage("com.junkfood.seal")
+        setPackage("com.chloemlla.seal")
     }
     startActivity(intent)
 }
@@ -255,8 +255,8 @@ private val sealDownloadLauncher =
     }
 
 fun enqueueOnSeal(url: String, requestId: String) {
-    val intent = Intent("com.junkfood.seal.action.DOWNLOAD").apply {
-        setPackage("com.junkfood.seal")
+    val intent = Intent("com.chloemlla.seal.action.DOWNLOAD").apply {
+        setPackage("com.chloemlla.seal")
         putExtra("protocol_version", 1)
         putExtra("url", url)
         putExtra("extract_audio", false)
@@ -273,8 +273,8 @@ fun enqueueOnSeal(url: String, requestId: String) {
 
 ```kotlin
 fun delegateMany(urls: Array<String>) {
-    val intent = Intent("com.junkfood.seal.action.DOWNLOAD").apply {
-        setPackage("com.junkfood.seal")
+    val intent = Intent("com.chloemlla.seal.action.DOWNLOAD").apply {
+        setPackage("com.chloemlla.seal")
         putExtra("protocol_version", 1)
         putExtra("urls", urls)
         putExtra("auto_start", false)
@@ -291,7 +291,7 @@ fun delegateMany(urls: Array<String>) {
     android:name=".SealDownloadStatusReceiver"
     android:exported="true">
     <intent-filter>
-        <action android:name="com.junkfood.seal.action.DOWNLOAD_STATUS" />
+        <action android:name="com.chloemlla.seal.action.DOWNLOAD_STATUS" />
     </intent-filter>
 </receiver>
 ```
@@ -299,7 +299,7 @@ fun delegateMany(urls: Array<String>) {
 ```kotlin
 class SealDownloadStatusReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action != "com.junkfood.seal.action.DOWNLOAD_STATUS") return
+        if (intent?.action != "com.chloemlla.seal.action.DOWNLOAD_STATUS") return
 
         val status = intent.getStringExtra("status") ?: return
         val taskId = intent.getStringExtra("task_id")
@@ -339,7 +339,7 @@ fun openDelegatedFile(context: Context, contentUri: String) {
 ### 8.8 检测 Seal 是否安装 / 是否支持协议
 
 ```kotlin
-fun isSealInstalled(context: Context, packageName: String = "com.junkfood.seal"): Boolean {
+fun isSealInstalled(context: Context, packageName: String = "com.chloemlla.seal"): Boolean {
     return try {
         context.packageManager.getPackageInfo(packageName, 0)
         true
@@ -348,10 +348,10 @@ fun isSealInstalled(context: Context, packageName: String = "com.junkfood.seal")
     }
 }
 
-fun sealProtocolVersion(context: Context, packageName: String = "com.junkfood.seal"): Int? {
+fun sealProtocolVersion(context: Context, packageName: String = "com.chloemlla.seal"): Int? {
     return try {
         val ai = context.packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
-        ai.metaData?.getInt("com.junkfood.seal.external_download_protocol_version")
+        ai.metaData?.getInt("com.chloemlla.seal.external_download_protocol_version")
     } catch (_: Exception) {
         null
     }
@@ -360,21 +360,21 @@ fun sealProtocolVersion(context: Context, packageName: String = "com.junkfood.se
 
 Application meta-data：
 
-- `com.junkfood.seal.external_download_protocol_version` = `1`
-- `com.junkfood.seal.external_download_max_protocol_version` = `1`
+- `com.chloemlla.seal.external_download_protocol_version` = `1`
+- `com.chloemlla.seal.external_download_max_protocol_version` = `1`
 
 ### 8.9 adb 快速自测
 
 ```bash
 # 打开配置 UI
-adb shell am start -a com.junkfood.seal.action.DOWNLOAD \
-  -n com.junkfood.seal/.QuickDownloadActivity \
+adb shell am start -a com.chloemlla.seal.action.DOWNLOAD \
+  -n com.chloemlla.seal/.QuickDownloadActivity \
   --es url "https://www.youtube.com/watch?v=dQw4w9WgXcQ" \
   --ei protocol_version 1
 
 # 分享文本
 adb shell am start -a android.intent.action.SEND \
-  -n com.junkfood.seal/.QuickDownloadActivity \
+  -n com.chloemlla.seal/.QuickDownloadActivity \
   -t text/plain \
   --es android.intent.extra.TEXT "看看这个 https://example.com/video"
 ```
@@ -415,15 +415,15 @@ A: 即时 result 仍可能 setResult；**终态广播可能发不出去**（无�
 A: 当前协议不支持。只暴露 `extract_audio`、`download_subtitle` 等安全子集；其余用用户在 Seal 里的预设。
 
 **Q: debug 包怎么调？**  
-A: `setPackage("com.junkfood.seal.debug")`，并确保装的是 debug 构建。
+A: `setPackage("com.chloemlla.seal.debug")`，并确保装的是 debug 构建。
 
 ---
 
 ## 11. 常量速查（与源码一致）
 
 ```text
-ACTION_DOWNLOAD         = com.junkfood.seal.action.DOWNLOAD
-ACTION_DOWNLOAD_STATUS  = com.junkfood.seal.action.DOWNLOAD_STATUS
+ACTION_DOWNLOAD         = com.chloemlla.seal.action.DOWNLOAD
+ACTION_DOWNLOAD_STATUS  = com.chloemlla.seal.action.DOWNLOAD_STATUS
 
 protocol_version        = 1
 

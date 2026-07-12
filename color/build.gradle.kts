@@ -16,7 +16,7 @@ android {
     defaultConfig {
         minSdk = 21
     }
-    namespace = "com.junkfood.seal.color"
+    namespace = "com.chloemlla.seal.color"
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         sourceCompatibility = JavaVersion.VERSION_1_8

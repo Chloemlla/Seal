@@ -10,9 +10,9 @@ Related checklist: [`third-party-delegate-integration-TODO.md`](./third-party-de
 
 | Build | applicationId |
 |-------|----------------|
-| release | `com.junkfood.seal` |
-| debug | `com.junkfood.seal.debug` |
-| preview | `com.junkfood.seal.preview` |
+| release | `com.chloemlla.seal` |
+| debug | `com.chloemlla.seal.debug` |
+| preview | `com.chloemlla.seal.preview` |
 
 FileProvider authority: `${applicationId}.provider`
 
@@ -36,7 +36,7 @@ Path: **Settings → Interface & interaction → External downloads**
 | Limit external callers | OFF | When ON, only whitelisted packages may call |
 | Allowed packages | empty | One package name per line |
 
-## Request: `com.junkfood.seal.action.DOWNLOAD`
+## Request: `com.chloemlla.seal.action.DOWNLOAD`
 
 Compatible legacy surfaces (still supported):
 
@@ -61,8 +61,8 @@ Also accepted: `Intent.EXTRA_TEXT`, `intent.data` URL.
 ### Kotlin example (delegate with UI)
 
 ```kotlin
-val intent = Intent("com.junkfood.seal.action.DOWNLOAD").apply {
-    setPackage("com.junkfood.seal")
+val intent = Intent("com.chloemlla.seal.action.DOWNLOAD").apply {
+    setPackage("com.chloemlla.seal")
     type = "text/plain"
     putExtra("protocol_version", 1)
     putExtra("url", "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
@@ -76,8 +76,8 @@ startActivity(intent)
 ### Kotlin example (auto-start, for result)
 
 ```kotlin
-val intent = Intent("com.junkfood.seal.action.DOWNLOAD").apply {
-    setPackage("com.junkfood.seal")
+val intent = Intent("com.chloemlla.seal.action.DOWNLOAD").apply {
+    setPackage("com.chloemlla.seal")
     putExtra("protocol_version", 1)
     putExtra("url", videoUrl)
     putExtra("auto_start", true)
@@ -101,21 +101,21 @@ Returned on accept / reject / needs_ui:
 
 ## Terminal status broadcast (L3)
 
-Action: `com.junkfood.seal.action.DOWNLOAD_STATUS`  
+Action: `com.chloemlla.seal.action.DOWNLOAD_STATUS`  
 Seal sets `Intent.setPackage(callerPackage)` (directed only).
 
 Terminal statuses: `completed`, `failed`, `canceled`.
 
 On `completed`, `content_uri` may be granted read-only via FileProvider.
 
-Caller must register a receiver for `com.junkfood.seal.action.DOWNLOAD_STATUS` (exported as needed for their app) and should verify extras.
+Caller must register a receiver for `com.chloemlla.seal.action.DOWNLOAD_STATUS` (exported as needed for their app) and should verify extras.
 
 ### Receiver sketch
 
 ```kotlin
 class SealDownloadStatusReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != "com.junkfood.seal.action.DOWNLOAD_STATUS") return
+        if (intent.action != "com.chloemlla.seal.action.DOWNLOAD_STATUS") return
         val status = intent.getStringExtra("status")
         val taskId = intent.getStringExtra("task_id")
         val contentUri = intent.getStringExtra("content_uri")
@@ -152,12 +152,12 @@ class SealDownloadStatusReceiver : BroadcastReceiver() {
 
 Application meta-data:
 
-- `com.junkfood.seal.external_download_protocol_version` = `1`
-- `com.junkfood.seal.external_download_max_protocol_version` = `1`
+- `com.chloemlla.seal.external_download_protocol_version` = `1`
+- `com.chloemlla.seal.external_download_max_protocol_version` = `1`
 
 ## Implementation map
 
-- `com.junkfood.seal.integration.ExternalDownloadProtocol`
+- `com.chloemlla.seal.integration.ExternalDownloadProtocol`
 - `ExternalDownloadRequestParser` / `ExternalDownloadGate`
 - `ExternalDownloadEntry` / `ExternalDownloadCoordinator`
 - `QuickDownloadActivity`, `MainActivity`

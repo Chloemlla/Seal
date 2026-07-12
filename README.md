@@ -92,7 +92,7 @@ English
 
 - Easy to use and user-friendly.
 
-- Third-party apps can **delegate** downloads to Seal via Intents (share / open URL / `com.junkfood.seal.action.DOWNLOAD`). See [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md); Chinese call guide: [docs/third-party-call-guide.md](docs/third-party-call-guide.md).
+- Third-party apps can **delegate** downloads to Seal via Intents (share / open URL / `com.chloemlla.seal.action.DOWNLOAD`). See [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md); Chinese call guide: [docs/third-party-call-guide.md](docs/third-party-call-guide.md).
 
 - [Material Design 3](https://m3.material.io/) style UI, with dynamic color theme.
 

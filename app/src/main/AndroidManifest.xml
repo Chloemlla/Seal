@@ -40,10 +40,10 @@
         android:supportsRtl="true"
         tools:targetApi="tiramisu">
         <meta-data
-            android:name="com.junkfood.seal.external_download_protocol_version"
+            android:name="com.chloemlla.seal.external_download_protocol_version"
             android:value="1" />
         <meta-data
-            android:name="com.junkfood.seal.external_download_max_protocol_version"
+            android:name="com.chloemlla.seal.external_download_max_protocol_version"
             android:value="1" />
         <activity
             android:name=".CrashReportActivity"
@@ -76,12 +76,12 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.junkfood.seal.action.DOWNLOAD" />
+                <action android:name="com.chloemlla.seal.action.DOWNLOAD" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.junkfood.seal.action.DOWNLOAD" />
+                <action android:name="com.chloemlla.seal.action.DOWNLOAD" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="http" />
                 <data android:scheme="https" />
@@ -125,12 +125,12 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.junkfood.seal.action.DOWNLOAD" />
+                <action android:name="com.chloemlla.seal.action.DOWNLOAD" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.junkfood.seal.action.DOWNLOAD" />
+                <action android:name="com.chloemlla.seal.action.DOWNLOAD" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="http" />
                 <data android:scheme="https" />

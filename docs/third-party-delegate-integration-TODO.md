@@ -40,7 +40,7 @@
 ## 2. 实现落点
 
 ### 2.1 协议与核心
-- [x] `com.junkfood.seal.integration.ExternalDownloadProtocol`
+- [x] `com.chloemlla.seal.integration.ExternalDownloadProtocol`
 - [x] `ExternalDownloadRequestParser`
 - [x] `ExternalDownloadGate`（开关 / 白名单 / 自动开始 / 限流入口）
 - [x] `ExternalDownloadEntry`（Activity 共用入口）
@@ -63,8 +63,8 @@
 
 ## 3. 冻结协议摘要
 
-- Action: `com.junkfood.seal.action.DOWNLOAD`
-- Status broadcast: `com.junkfood.seal.action.DOWNLOAD_STATUS`（`setPackage(caller)`）
+- Action: `com.chloemlla.seal.action.DOWNLOAD`
+- Status broadcast: `com.chloemlla.seal.action.DOWNLOAD_STATUS`（`setPackage(caller)`）
 - `protocol_version = 1`
 - Defaults: delegate ON, auto-start OFF, whitelist OFF
 
