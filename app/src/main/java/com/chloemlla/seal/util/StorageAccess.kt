@@ -50,11 +50,11 @@ object StorageAccess {
 
     fun isAllowedAbsolutePath(path: String, publicDownloadsRoot: String, publicDocumentsRoot: String, appSpecificRoots: List<String>): Boolean {
         if (path.isBlank()) return false
-        val normalized = path.replace('\', '/')
+        val normalized = path.replace('\\', '/')
         val allowedRoots =
             (listOf(publicDownloadsRoot, publicDocumentsRoot) + appSpecificRoots)
                 .filter { it.isNotBlank() }
-                .map { it.replace('\', '/').trimEnd('/') }
+                .map { it.replace('\\', '/').trimEnd('/') }
         return allowedRoots.any { root ->
             normalized.equals(root, ignoreCase = true) ||
                 normalized.startsWith("$root/", ignoreCase = true)
