@@ -161,6 +161,17 @@ jobs:
             app/build/outputs/apk/generic/release/*.apk
             app/build/outputs/apk/generic/release/SHA256SUMS
 
+      # Movable pointer for consumers that pin ref "latest" (same commit as this pre-release).
+      - name: Update latest tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f latest "${GITHUB_SHA}"
+          git push -f origin "refs/tags/latest"
+
       - name: Remove signing credentials
         if: always()
         run: rm -f keystore.properties "$RUNNER_TEMP/seal-release.keystore"
