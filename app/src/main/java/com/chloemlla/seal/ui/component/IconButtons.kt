@@ -22,7 +22,8 @@ import com.chloemlla.seal.util.readClipboardText
 
 @Composable
 fun PasteFromClipBoardButton(onPaste: (String) -> Unit = {}) {
-        PasteButton(onClick = { context.readClipboardText()?.let { onPaste(it) } })
+    val context = LocalContext.current
+    PasteButton(onClick = { context.readClipboardText()?.let { onPaste(it) } })
 }
 
 @Composable

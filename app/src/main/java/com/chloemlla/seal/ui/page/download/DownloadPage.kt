@@ -164,6 +164,7 @@ fun DownloadPage(
         val keyboardController = LocalSoftwareKeyboardController.current
     val useDialog = LocalWindowWidthState.current != WindowWidthSizeClass.Compact
     val view = LocalView.current
+    val context = LocalContext.current
     var showDownloadDialog by rememberSaveable { mutableStateOf(false) }
     var showMeteredNetworkDialog by remember { mutableStateOf(false) }
 
@@ -361,7 +362,8 @@ fun DownloadPageImpl(
     content: @Composable () -> Unit,
 ) {
     val view = LocalView.current
-    
+    val context = LocalContext.current
+
     val showCancelButton =
         downloaderState is Downloader.State.DownloadingPlaylist ||
             downloaderState is Downloader.State.DownloadingVideo

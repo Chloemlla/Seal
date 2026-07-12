@@ -290,9 +290,9 @@ fun Title(imageModel: Any?, title: String, author: String, downloadState: Downlo
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.height(IntrinsicSize.Min)) {
-            Column(modifier) {
+            Column {
                 Text(text = title, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = author,
                     style = MaterialTheme.typography.bodySmall,
@@ -300,7 +300,7 @@ fun Title(imageModel: Any?, title: String, author: String, downloadState: Downlo
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             ListItemStateText(downloadState = downloadState)
         }
     }

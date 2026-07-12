@@ -90,6 +90,7 @@ import com.chloemlla.seal.util.readClipboardText
 fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) {
     val scope = rememberCoroutineScope()
     val view = LocalView.current
+    val context = LocalContext.current
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -149,9 +150,9 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
                         url = url,
                         templateName = template.name,
                         onCancel = { onCancel() },
-                        onCopyError = { onCopyError(clipboardManager) },
+                        onCopyError = { onCopyError() },
                         onRestart = { onRestart() },
-                        onCopyLog = { onCopyLog(clipboardManager) },
+                        onCopyLog = { onCopyLog() },
                         onShowLog = { onNavigateToDetail(hashCode()) },
                         modifier = Modifier.animateItem(),
                     )
@@ -187,7 +188,7 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
 
                 LaunchedEffect(sheetState.targetValue) {
                     if (sheetState.targetValue == ModalBottomSheetValue.Expanded)
-                        url = findURLsFromString(clipboardManager.getText(, true).joinToString(separator = "\n")?.text.toString(), true)
+                        url = findURLsFromString(context.readClipboardText().orEmpty(), firstMatchOnly = false).joinToString(separator = "\n")
                 }
 
                 Column(Modifier.fillMaxWidth()) {

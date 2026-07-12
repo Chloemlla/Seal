@@ -95,7 +95,7 @@ fun TaskLogPage(onNavigateBack: () -> Unit, taskHashCode: Int) {
                             icon = Icons.Outlined.ContentCopy,
                             label = stringResource(id = R.string.copy_log),
                         ) {
-                            onCopyLog(clipboardManager)
+                            onCopyLog()
                         }
                         if (state is Downloader.CustomCommandTask.State.Error)
                             ButtonChip(
@@ -103,7 +103,7 @@ fun TaskLogPage(onNavigateBack: () -> Unit, taskHashCode: Int) {
                                 label = stringResource(id = R.string.copy_error_report),
                                 iconColor = MaterialTheme.colorScheme.error,
                             ) {
-                                onCopyError(clipboardManager)
+                                onCopyError()
                             }
                         if (state is Downloader.CustomCommandTask.State.Running)
                             ButtonChip(

@@ -86,7 +86,8 @@ fun InputUrlPage(
     onConfigUpdate: (Config) -> Unit,
     onActionPost: (Action) -> Unit,
 ) {
-        val urlList = remember { mutableStateListOf<String>() }
+    val context = LocalContext.current
+    val urlList = remember { mutableStateListOf<String>() }
     val savedLinks = remember(config) { mutableStateListOf<String>() }
 
     LaunchedEffect(Unit) {

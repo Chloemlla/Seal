@@ -20,6 +20,7 @@ import com.chloemlla.seal.util.PlaylistEntry
 import com.chloemlla.seal.util.PlaylistResult
 import com.chloemlla.seal.util.PreferenceUtil.getString
 import com.chloemlla.seal.util.ToastUtil
+import com.chloemlla.seal.util.copyToClipboard
 import com.chloemlla.seal.util.VideoInfo
 import com.chloemlla.seal.util.toHttpsUrl
 import com.yausername.youtubedl_android.YoutubeDL
@@ -113,7 +114,7 @@ object Downloader {
             return true
         }
 
-        fun onCopyLog(clipboardManager: ClipboardManager) {
+        fun onCopyLog() {
             context.copyToClipboard(output)
         }
 
@@ -123,7 +124,7 @@ object Downloader {
             }
         }
 
-        fun onCopyError(clipboardManager: ClipboardManager) {
+        fun onCopyError() {
             context.copyToClipboard(currentLine)
             ToastUtil.makeToast(R.string.error_copied)
         }
@@ -203,7 +204,7 @@ object Downloader {
 
     fun updateTaskOutput(template: CommandTemplate, url: String, line: String, progress: Float) {
         val key = makeKey(url, template.name)
-        val oldValue = mutableTaskList[key] ?: return@run
+        val oldValue = mutableTaskList[key] ?: return
         val newValue =
             oldValue.run {
                 copy(
@@ -248,7 +249,7 @@ object Downloader {
                 notificationId = key.toNotificationId(),
                 report = errorReport,
             )
-            val oldValue = mutableTaskList[key] ?: return@run
+            val oldValue = mutableTaskList[key] ?: return
             mutableTaskList[key] =
                 oldValue.copy(
                     state = CustomCommandTask.State.Error(errorReport),

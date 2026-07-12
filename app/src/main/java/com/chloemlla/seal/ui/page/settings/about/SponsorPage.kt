@@ -403,7 +403,8 @@ fun SponsorDialogContent(
 @Composable
 private fun LinkItem(modifier: Modifier = Modifier, icon: ImageVector, link: String) {
     val uriHandler = LocalUriHandler.current
-        val linkCopiedText = stringResource(id = R.string.link_copied)
+    val context = LocalContext.current
+    val linkCopiedText = stringResource(id = R.string.link_copied)
     Row(
         modifier =
             modifier

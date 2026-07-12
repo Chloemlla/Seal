@@ -281,6 +281,7 @@ fun DownloadDialog(
 @Composable
 private fun ErrorPage(modifier: Modifier = Modifier, state: Error, onActionPost: (Action) -> Unit) {
     val view = LocalView.current
+    val context = LocalContext.current
         val url =
         state.action.run {
             when (this) {

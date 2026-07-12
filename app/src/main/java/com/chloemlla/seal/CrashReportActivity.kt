@@ -45,9 +45,10 @@ class CrashReportActivity : ComponentActivity() {
                     darkTheme = LocalDarkTheme.current.isDarkTheme(),
                     isHighContrastModeEnabled = LocalDarkTheme.current.isHighContrastModeEnabled,
                 ) {
-                                        CrashReportPage(errorMessage = errorMessage) {
+                    val context = LocalContext.current
+                    CrashReportPage(errorMessage = errorMessage) {
                         context.copyToClipboard(errorMessage)
-                        this.finishAffinity()
+                        this@CrashReportActivity.finishAffinity()
                     }
                 }
             }
