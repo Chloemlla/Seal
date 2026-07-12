@@ -1,0 +1,163 @@
+name: Build Pre-Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  BuildPreRelease:
+    # Only the repository owner account may run the release workflow.
+    if: ${{ github.actor == 'Chloemlla' || github.triggering_actor == 'Chloemlla' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set release metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import os
+
+          text = Path("buildSrc/src/main/kotlin/Version.kt").read_text(encoding="utf-8")
+          match = re.search(
+              r"currentVersion:\s*Version\s*=\s*Version\.(Alpha|Beta|Stable|ReleaseCandidate)\((.*?)\)",
+              text,
+              re.S,
+          )
+          if not match:
+              raise SystemExit("unable to parse currentVersion from Version.kt")
+
+          kind, args = match.group(1), match.group(2)
+          values = {
+              key: int(value)
+              for key, value in re.findall(r"(\w+)\s*=\s*(\d+)", args)
+          }
+          major = values["versionMajor"]
+          minor = values["versionMinor"]
+          patch = values["versionPatch"]
+          build = values.get("versionBuild", 0)
+
+          if kind == "Stable":
+              version_name = f"{major}.{minor}.{patch}"
+          elif kind == "Alpha":
+              version_name = f"{major}.{minor}.{patch}-alpha.{build}"
+          elif kind == "Beta":
+              version_name = f"{major}.{minor}.{patch}-beta.{build}"
+          else:
+              version_name = f"{major}.{minor}.{patch}-rc.{build}"
+
+          env_file = Path(os.environ["GITHUB_ENV"])
+          with env_file.open("a", encoding="utf-8") as handle:
+              handle.write(f"SEAL_VERSION_NAME={version_name}\n")
+          print(version_name)
+          PY
+          SEAL_VERSION_NAME=$(grep '^SEAL_VERSION_NAME=' "$GITHUB_ENV" | tail -n1 | cut -d= -f2-)
+          SHORT_HASH=$(git rev-parse --short=7 HEAD)
+          echo "SEAL_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
+          test -n "$SEAL_VERSION_NAME"
+          test -n "$SHORT_HASH"
+          echo "Pre-release version: $SEAL_VERSION_NAME-$SHORT_HASH"
+
+      - name: set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Prepare signing credentials
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          : "${KEYSTORE_BASE64:?KEYSTORE_BASE64 is required}"
+          : "${KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
+          : "${KEY_ALIAS:?KEY_ALIAS is required}"
+          : "${KEY_PASSWORD:?KEY_PASSWORD is required}"
+          KEYSTORE_FILE="$RUNNER_TEMP/seal-release.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+          chmod 600 "$KEYSTORE_FILE"
+          # Seal app/build.gradle.kts reads root keystore.properties
+          printf '%s\n' \
+            "storeFile=$KEYSTORE_FILE" \
+            "storePassword=$KEYSTORE_PASSWORD" \
+            "keyAlias=$KEY_ALIAS" \
+            "keyPassword=$KEY_PASSWORD" \
+            > keystore.properties
+          chmod 600 keystore.properties
+
+      # generic only — githubPreview / preview APK release is disabled
+      - name: Build pre-release APKs
+        run: ./gradlew --no-daemon assembleGenericRelease
+
+      - name: Verify signed APKs
+        env:
+          SIGNING_CERT_SHA256: ${{ secrets.SIGNING_CERT_SHA256 }}
+        run: |
+          APK_DIR="app/build/outputs/apk/generic/release"
+          test -d "$APK_DIR"
+          mapfile -t apks < <(find "$APK_DIR" -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -gt 0
+
+          if [[ -n "${SIGNING_CERT_SHA256:-}" ]]; then
+            expected_digest=${SIGNING_CERT_SHA256//:/}
+            expected_digest=${expected_digest^^}
+            apksigner=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)
+            test -n "$apksigner"
+            for apk in "${apks[@]}"; do
+              verification=$("$apksigner" verify --verbose --print-certs "$apk")
+              actual_digest=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$verification" | head -n 1)
+              actual_digest=${actual_digest//:/}
+              actual_digest=${actual_digest^^}
+              test -n "$actual_digest"
+              if [[ "$actual_digest" != "$expected_digest" ]]; then
+                echo "Unexpected signing certificate for $apk" >&2
+                exit 1
+              fi
+            done
+          else
+            echo "SIGNING_CERT_SHA256 not set; skipping certificate fingerprint check"
+          fi
+
+          (
+            cd "$APK_DIR"
+            sha256sum ./*.apk > SHA256SUMS
+          )
+
+      - name: Automatic release
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          tag_name: v${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}
+          prerelease: true
+          name: Seal ${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}
+          files: |
+            app/build/outputs/apk/generic/release/*.apk
+            app/build/outputs/apk/generic/release/SHA256SUMS
+
+      - name: Remove signing credentials
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/seal-release.keystore"
