@@ -184,6 +184,8 @@ Highlights:
 - Protocol versioning (`protocol_version`, currently `1`)
 - User-controlled settings under **Settings → Interface & interaction → External downloads**
 - UI-path external downloads are watched so L3 status still reports completion/failure/cancel
+- `extract_audio=true` opens the Quick Download sheet with **Audio** type (not the global video default)
+- Reference integration: [Chloemlla/PiliPlus](https://github.com/Chloemlla/PiliPlus) video menu “下载视频 / 下载音频”
 - Docs:
   - [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md)
   - [docs/third-party-call-guide.md](docs/third-party-call-guide.md) (中文调用说明)
