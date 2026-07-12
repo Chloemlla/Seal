@@ -143,8 +143,6 @@ android {
         }
     }
 
-    kotlinOptions { freeCompilerArgs = freeCompilerArgs + "-opt-in=kotlin.RequiresOptIn" }
-
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
         jniLibs.useLegacyPackaging = true
@@ -156,7 +154,13 @@ android {
 
 ktfmt { kotlinLangStyle() }
 
-kotlin { jvmToolchain(21) }
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        // Migrated from deprecated android.kotlinOptions.freeCompilerArgs
+        optIn.add("kotlin.RequiresOptIn")
+    }
+}
 
 dependencies {
     implementation(project(":color"))
