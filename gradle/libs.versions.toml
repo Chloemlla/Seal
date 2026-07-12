@@ -11,7 +11,8 @@ androidxActivity = "1.13.0"
 graphics = "1.0.1"
 constraintLayout = "1.1.1"
 
-androidxLifecycle = "2.11.0"
+androidxLifecycle = "2.10.0"
+# 2.11.0+ requires AGP 9.1.0; keep 2.10.x while on AGP 8.13.x
 androidxNavigation = "2.9.8"
 
 androidxEspresso = "3.7.0"
