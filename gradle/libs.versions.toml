@@ -2,7 +2,7 @@
 accompanist = "0.37.3"
 # webview was removed from the 0.37 line; last published artifact is 0.36.0
 accompanistWebview = "0.36.0"
-androidGradlePlugin = "8.13.2"
+androidGradlePlugin = "9.2.1"
 androidxComposeBom = "2026.06.01"
 androidxCore = "1.18.0"
 androidMaterial = "1.14.0"
@@ -11,8 +11,8 @@ androidxActivity = "1.13.0"
 graphics = "1.0.1"
 constraintLayout = "1.1.1"
 
-androidxLifecycle = "2.10.0"
-# 2.11.0+ requires AGP 9.1.0; keep 2.10.x while on AGP 8.13.x
+androidxLifecycle = "2.11.0"
+# Requires AGP 9.1.0+ (AAR metadata)
 androidxNavigation = "2.9.8"
 
 androidxEspresso = "3.7.0"
