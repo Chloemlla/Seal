@@ -1,6 +1,7 @@
 package com.chloemlla.seal.ui.page.downloadv2
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,9 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.TextSnippet
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Cancel
@@ -22,10 +24,13 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.VideoFile
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,13 +49,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.chloemlla.seal.R
-import com.chloemlla.seal.download.FakeDownloaderV2
 import com.chloemlla.seal.download.Task
 import com.chloemlla.seal.download.Task.*
 import com.chloemlla.seal.download.Task.DownloadState.Canceled
@@ -74,150 +79,218 @@ import com.chloemlla.seal.util.toFileSizeText
 import com.chloemlla.seal.util.toLocalizedString
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+
+/** Portrait only: keep the top action strip compact by overflowing into a More menu. */
+private const val PortraitVisibleActionLimit = 5
+
+private data class ActionButtonSpec(
+    val key: String,
+    val text: String,
+    val imageVector: ImageVector,
+    val containerColor: Color,
+    val contentColor: Color,
+    val outlineColor: Color = Color.Unspecified,
+    val onClick: () -> Unit,
+)
 
 @Composable
-private fun ShareButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun ActionPrimaryButton(spec: ActionButtonSpec, modifier: Modifier = Modifier) {
     ActionSheetPrimaryButton(
         modifier = modifier,
-        containerColor = LocalFixedColorRoles.current.secondaryFixed,
-        contentColor = LocalFixedColorRoles.current.onSecondaryFixedVariant,
-        imageVector = Icons.Rounded.Share,
-        text = stringResource(R.string.share),
-        onClick = onClick,
+        containerColor = spec.containerColor,
+        contentColor = spec.contentColor,
+        outlineColor = spec.outlineColor,
+        imageVector = spec.imageVector,
+        text = spec.text,
+        onClick = spec.onClick,
     )
 }
 
 @Composable
-private fun PlayButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = LocalFixedColorRoles.current.primaryFixed,
-        contentColor = LocalFixedColorRoles.current.onPrimaryFixedVariant,
-        imageVector = Icons.Rounded.PlayArrow,
-        text = stringResource(R.string.open_file),
-        onClick = onClick,
-    )
+private fun buildActionButtonSpecs(
+    task: Task,
+    downloadState: DownloadState,
+    viewState: ViewState,
+    onDismissRequest: () -> Unit,
+    onActionPost: (Task, UiAction) -> Unit,
+): List<ActionButtonSpec> {
+    val secondaryContainer = Color.Transparent
+    val secondaryContent = MaterialTheme.colorScheme.onSurface
+    val outline = MaterialTheme.colorScheme.outlineVariant
+    val fixed = LocalFixedColorRoles.current
+
+    val specs = mutableListOf<ActionButtonSpec>()
+    when (downloadState) {
+        is Canceled -> {
+            specs +=
+                ActionButtonSpec(
+                    key = "ResumeButton",
+                    text = stringResource(R.string.resume),
+                    imageVector = Icons.Outlined.RestartAlt,
+                    containerColor = fixed.tertiaryFixed,
+                    contentColor = fixed.onTertiaryFixedVariant,
+                    onClick = {
+                        onActionPost(task, UiAction.Resume)
+                        onDismissRequest()
+                    },
+                )
+        }
+        is Completed -> {
+            specs +=
+                ActionButtonSpec(
+                    key = "PlayButton",
+                    text = stringResource(R.string.open_file),
+                    imageVector = Icons.Rounded.PlayArrow,
+                    containerColor = fixed.primaryFixed,
+                    contentColor = fixed.onPrimaryFixedVariant,
+                    onClick = {
+                        onActionPost(task, UiAction.OpenFile(downloadState.filePath))
+                        onDismissRequest()
+                    },
+                )
+            specs +=
+                ActionButtonSpec(
+                    key = "ShareButton",
+                    text = stringResource(R.string.share),
+                    imageVector = Icons.Rounded.Share,
+                    containerColor = fixed.secondaryFixed,
+                    contentColor = fixed.onSecondaryFixedVariant,
+                    onClick = { onActionPost(task, UiAction.ShareFile(downloadState.filePath)) },
+                )
+        }
+        is Error -> {
+            specs +=
+                ActionButtonSpec(
+                    key = "ResumeButton",
+                    text = stringResource(R.string.resume),
+                    imageVector = Icons.Outlined.RestartAlt,
+                    containerColor = fixed.tertiaryFixed,
+                    contentColor = fixed.onTertiaryFixedVariant,
+                    onClick = {
+                        onActionPost(task, UiAction.Resume)
+                        onDismissRequest()
+                    },
+                )
+            specs +=
+                ActionButtonSpec(
+                    key = "ErrorReportButton",
+                    text = stringResource(R.string.copy_error_report),
+                    imageVector = Icons.Outlined.ErrorOutline,
+                    containerColor = ErrorTonalPalettes.accent1(80.0),
+                    contentColor = ErrorTonalPalettes.accent1(10.0),
+                    onClick = {
+                        onActionPost(task, UiAction.CopyErrorReport(downloadState.throwable))
+                    },
+                )
+        }
+        is FetchingInfo,
+        ReadyWithInfo,
+        Idle,
+        is Running -> {
+            specs +=
+                ActionButtonSpec(
+                    key = "CancelButton",
+                    text = stringResource(R.string.cancel),
+                    imageVector = Icons.Outlined.Cancel,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    onClick = {
+                        onActionPost(task, UiAction.Cancel)
+                        onDismissRequest()
+                    },
+                )
+        }
+    }
+    if (downloadState is DownloadState.Restartable || downloadState is Completed) {
+        specs +=
+            ActionButtonSpec(
+                key = "DeleteButton",
+                text = stringResource(R.string.delete),
+                imageVector = Icons.Outlined.Delete,
+                containerColor = secondaryContainer,
+                contentColor = secondaryContent,
+                outlineColor = outline,
+                onClick = {
+                    onActionPost(task, UiAction.Delete)
+                    onDismissRequest()
+                },
+            )
+    }
+    specs +=
+        ActionButtonSpec(
+            key = "CopyURLButton",
+            text = stringResource(R.string.copy_link),
+            imageVector = Icons.Outlined.ContentCopy,
+            containerColor = secondaryContainer,
+            contentColor = secondaryContent,
+            outlineColor = outline,
+            onClick = { onActionPost(task, UiAction.CopyVideoURL) },
+        )
+    specs +=
+        ActionButtonSpec(
+            key = "OpenVideoURLButton",
+            text = stringResource(R.string.open_url),
+            imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+            containerColor = secondaryContainer,
+            contentColor = secondaryContent,
+            outlineColor = outline,
+            onClick = { onActionPost(task, UiAction.OpenVideoURL(viewState.url)) },
+        )
+    if (!viewState.thumbnailUrl.isNullOrEmpty()) {
+        specs +=
+            ActionButtonSpec(
+                key = "OpenThumbnailURLButton",
+                text = stringResource(R.string.thumbnail),
+                imageVector = Icons.Outlined.Image,
+                containerColor = secondaryContainer,
+                contentColor = secondaryContent,
+                outlineColor = outline,
+                onClick = { onActionPost(task, UiAction.OpenThumbnailURL(viewState.thumbnailUrl)) },
+            )
+    }
+    return specs
 }
 
 @Composable
-private fun ResumeButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = LocalFixedColorRoles.current.tertiaryFixed,
-        contentColor = LocalFixedColorRoles.current.onTertiaryFixedVariant,
-        imageVector = Icons.Outlined.RestartAlt,
-        text = stringResource(R.string.resume),
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun ErrorReportButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = ErrorTonalPalettes.accent1(80.0),
-        contentColor = ErrorTonalPalettes.accent1(10.0),
-        imageVector = Icons.Outlined.ErrorOutline,
-        text = stringResource(R.string.copy_error_report),
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun DeleteButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        imageVector = Icons.Outlined.Delete,
-        outlineColor = MaterialTheme.colorScheme.outlineVariant,
-        text = stringResource(R.string.delete),
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun CancelButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        imageVector = Icons.Outlined.Cancel,
-        text = stringResource(R.string.cancel),
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun DownloadLogButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = LocalFixedColorRoles.current.secondaryFixed,
-        contentColor = LocalFixedColorRoles.current.onSecondaryFixedVariant,
-        imageVector = Icons.AutoMirrored.Outlined.TextSnippet,
-        text = stringResource(R.string.show_logs),
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun CopyURLButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        outlineColor = MaterialTheme.colorScheme.outlineVariant,
-        imageVector = Icons.Outlined.ContentCopy,
-        text = stringResource(R.string.copy_link),
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun OpenVideoURLButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        outlineColor = MaterialTheme.colorScheme.outlineVariant,
-        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-        text = stringResource(R.string.open_url),
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun OpenThumbnailURLButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ActionSheetPrimaryButton(
-        modifier = modifier,
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        outlineColor = MaterialTheme.colorScheme.outlineVariant,
-        imageVector = Icons.Outlined.Image,
-        text = stringResource(R.string.thumbnail),
-        onClick = onClick,
-    )
+private fun MoreActionsButton(
+    modifier: Modifier = Modifier,
+    overflowActions: List<ActionButtonSpec>,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        ActionSheetPrimaryButton(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            outlineColor = MaterialTheme.colorScheme.outlineVariant,
+            imageVector = Icons.Outlined.MoreVert,
+            text = stringResource(R.string.show_more_actions),
+            onClick = { expanded = true },
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            overflowActions.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(action.text) },
+                    leadingIcon = {
+                        Icon(imageVector = action.imageVector, contentDescription = null)
+                    },
+                    onClick = {
+                        expanded = false
+                        action.onClick()
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable
 fun Title(imageModel: Any?, title: String, author: String, downloadState: DownloadState) {
-
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        /*        AsyncImageImpl(
-            model = imageModel,
-            modifier =
-                Modifier.height(64.dp).aspectRatio(16f / 9f, matchHeightConstraintsFirst = true),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-        )*/
-        //        Spacer(Modifier.width(12.dp))
-
         Column(modifier = Modifier.height(IntrinsicSize.Min)) {
-            Column(Modifier) {
+            Column(modifier) {
                 Text(text = title, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -227,8 +300,7 @@ fun Title(imageModel: Any?, title: String, author: String, downloadState: Downlo
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
-            Spacer(Modifier.height(8.dp))
-
+            Spacer(modifier.height(8.dp))
             ListItemStateText(downloadState = downloadState)
         }
     }
@@ -242,7 +314,6 @@ fun SheetContent(
     onDismissRequest: () -> Unit,
     onActionPost: (Task, UiAction) -> Unit,
 ) {
-
     LazyColumn {
         item {
             Title(
@@ -254,100 +325,62 @@ fun SheetContent(
         }
 
         item {
-            LazyRow(
-                modifier = Modifier.padding(top = 12.dp, bottom = 24.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp),
-            ) {
-                ActionButtons(
-                    task = task,
-                    downloadState = downloadState,
-                    viewState = viewState,
-                    onDismissRequest = onDismissRequest,
-                    onActionPost = onActionPost,
-                )
-            }
+            ActionButtonsRow(
+                task = task,
+                downloadState = downloadState,
+                viewState = viewState,
+                onDismissRequest = onDismissRequest,
+                onActionPost = onActionPost,
+            )
         }
 
         item { ActionSheetInfo(task = task, viewState = viewState) }
     }
 }
 
-fun LazyListScope.ActionButtons(
+@Composable
+private fun ActionButtonsRow(
     task: Task,
     downloadState: DownloadState,
     viewState: ViewState,
     onDismissRequest: () -> Unit,
     onActionPost: (Task, UiAction) -> Unit,
 ) {
-    when (downloadState) {
-        is Canceled -> {
-            item(key = "ResumeButton") {
-                ResumeButton(modifier = Modifier.animateItem()) {
-                    onActionPost(task, UiAction.Resume)
-                    onDismissRequest()
-                }
-            }
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val actions =
+        buildActionButtonSpecs(
+            task = task,
+            downloadState = downloadState,
+            viewState = viewState,
+            onDismissRequest = onDismissRequest,
+            onActionPost = onActionPost,
+        )
+
+    // Portrait: at most 5 visible controls including the More button itself when needed.
+    // Landscape: keep the previous horizontal-scroll full strip.
+    val (visibleActions, overflowActions) =
+        if (isPortrait && actions.size > PortraitVisibleActionLimit) {
+            val visibleCount = (PortraitVisibleActionLimit - 1).coerceAtLeast(1)
+            actions.take(visibleCount) to actions.drop(visibleCount)
+        } else {
+            actions to emptyList()
         }
-        is Completed -> {
-            item(key = "PlayButton") {
-                PlayButton(modifier = Modifier.animateItem()) {
-                    onActionPost(task, UiAction.OpenFile(downloadState.filePath))
-                    onDismissRequest()
-                }
-            }
-            item(key = "ShareButton") {
-                ShareButton(modifier = Modifier.animateItem()) {
-                    onActionPost(task, UiAction.ShareFile(downloadState.filePath))
-                }
-            }
+
+    LazyRow(
+        modifier = Modifier.padding(top = 12.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        items(items = visibleActions, key = { it.key }) { action ->
+            ActionPrimaryButton(spec = action, modifier = Modifier.animateItem())
         }
-        is Error -> {
-            item(key = "ResumeButton") {
-                ResumeButton(modifier = Modifier.animateItem()) {
-                    onActionPost(task, UiAction.Resume)
-                    onDismissRequest()
-                }
-            }
-            item(key = "ErrorReportButton") {
-                ErrorReportButton(modifier = Modifier.animateItem()) {
-                    onActionPost(task, UiAction.CopyErrorReport(downloadState.throwable))
-                }
-            }
-        }
-        is FetchingInfo,
-        ReadyWithInfo,
-        Idle,
-        is Running -> {
-            item(key = "CancelButton") {
-                CancelButton(modifier = Modifier.animateItem()) {
-                    onActionPost(task, UiAction.Cancel)
-                    onDismissRequest()
-                }
-            }
-        }
-    }
-    if (downloadState is DownloadState.Restartable || downloadState is Completed) {
-        item(key = "DeleteButton") {
-            DeleteButton(modifier = Modifier.animateItem()) {
-                onActionPost(task, UiAction.Delete)
-                onDismissRequest()
-            }
-        }
-    }
-    item(key = "CopyURLButton") {
-        CopyURLButton(modifier = Modifier.animateItem()) {
-            onActionPost(task, UiAction.CopyVideoURL)
-        }
-    }
-    item(key = "OpenVideoURLButton") {
-        OpenVideoURLButton(modifier = Modifier.animateItem()) {
-            onActionPost(task, UiAction.OpenVideoURL(viewState.url))
-        }
-    }
-    if (!viewState.thumbnailUrl.isNullOrEmpty()) {
-        item(key = "OpenThumbnailURLButton") {
-            OpenThumbnailURLButton(modifier = Modifier.animateItem()) {
-                onActionPost(task, UiAction.OpenThumbnailURL(viewState.thumbnailUrl))
+        if (overflowActions.isNotEmpty()) {
+            item(key = "MoreActionsButton") {
+                MoreActionsButton(
+                    modifier = Modifier.animateItem(),
+                    overflowActions = overflowActions,
+                )
             }
         }
     }
@@ -389,10 +422,7 @@ private fun SheetPreview() {
         }
     }
 
-    val context = LocalContext.current
-    val downloader = FakeDownloaderV2
     val scope = rememberCoroutineScope()
-
     val viewState =
         ViewState(
             title = "video title looooooooooooooooooooooooooooong title sample",
@@ -407,10 +437,13 @@ private fun SheetPreview() {
                     )
                 ),
             audioOnlyFormats = listOf(Format(acodec = "mp4a", abr = 129.0, fileSize = 114514.0)),
+            thumbnailUrl = "https://example.com/thumb.jpg",
+            url = "https://www.example.com",
+            extractorKey = "youtube",
         )
 
     SealTheme {
-        Surface() {
+        Surface {
             SealModalBottomSheet(
                 contentPadding = PaddingValues(),
                 onDismissRequest = {},
@@ -421,7 +454,7 @@ private fun SheetPreview() {
                     viewState = viewState,
                     downloadState = downloadState,
                     onDismissRequest = { scope.launch { sheetState.hide() } },
-                ) { task, action ->
+                ) { _, _ ->
                 }
             }
         }
