@@ -63,8 +63,10 @@ jobs:
           SEAL_VERSION_NAME=$(grep '^SEAL_VERSION_NAME=' "$GITHUB_ENV" | tail -n1 | cut -d= -f2-)
           SHORT_HASH=$(git rev-parse --short=7 HEAD)
           echo "SEAL_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
+          echo "SEAL_REPORT_DIR=$RUNNER_TEMP/seal-build-report" >> "$GITHUB_ENV"
           test -n "$SEAL_VERSION_NAME"
           test -n "$SHORT_HASH"
+          mkdir -p "$RUNNER_TEMP/seal-build-report"
           echo "Pre-release version: $SEAL_VERSION_NAME-$SHORT_HASH"
 
       - name: set up JDK 21
@@ -111,41 +113,69 @@ jobs:
 
       # generic only — githubPreview / preview APK release is disabled
       - name: Build pre-release APKs
-        run: ./gradlew --no-daemon assembleGenericRelease
+        id: build
+        shell: bash
+        run: |
+          set -o pipefail
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR"
+          LOG_FILE="$REPORT_DIR/gradle-assembleGenericRelease.log"
+          {
+            echo "=== seal pre-release build ==="
+            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "sha=$GITHUB_SHA"
+            echo "ref=$GITHUB_REF"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "actor=$GITHUB_ACTOR"
+            echo "version=${SEAL_VERSION_NAME:-unknown}-${SEAL_SHORT_HASH:-unknown}"
+            echo "java=$(java -version 2>&1 | tr '\n' ' ')"
+            echo "=== gradle assembleGenericRelease ==="
+          } | tee "$LOG_FILE"
+          # Full console + file capture for later failure packaging
+          ./gradlew --no-daemon --stacktrace --info assembleGenericRelease 2>&1 | tee -a "$LOG_FILE"
 
       - name: Verify signed APKs
+        id: verify
         env:
           SIGNING_CERT_SHA256: ${{ secrets.SIGNING_CERT_SHA256 }}
+        shell: bash
         run: |
-          APK_DIR="app/build/outputs/apk/generic/release"
-          test -d "$APK_DIR"
-          mapfile -t apks < <(find "$APK_DIR" -type f -name '*.apk' | sort)
-          test "${#apks[@]}" -gt 0
+          set -o pipefail
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR"
+          LOG_FILE="$REPORT_DIR/verify-signed-apks.log"
+          {
+            APK_DIR="app/build/outputs/apk/generic/release"
+            test -d "$APK_DIR"
+            mapfile -t apks < <(find "$APK_DIR" -type f -name '*.apk' | sort)
+            test "${#apks[@]}" -gt 0
 
-          if [[ -n "${SIGNING_CERT_SHA256:-}" ]]; then
-            expected_digest=${SIGNING_CERT_SHA256//:/}
-            expected_digest=${expected_digest^^}
-            apksigner=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)
-            test -n "$apksigner"
-            for apk in "${apks[@]}"; do
-              verification=$("$apksigner" verify --verbose --print-certs "$apk")
-              actual_digest=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$verification" | head -n 1)
-              actual_digest=${actual_digest//:/}
-              actual_digest=${actual_digest^^}
-              test -n "$actual_digest"
-              if [[ "$actual_digest" != "$expected_digest" ]]; then
-                echo "Unexpected signing certificate for $apk" >&2
-                exit 1
-              fi
-            done
-          else
-            echo "SIGNING_CERT_SHA256 not set; skipping certificate fingerprint check"
-          fi
+            if [[ -n "${SIGNING_CERT_SHA256:-}" ]]; then
+              expected_digest=${SIGNING_CERT_SHA256//:/}
+              expected_digest=${expected_digest^^}
+              apksigner=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)
+              test -n "$apksigner"
+              for apk in "${apks[@]}"; do
+                verification=$("$apksigner" verify --verbose --print-certs "$apk")
+                actual_digest=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$verification" | head -n 1)
+                actual_digest=${actual_digest//:/}
+                actual_digest=${actual_digest^^}
+                test -n "$actual_digest"
+                if [[ "$actual_digest" != "$expected_digest" ]]; then
+                  echo "Unexpected signing certificate for $apk" >&2
+                  exit 1
+                fi
+              done
+            else
+              echo "SIGNING_CERT_SHA256 not set; skipping certificate fingerprint check"
+            fi
 
-          (
-            cd "$APK_DIR"
-            sha256sum ./*.apk > SHA256SUMS
-          )
+            (
+              cd "$APK_DIR"
+              sha256sum ./*.apk > SHA256SUMS
+            )
+          } 2>&1 | tee "$LOG_FILE"
 
       - name: Automatic release
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
@@ -171,6 +201,148 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -f latest "${GITHUB_SHA}"
           git push -f origin "refs/tags/latest"
+
+      - name: Package full build error report
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR/logs" "$REPORT_DIR/reports" "$REPORT_DIR/diagnostics"
+          STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          VERSION_LABEL="${SEAL_VERSION_NAME:-unknown}-${SEAL_SHORT_HASH:-unknown}"
+
+          {
+            echo "=== Seal pre-release failure report ==="
+            echo "generated_utc=$STAMP"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "workflow=$GITHUB_WORKFLOW"
+            echo "job=$GITHUB_JOB"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "run_number=$GITHUB_RUN_NUMBER"
+            echo "sha=$GITHUB_SHA"
+            echo "ref=$GITHUB_REF"
+            echo "actor=$GITHUB_ACTOR"
+            echo "version=$VERSION_LABEL"
+            echo "runner_os=$RUNNER_OS"
+            echo "runner_arch=$RUNNER_ARCH"
+            echo "runner_name=$RUNNER_NAME"
+            echo "server_url=$GITHUB_SERVER_URL"
+            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "=== java -version ==="
+            java -version 2>&1
+            echo
+            echo "=== gradle wrapper ==="
+            if [[ -f gradle/wrapper/gradle-wrapper.properties ]]; then
+              cat gradle/wrapper/gradle-wrapper.properties
+            fi
+            echo
+            echo "=== df -h ==="
+            df -h
+            echo
+            echo "=== free -h ==="
+            free -h 2>/dev/null || true
+            echo
+            echo "=== env (redacted) ==="
+            env | sort | sed -E 's/(PASSWORD|TOKEN|SECRET|KEYSTORE|KEY_)=.*/\1=<redacted>/I'
+          } > "$REPORT_DIR/diagnostics/environment.txt"
+
+          while IFS= read -r -d '' f; do
+            rel="${f#./}"
+            dest="$REPORT_DIR/reports/$rel"
+            mkdir -p "$(dirname "$dest")"
+            cp -a "$f" "$dest" 2>/dev/null || true
+          done < <(find . \
+            \( -path './.git' -o -path './.gradle' -o -path '*/.gradle/*' \) -prune -o \
+            \( \
+              -name '*-error-report.html' -o \
+              -name 'errors.txt' -o \
+              -name 'output.txt' -o \
+              -name 'report.html' -o \
+              -name 'report.xml' -o \
+              -name 'lint-results*.html' -o \
+              -name 'lint-results*.xml' -o \
+              -name 'lint-results*.txt' -o \
+              -name '*Test.txt' -o \
+              -name 'TEST-*.xml' -o \
+              -path '*/build/reports/*' -o \
+              -path '*/build/outputs/logs/*' \
+            \) -type f -print0 2>/dev/null)
+
+          if [[ -f "$REPORT_DIR/gradle-assembleGenericRelease.log" ]]; then
+            cp -a "$REPORT_DIR/gradle-assembleGenericRelease.log" "$REPORT_DIR/logs/" 2>/dev/null || true
+          fi
+          if [[ -f "$REPORT_DIR/verify-signed-apks.log" ]]; then
+            cp -a "$REPORT_DIR/verify-signed-apks.log" "$REPORT_DIR/logs/" 2>/dev/null || true
+          fi
+
+          {
+            echo "=== failure excerpts ==="
+            echo "generated_utc=$STAMP"
+            echo
+            for log in \
+              "$REPORT_DIR/gradle-assembleGenericRelease.log" \
+              "$REPORT_DIR/verify-signed-apks.log" \
+              "$REPORT_DIR/logs"/*.log
+            do
+              [[ -f "$log" ]] || continue
+              echo "----- file: $log -----"
+              grep -nE \
+                -e '^e: ' \
+                -e 'e: file://' \
+                -e 'FAILURE: Build failed' \
+                -e 'What went wrong:' \
+                -e 'Execution failed for task' \
+                -e 'Could not resolve' \
+                -e 'Could not find' \
+                -e 'Compilation error' \
+                -e 'Inconsistent JVM-target' \
+                -e 'error: ' \
+                -e 'Error:' \
+                -e 'Caused by:' \
+                "$log" | tail -n 400
+              echo
+              echo "----- tail of $log (last 200 lines) -----"
+              tail -n 200 "$log"
+              echo
+            done
+          } > "$REPORT_DIR/FAILURE_SUMMARY.txt"
+
+          {
+            echo "Seal pre-release full build error report"
+            echo "======================================="
+            echo "See FAILURE_SUMMARY.txt first, then logs/ for full Gradle output."
+            echo "Contents: FAILURE_SUMMARY.txt, logs/, reports/, diagnostics/, MANIFEST.txt"
+            echo "version: $VERSION_LABEL"
+            echo "sha: $GITHUB_SHA"
+            echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "generated_utc: $STAMP"
+          } > "$REPORT_DIR/README.txt"
+
+          (
+            cd "$REPORT_DIR"
+            find . -type f | sort > MANIFEST.txt
+          )
+
+          ARCHIVE="$RUNNER_TEMP/seal-build-error-report-${VERSION_LABEL}-${STAMP}.tar.gz"
+          tar -C "$REPORT_DIR" -czf "$ARCHIVE" .
+          echo "SEAL_ERROR_ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          ls -lah "$REPORT_DIR" "$ARCHIVE" || true
+          echo "==== FAILURE_SUMMARY (first 120 lines) ===="
+          head -n 120 "$REPORT_DIR/FAILURE_SUMMARY.txt" || true
+
+      - name: Upload full build error report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seal-build-error-report-${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.SEAL_REPORT_DIR }}
+            ${{ env.SEAL_ERROR_ARCHIVE }}
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Remove signing credentials
         if: always()
