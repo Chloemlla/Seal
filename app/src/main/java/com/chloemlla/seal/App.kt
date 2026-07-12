@@ -20,7 +20,6 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.android.material.color.DynamicColors
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.DownloaderV2Impl
-import com.chloemlla.seal.ui.page.download.HomePageViewModel
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel
 import com.chloemlla.seal.ui.page.settings.directory.Directory
 import com.chloemlla.seal.ui.page.settings.network.CookiesViewModel
@@ -71,7 +70,6 @@ class App : Application() {
                 module {
                     single<DownloaderV2> { DownloaderV2Impl(androidContext()) }
                     viewModel { DownloadDialogViewModel(downloader = get()) }
-                    viewModel { HomePageViewModel() }
                     viewModel { CookiesViewModel() }
                     viewModel { VideoListViewModel() }
                 }
