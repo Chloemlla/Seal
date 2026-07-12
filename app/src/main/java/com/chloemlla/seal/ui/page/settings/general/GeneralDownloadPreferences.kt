@@ -111,6 +111,10 @@ import androidx.compose.material.icons.automirrored.outlined.PlaylistAddCheck
 @Composable
 fun GeneralDownloadPreferences(onNavigateBack: () -> Unit, navigateToTemplate: () -> Unit) {
     val context = LocalContext.current
+    val permissionDeniedText = stringResource(R.string.permission_denied)
+    val ytdlpUpdateText = stringResource(R.string.ytdlp_update)
+    val ytDlpUpToDateText = stringResource(R.string.yt_dlp_up_to_date)
+    val ytDlpUpdateFailText = stringResource(R.string.yt_dlp_update_fail)
     val scope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -135,7 +139,7 @@ fun GeneralDownloadPreferences(onNavigateBack: () -> Unit, navigateToTemplate: (
     val notificationPermission =
         if (Build.VERSION.SDK_INT >= 33)
             rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS) { status ->
-                if (!status) ToastUtil.makeToast(context.getString(R.string.permission_denied))
+                if (!status) ToastUtil.makeToast(permissionDeniedText)
                 else isNotificationPermissionGranted = true
             }
         else null
@@ -182,7 +186,7 @@ fun GeneralDownloadPreferences(onNavigateBack: () -> Unit, navigateToTemplate: (
                     var ytdlpVersion by remember {
                         mutableStateOf(
                             YoutubeDL.getInstance().version(context.applicationContext)
-                                ?: context.getString(R.string.ytdlp_update)
+                                ?: ytdlpUpdateText
                         )
                     }
                     PreferenceItem(
@@ -210,12 +214,12 @@ fun GeneralDownloadPreferences(onNavigateBack: () -> Unit, navigateToTemplate: (
                                     .onFailure { th ->
                                         th.printStackTrace()
                                         ToastUtil.makeToastSuspend(
-                                            App.context.getString(R.string.yt_dlp_update_fail)
+                                            ytDlpUpdateFailText
                                         )
                                     }
                                     .onSuccess {
                                         ToastUtil.makeToastSuspend(
-                                            context.getString(R.string.yt_dlp_up_to_date) +
+                                            ytDlpUpToDateText +
                                                 " (${YT_DLP_VERSION.getString()})"
                                         )
                                     }

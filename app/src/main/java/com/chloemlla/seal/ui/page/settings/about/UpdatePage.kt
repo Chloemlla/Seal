@@ -69,7 +69,8 @@ fun UpdatePage(onNavigateBack: () -> Unit) {
     var updateChannel by UPDATE_CHANNEL.intState
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
+    val appUpToDateText = stringResource(R.string.app_up_to_date)
+    val appUpdateFailedText = stringResource(R.string.app_update_failed)
     var release by remember { mutableStateOf(UpdateUtil.Release()) }
     var showUpdateDialog by remember { mutableStateOf(false) }
     var showUnavailableDialog by remember { mutableStateOf(App.isFDroidBuild()) }
@@ -149,7 +150,7 @@ fun UpdatePage(onNavigateBack: () -> Unit) {
                                                     showUpdateDialog = true
                                                 }
                                                     ?: ToastUtil.makeToastSuspend(
-                                                        context.getString(R.string.app_up_to_date)
+                                                        appUpToDateText
                                                     )
                                             }
                                             isLoading = false
@@ -157,7 +158,7 @@ fun UpdatePage(onNavigateBack: () -> Unit) {
                                         .onFailure {
                                             it.printStackTrace()
                                             ToastUtil.makeToastSuspend(
-                                                context.getString(R.string.app_update_failed)
+                                                appUpdateFailedText
                                             )
                                             isLoading = false
                                         }

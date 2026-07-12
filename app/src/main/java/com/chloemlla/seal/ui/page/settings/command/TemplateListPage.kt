@@ -103,6 +103,8 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
     val hapticFeedback = LocalHapticFeedback.current
     val view = LocalView.current
         val context = LocalContext.current
+        val templateExportedText = stringResource(R.string.template_exported)
+        val templateImportedText = stringResource(R.string.template_imported)
     var showHelpDialog by remember { mutableStateOf(false) }
 
     var isMultiSelectEnabled by remember { mutableStateOf(false) }
@@ -172,9 +174,7 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
                                     onClick = {
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
-                                                context
-                                                    .getString(R.string.template_exported)
-                                                    .format(templates.size)
+                                                templateExportedText.format(templates.size)
                                             )
                                         }
                                         scope.launch {
@@ -195,9 +195,7 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
                                                     val res =
                                                         DatabaseUtil.importTemplatesFromJson(it)
                                                     snackbarHostState.showSnackbar(
-                                                        context
-                                                            .getString(R.string.template_imported)
-                                                            .format(res)
+                                                        templateImportedText.format(res)
                                                     )
                                                 }
                                             }
@@ -261,9 +259,7 @@ fun TemplateListPage(onNavigateBack: () -> Unit, onNavigateToEditPage: (Int) -> 
                                 view.slightHapticFeedback()
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
-                                        context
-                                            .getString(R.string.template_exported)
-                                            .format(selectedTemplates.size)
+                                        templateExportedText.format(selectedTemplates.size)
                                     )
                                 }
                                 scope.launch {

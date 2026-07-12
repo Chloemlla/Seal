@@ -200,6 +200,7 @@ fun DownloadPageV2(
 ) {
     val view = LocalView.current
     val context = LocalContext.current
+    val shareTitleText = stringResource(R.string.share)
     val scope = rememberCoroutineScope()
         val uriHandler = LocalUriHandler.current
 
@@ -238,7 +239,7 @@ fun DownloadPageV2(
                 uriHandler.openUri(action.url)
             }
             is UiAction.ShareFile -> {
-                val shareTitle = context.getString(R.string.share)
+                val shareTitle = shareTitleText
                 FileUtil.createIntentForSharingFile(action.filePath)?.let {
                     context.startActivity(Intent.createChooser(it, shareTitle))
                 }

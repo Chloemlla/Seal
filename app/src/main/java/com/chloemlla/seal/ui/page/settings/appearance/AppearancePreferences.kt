@@ -82,7 +82,6 @@ import com.kyant.monet.a1
 import com.kyant.monet.a2
 import com.kyant.monet.a3
 import io.material.hct.Hct
-import java.util.Locale
 import kotlinx.coroutines.Job
 
 private val ColorList =
@@ -226,11 +225,7 @@ fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (String) -> 
                 PreferenceItem(
                     title = stringResource(R.string.language),
                     icon = Icons.Outlined.Language,
-                    description = run {
-                        // Observe configuration so language changes recompose this preference.
-                        val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
-                        locale.toDisplayName()
-                    },
+                    description = LocalConfiguration.current.locales[0].toDisplayName(),
                 ) {
                     onNavigateTo(Route.LANGUAGES)
                 }

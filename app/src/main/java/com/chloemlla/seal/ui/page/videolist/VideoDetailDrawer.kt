@@ -65,6 +65,7 @@ fun VideoDetailDrawer(
     val uriHandler = LocalUriHandler.current
     val view = LocalView.current
     val context = LocalContext.current
+    val linkCopiedText = stringResource(R.string.link_copied)
     val hapticFeedback = LocalHapticFeedback.current
     BackHandler(sheetState.targetValue == ModalBottomSheetValue.Expanded) { onDismissRequest() }
 
@@ -142,7 +143,8 @@ fun VideoDetailDrawerImpl(
     onOpenLink: () -> Unit = {},
     onShareFile: () -> Unit = {},
 ) {
-        val context = LocalContext.current
+    val context = LocalContext.current
+    val linkCopiedText = stringResource(R.string.link_copied)
     SealModalBottomSheetM2(
         sheetState = sheetState,
         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -169,7 +171,7 @@ fun VideoDetailDrawerImpl(
                 LongTapTextButton(
                     onClick = {
                         context.copyToClipboard(url)
-                        ToastUtil.makeToast(context.getString(R.string.link_copied))
+                        ToastUtil.makeToast(linkCopiedText)
                     },
                     onClickLabel = stringResource(id = R.string.copy_link),
                     onLongClick = onOpenLink,

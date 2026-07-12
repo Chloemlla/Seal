@@ -39,6 +39,7 @@ fun UpdateDialog(onDismissRequest: () -> Unit, release: UpdateUtil.Release) {
         mutableStateOf(UpdateUtil.DownloadStatus.NotYet as UpdateUtil.DownloadStatus)
     }
     val context = LocalContext.current
+    val appUpdateFailedText = stringResource(R.string.app_update_failed)
 
     val scope = rememberCoroutineScope()
     UpdateDialogImpl(
@@ -59,7 +60,7 @@ fun UpdateDialog(onDismissRequest: () -> Unit, release: UpdateUtil.Release) {
                     .onFailure {
                         it.printStackTrace()
                         currentDownloadStatus = UpdateUtil.DownloadStatus.NotYet
-                        ToastUtil.makeToastSuspend(context.getString(R.string.app_update_failed))
+                        ToastUtil.makeToastSuspend(appUpdateFailedText)
                         return@launch
                     }
             }

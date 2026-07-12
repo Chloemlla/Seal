@@ -56,6 +56,9 @@ fun TroubleShootingPage(
 ) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
+    val ytdlpUpdateText = stringResource(R.string.ytdlp_update)
+    val ytDlpUpToDateText = stringResource(R.string.yt_dlp_up_to_date)
+    val ytDlpUpdateFailText = stringResource(R.string.yt_dlp_update_fail)
     val scope = rememberCoroutineScope()
 
     BasePreferencePage(
@@ -97,7 +100,7 @@ fun TroubleShootingPage(
                 var ytdlpVersion by remember {
                     mutableStateOf(
                         YoutubeDL.getInstance().version(context.applicationContext)
-                            ?: context.getString(R.string.ytdlp_update)
+                            ?: ytdlpUpdateText
                     )
                 }
                 PreferenceItem(
@@ -131,14 +134,14 @@ fun TroubleShootingPage(
                                     th.printStackTrace()
                                     withContext(Dispatchers.Main) {
                                         context.makeToast(
-                                            App.context.getString(R.string.yt_dlp_update_fail)
+                                            ytDlpUpdateFailText
                                         )
                                     }
                                 }
                                 .onSuccess {
                                     withContext(Dispatchers.Main) {
                                         context.makeToast(
-                                            context.getString(R.string.yt_dlp_up_to_date) +
+                                            ytDlpUpToDateText +
                                                 " (${YT_DLP_VERSION.getString()})"
                                         )
                                     }
