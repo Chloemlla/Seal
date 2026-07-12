@@ -241,7 +241,7 @@ object Downloader {
             get(taskId)?.let { this.put(taskId, it.copy(state = CustomCommandTask.State.Canceled)) }
         }
 
-    fun onTaskError(errorReport: String, template: CommandTemplate, url: String) =
+    fun onTaskError(errorReport: String, template: CommandTemplate, url: String) {
         mutableTaskList.run {
             val key = makeKey(url, template.name)
             NotificationUtil.notifyError(
@@ -257,6 +257,7 @@ object Downloader {
                     output = oldValue.output + "\n" + errorReport,
                 )
         }
+    }
 
     private fun VideoInfo.toTask(playlistIndex: Int = 0, preferencesHash: Int): DownloadTaskItem =
         DownloadTaskItem(

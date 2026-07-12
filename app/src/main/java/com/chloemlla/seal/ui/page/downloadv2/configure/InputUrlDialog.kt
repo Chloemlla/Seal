@@ -93,7 +93,7 @@ fun InputUrlPage(
     LaunchedEffect(Unit) {
         context.readClipboardText()?.let {
             urlList.clear()
-            urlList.addAll(findURLsFromString(it.toString()).toSet())
+            urlList.addAll(findURLsFromString(it).toSet())
         }
     }
 

@@ -684,7 +684,7 @@ object PreferenceUtil {
         if (Build.VERSION.SDK_INT >= 33) {
             // No op
         } else {
-            LANGUAGE.updateInt(LocaleLanguageCodeMap[locale] ?: SYSTEM_DEFAULT)
+            LANGUAGE.updateInt(locale?.let { LocaleLanguageCodeMap[it] } ?: SYSTEM_DEFAULT)
         }
     }
 
