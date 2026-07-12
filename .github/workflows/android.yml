@@ -4,41 +4,47 @@ on:
   workflow_dispatch:
 
 jobs:
-
   build:
+    # Only the repository owner account may run the release workflow.
+    if: ${{ github.actor == 'Chloemlla' || github.triggering_actor == 'Chloemlla' }}
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: set up JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        cache: 'gradle'
+      - name: set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-    - uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v3
 
-    - run: gradle assembleRelease
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-    - name: Sign app APK
-      id: sign_app
-      uses: ilharp/sign-android-release@nightly
-      with:
-        releaseDir: app/build/outputs/apk/release
-        signingKey: ${{ secrets.SIGNING_KEY }}
-        keyAlias: ${{ secrets.ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-        keyPassword: ${{ secrets.KEY_PASSWORD }}
+      # generic only — do not assemble githubPreview (preview APK release is disabled)
+      - name: Build generic release APK
+        run: ./gradlew assembleGenericRelease
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: signed-apks
-        path: app/build/outputs/apk/release/*-arm64-v8a-release-signed.apk
-        if-no-files-found: error
-        retention-days: 20
+      - name: Sign app APK
+        id: sign_app
+        uses: ilharp/sign-android-release@nightly
+        with:
+          releaseDir: app/build/outputs/apk/generic/release
+          signingKey: ${{ secrets.KEYSTORE_BASE64 }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-apks
+          path: app/build/outputs/apk/generic/release/*-arm64-v8a-*-signed.apk
+          if-no-files-found: error
+          retention-days: 20
