@@ -202,7 +202,7 @@ dependencies {
 // Bundle latest Stable yt-dlp over youtubedl-android res/raw/ytdlp at packaging time.
 val skipYtDlpDownload: Boolean = project.hasProperty("skipYtDlpDownload")
 val ytDlpRawFile: File = file("src/main/res/raw/ytdlp")
-val ytDlpVersionFile: File = file("src/main/res/raw/ytdlp.version")
+val ytDlpVersionFile: File = file("ytdlp.version") // keep outside res/raw (name would collide with ytdlp)
 
 abstract class DownloadStableYtDlpTask : DefaultTask() {
     @get:OutputFile
