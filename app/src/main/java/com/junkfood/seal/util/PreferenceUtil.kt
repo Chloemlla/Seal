@@ -185,6 +185,12 @@ const val TEMPLATE_SHORTCUTS = "template_shortcuts"
 const val TASK_LIST = "task_list"
 const val SAVED_LINKS = "saved_links"
 
+// Third-party delegate-only integration (see docs/third-party-delegate-integration-TODO.md)
+const val EXTERNAL_DELEGATE_ENABLED = "external_delegate_enabled"
+const val EXTERNAL_AUTO_START_ENABLED = "external_auto_start_enabled"
+const val EXTERNAL_WHITELIST_MODE = "external_whitelist_mode"
+const val EXTERNAL_CALLER_WHITELIST = "external_caller_whitelist"
+
 val paletteStyles =
     listOf(
         PaletteStyle.TonalSpot,
@@ -207,6 +213,7 @@ private val StringPreferenceDefaults =
         SUBTITLE_LANGUAGE to "en.*,.*-orig",
         OUTPUT_TEMPLATE to DownloadUtil.OUTPUT_TEMPLATE_ID,
         CUSTOM_OUTPUT_TEMPLATE to DownloadUtil.OUTPUT_TEMPLATE_ID,
+        EXTERNAL_CALLER_WHITELIST to "",
     )
 
 private val BooleanPreferenceDefaults =
@@ -218,6 +225,9 @@ private val BooleanPreferenceDefaults =
         NOTIFICATION to true,
         EMBED_METADATA to true,
         USE_CUSTOM_AUDIO_PRESET to false,
+        EXTERNAL_DELEGATE_ENABLED to true,
+        EXTERNAL_AUTO_START_ENABLED to false,
+        EXTERNAL_WHITELIST_MODE to false,
     )
 
 private val IntPreferenceDefaults =
@@ -631,3 +641,4 @@ object PreferenceStrings {
         }
     }
 }
+

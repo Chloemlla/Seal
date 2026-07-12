@@ -450,4 +450,16 @@
         <item quantity="one">%d audio</item>
         <item quantity="other">%d audios</item>
     </plurals>
+    <string name="external_download_section">External downloads</string>
+    <string name="external_delegate_enabled">Allow external apps to delegate downloads</string>
+    <string name="external_delegate_enabled_desc">Other apps can send links to Seal for downloading. Seal always performs the download itself.</string>
+    <string name="external_auto_start_enabled">Allow external auto-start</string>
+    <string name="external_auto_start_enabled_desc">When enabled, trusted external requests may enqueue downloads without opening the configure sheet.</string>
+    <string name="external_whitelist_mode">Limit external callers</string>
+    <string name="external_whitelist_mode_desc">Only packages listed below may delegate downloads to Seal.</string>
+    <string name="external_caller_whitelist">Allowed packages</string>
+    <string name="external_caller_whitelist_desc">One package name per line (for example com.example.browser)</string>
 </resources>
+
+
+

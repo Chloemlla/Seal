@@ -92,6 +92,8 @@ English
 
 - Easy to use and user-friendly.
 
+- Third-party apps can **delegate** downloads to Seal via Intents (share / open URL / `com.junkfood.seal.action.DOWNLOAD`). See [docs/third-party-delegate-integration.md](docs/third-party-delegate-integration.md).
+
 - [Material Design 3](https://m3.material.io/) style UI, with dynamic color theme.
 
 - MAD: UI and logic written with pure Kotlin. Single activity, no fragments, only composable destinations.
@@ -167,3 +169,5 @@ Some of the UI designs and codes are borrowed from [Read You](https://github.com
 <a href="#start-of-content">👆 Scroll to top</a>
 </td></table>
 </div>
+
+
