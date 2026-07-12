@@ -219,6 +219,21 @@ abstract class DownloadStableYtDlpTask : DefaultTask() {
         val out = outputFile.get().asFile
         val ver = versionFile.get().asFile
         out.parentFile.mkdirs()
+        ver.parentFile?.mkdirs()
+
+        // Android raw resources strip extensions: ytdlp.version would collide with ytdlp.
+        // Also never leave download temps inside res/raw.
+        sequenceOf(
+                File(out.parentFile, "ytdlp.version"),
+                File(out.parentFile, "ytdlp.download.tmp"),
+                File(out.parentFile, "ytdlp.tmp"),
+            )
+            .forEach { stray ->
+                if (stray.exists() && stray != out) {
+                    logger.lifecycle("Removing stray raw resource: ${stray.absolutePath}")
+                    stray.delete()
+                }
+            }
 
         if (skipDownload.get()) {
             if (!out.isFile || out.length() < 100_000L) {
@@ -259,9 +274,11 @@ abstract class DownloadStableYtDlpTask : DefaultTask() {
             logger.warn("Could not resolve yt-dlp latest tag: ${t.message}")
         }
 
-        val tmp = File(out.parentFile, "ytdlp.download.tmp")
+        // Keep temp outside res/raw so interrupted downloads cannot create duplicate raw names.
+        val tmp =
+            File(ver.parentFile ?: project.layout.projectDirectory.asFile, "ytdlp.download.tmp")
         try {
-            logger.lifecycle("Downloading yt-dlp Stable ($tag) ...")
+            logger.lifecycle("Downloading yt-dlp Stable (${tag}) ...")
             connect(assetUrl).getInputStream().use { input ->
                 tmp.outputStream().use { output -> input.copyTo(output) }
             }
@@ -279,9 +296,9 @@ abstract class DownloadStableYtDlpTask : DefaultTask() {
                 throw GradleException("Downloaded file does not look like a yt-dlp zipapp")
             }
             tmp.copyTo(out, overwrite = true)
-            ver.writeText("$tag\n")
+            ver.writeText("${tag}\n")
             logger.lifecycle(
-                "Bundled yt-dlp Stable $tag -> ${out.absolutePath} (${out.length()} bytes)"
+                "Bundled yt-dlp Stable ${tag} -> ${out.absolutePath} (${out.length()} bytes)"
             )
         } catch (t: Throwable) {
             if (out.isFile && out.length() > 100_000L) {

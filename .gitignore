@@ -29,4 +29,7 @@ seal-release.jks
 
 # Generated at build time from yt-dlp Stable release
 app/src/main/res/raw/ytdlp
+app/src/main/res/raw/ytdlp.version
+app/src/main/res/raw/ytdlp.download.tmp
 app/ytdlp.version
+app/ytdlp.download.tmp
