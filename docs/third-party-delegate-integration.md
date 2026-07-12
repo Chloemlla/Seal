@@ -1,3 +1,5 @@
+Chinese caller guide: [`third-party-call-guide.md`](./third-party-call-guide.md)
+
 # Seal third-party download delegation (L1–L3)
 
 Third-party apps may **only delegate** downloads to Seal. Seal always owns the queue, yt-dlp process, notifications, and saved files. There is no embeddable download SDK and no remote control API.
@@ -160,3 +162,5 @@ Application meta-data:
 - `ExternalDownloadEntry` / `ExternalDownloadCoordinator`
 - `QuickDownloadActivity`, `MainActivity`
 - Settings: `InteractionPreferencePage`
+
+
