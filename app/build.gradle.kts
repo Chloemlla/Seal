@@ -26,7 +26,7 @@ val baseVersionName = currentVersion.name
 val currentVersionCode = currentVersion.code.toInt()
 
 android {
-    compileSdk = 35
+    compileSdk = 37
 
     if (keystorePropertiesFile.exists()) {
         val keystoreProperties = Properties()
@@ -46,7 +46,7 @@ android {
     defaultConfig {
         applicationId = "com.chloemlla.seal"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 200_000_150
         check(versionCode == currentVersionCode)
 

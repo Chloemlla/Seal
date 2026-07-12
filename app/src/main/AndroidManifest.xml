@@ -34,7 +34,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        tools:targetApi="tiramisu">
+        tools:targetApi="37">
         <meta-data
             android:name="com.chloemlla.seal.external_download_protocol_version"
             android:value="1" />
@@ -88,7 +88,11 @@
             android:name=".DownloadService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Offline media download with yt-dlp" />
+        </service>
 
         <activity
             android:name=".MainActivity"

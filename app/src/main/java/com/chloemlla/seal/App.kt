@@ -75,12 +75,7 @@ class App : Application() {
         }
 
         context = applicationContext
-        packageInfo =
-            packageManager.run {
-                if (Build.VERSION.SDK_INT >= 33)
-                    getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-                else getPackageInfo(packageName, 0)
-            }
+        packageInfo = com.chloemlla.seal.util.PackageManagerCompat.getPackageInfo(this)
         applicationScope = CoroutineScope(SupervisorJob())
         DynamicColors.applyToActivitiesIfAvailable(this)
 

@@ -2,7 +2,6 @@ package com.chloemlla.seal.util
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -93,14 +92,7 @@ object UpdateUtil {
     }
 
     private fun Context.getCurrentVersion(): Version =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager
-                .getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-                .versionName
-                .toVersion()
-        } else {
-            packageManager.getPackageInfo(packageName, 0).versionName.toVersion()
-        }
+        PackageManagerCompat.getPackageInfo(this).versionName.toVersion()
 
     private fun Context.getLatestApk() = File(getExternalFilesDir("apk"), "latest.apk")
 
@@ -111,7 +103,7 @@ object UpdateUtil {
     fun verifyDownloadedApk(context: Context = App.context, apkFile: File = context.getLatestApk()): Boolean {
         if (!apkFile.exists() || apkFile.length() <= 0L) return false
         val info =
-            context.packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0) ?: return false
+            PackageManagerCompat.getPackageArchiveInfo(context, apkFile) ?: return false
         val expected = context.packageName.removeSuffix(".debug").removeSuffix(".preview")
         val actual = info.packageName?.removeSuffix(".debug")?.removeSuffix(".preview")
         val ok = actual == expected || actual == context.packageName
@@ -151,8 +143,7 @@ object UpdateUtil {
             val apkFile = getLatestApk()
             if (apkFile.exists()) {
                 val apkVersion =
-                    context.packageManager
-                        .getPackageArchiveInfo(apkFile.absolutePath, 0)
+                    PackageManagerCompat.getPackageArchiveInfo(context, apkFile)
                         ?.versionName
                         .toVersion()
                 if (apkVersion <= context.getCurrentVersion()) {
@@ -167,8 +158,7 @@ object UpdateUtil {
     ): Flow<DownloadStatus> =
         withContext(Dispatchers.IO) {
             val apkVersion =
-                context.packageManager
-                    .getPackageArchiveInfo(context.getLatestApk().absolutePath, 0)
+                PackageManagerCompat.getPackageArchiveInfo(context, context.getLatestApk())
                     ?.versionName
                     .toVersion()
 
