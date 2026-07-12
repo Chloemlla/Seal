@@ -297,6 +297,11 @@ object DownloadUtil {
                 )
 
             fun createFromPreferences(): DownloadPreferences {
+                return PreferenceUtil.getCachedDownloadPreferences()
+            }
+
+            /** Rebuild from MMKV. Prefer [createFromPreferences] for hot paths. */
+            fun buildFromPreferenceStore(): DownloadPreferences {
                 val downloadSubtitle = SUBTITLE.getBoolean()
                 val embedSubtitle = EMBED_SUBTITLE.getBoolean()
                 return DownloadPreferences(

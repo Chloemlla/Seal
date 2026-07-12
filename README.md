@@ -148,6 +148,12 @@ This `main` branch is the **Chloemlla** fork of Seal. Beyond retargeting the pac
 
 ### Storage and permissions
 
+- **MMKV multi-store layout** for faster, safer preference IO:
+  - `seal_prefs` — stable settings / theme / download preferences
+  - `seal_runtime` — high-churn data (queue backup JSON, saved links, version timestamps)
+  - one-time migration from the legacy `defaultMMKV` instance
+- In-memory **download preference snapshot** (`createFromPreferences`) avoids re-decoding dozens of keys on every configure UI open; invalidated on related writes.
+- Task queue MMKV backup is **debounced (~750ms)** so progress updates do not rewrite large JSON every tick.
 - Dropped reliance on **`MANAGE_EXTERNAL_STORAGE`** for default download paths.
 - Scoped-storage oriented defaults with safer path resolution / writable-directory checks.
 - Download history “delete local file” path hardened:

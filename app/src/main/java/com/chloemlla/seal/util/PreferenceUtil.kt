@@ -184,6 +184,7 @@ const val TEMPLATE_SHORTCUTS = "template_shortcuts"
 
 const val TASK_LIST = "task_list"
 const val SAVED_LINKS = "saved_links"
+private const val MMKV_STORAGE_MIGRATED = "mmkv_storage_migrated_v1"
 
 // Third-party delegate-only integration (see docs/third-party-delegate-integration-TODO.md)
 const val EXTERNAL_DELEGATE_ENABLED = "external_delegate_enabled"
@@ -253,34 +254,338 @@ private val LongPreferenceDefaults = mapOf(YT_DLP_UPDATE_INTERVAL to DEFAULT_INT
 
 fun String.getStringDefault() = StringPreferenceDefaults.getOrElse(this) { "" }
 
+/**
+ * Pure classification of preference keys for multi-mmap MMKV layout.
+ * Runtime keys are high-churn and isolated from stable settings.
+ */
+object PreferenceStorageKeys {
+    const val PREFS_MMAP_ID = "seal_prefs"
+    const val RUNTIME_MMAP_ID = "seal_runtime"
+
+    val runtimeKeys: Set<String> =
+        setOf(
+            TASK_LIST,
+            SAVED_LINKS,
+            YT_DLP_VERSION,
+            YT_DLP_UPDATE_TIME,
+            SHOW_SPONSOR_MSG,
+            WELCOME_DIALOG,
+        )
+
+    fun isRuntimeKey(key: String): Boolean = key in runtimeKeys
+
+    fun isDownloadPreferenceKey(key: String): Boolean = key in downloadPreferenceKeys
+
+    private val downloadPreferenceKeys =
+        setOf(
+            EXTRACT_AUDIO,
+            THUMBNAIL,
+            PLAYLIST,
+            SUBDIRECTORY_EXTRACTOR,
+            SUBDIRECTORY_PLAYLIST_TITLE,
+            COMMAND_DIRECTORY,
+            SUBTITLE,
+            EMBED_SUBTITLE,
+            KEEP_SUBTITLE_FILES,
+            SUBTITLE_LANGUAGE,
+            AUTO_SUBTITLE,
+            AUTO_TRANSLATED_SUBTITLES,
+            CONVERT_SUBTITLE,
+            CONCURRENT,
+            SPONSORBLOCK,
+            SPONSORBLOCK_CATEGORIES,
+            COOKIES,
+            ARIA2C,
+            USE_CUSTOM_AUDIO_PRESET,
+            AUDIO_FORMAT,
+            AUDIO_QUALITY,
+            AUDIO_CONVERT,
+            FORMAT_SORTING,
+            SORTING_FIELDS,
+            AUDIO_CONVERSION_FORMAT,
+            VIDEO_FORMAT,
+            VIDEO_QUALITY,
+            PRIVATE_MODE,
+            RATE_LIMIT,
+            MAX_RATE,
+            PRIVATE_DIRECTORY,
+            CROP_ARTWORK,
+            SDCARD_DOWNLOAD,
+            SDCARD_URI,
+            EMBED_THUMBNAIL,
+            DEBUG,
+            PROXY,
+            PROXY_URL,
+            USER_AGENT,
+            USER_AGENT_STRING,
+            OUTPUT_TEMPLATE,
+            DOWNLOAD_ARCHIVE,
+            EMBED_METADATA,
+            RESTRICT_FILENAMES,
+            AV1_HARDWARE_ACCELERATED,
+            FORCE_IPV4,
+            MERGE_OUTPUT_MKV,
+            MERGE_MULTI_AUDIO_STREAM,
+            CUSTOM_COMMAND,
+            FORMAT_SELECTION,
+            VIDEO_CLIP,
+        )
+}
+
 object PreferenceUtil {
-    private val kv: MMKV = MMKV.defaultMMKV()
+    private const val PREFS_MMAP_ID = PreferenceStorageKeys.PREFS_MMAP_ID
+    private const val RUNTIME_MMAP_ID = PreferenceStorageKeys.RUNTIME_MMAP_ID
+    private const val TAG = "PreferenceUtil"
+
+    /** Stable user settings / download preferences / theme. */
+    private val prefs: MMKV = MMKV.mmkvWithID(PREFS_MMAP_ID)
+
+    /** High-churn runtime data (queue backup, saved links). Isolated from settings. */
+    private val runtime: MMKV = MMKV.mmkvWithID(RUNTIME_MMAP_ID)
+
+    /** Legacy single-store instance used before multi-mmap split. */
+    private val legacy: MMKV = MMKV.defaultMMKV()
+
     private val json = Json {
         ignoreUnknownKeys = true
         allowStructuredMapKeys = true
     }
 
-    fun String.getInt(default: Int = IntPreferenceDefaults.getOrElse(this) { 0 }): Int =
-        kv.decodeInt(this, default)
+    @Volatile private var downloadPreferencesSnapshot: DownloadUtil.DownloadPreferences? = null
+
+    private val runtimeKeys = PreferenceStorageKeys.runtimeKeys
+
+    private val booleanPreferenceKeys =
+        setOf(
+            CUSTOM_COMMAND,
+            EXTRACT_AUDIO,
+            THUMBNAIL,
+            YT_DLP_AUTO_UPDATE,
+            DEBUG,
+            CONFIGURE,
+            AUDIO_CONVERT,
+            FORMAT_SORTING,
+            SDCARD_DOWNLOAD,
+            SUBDIRECTORY_EXTRACTOR,
+            SUBDIRECTORY_PLAYLIST_TITLE,
+            PLAYLIST,
+            NOTIFICATION,
+            SUBTITLE,
+            EMBED_SUBTITLE,
+            KEEP_SUBTITLE_FILES,
+            AUTO_SUBTITLE,
+            AUTO_TRANSLATED_SUBTITLES,
+            SPONSORBLOCK,
+            ARIA2C,
+            COOKIES,
+            USER_AGENT,
+            AUTO_UPDATE,
+            PRIVATE_MODE,
+            DYNAMIC_COLOR,
+            CELLULAR_DOWNLOAD,
+            RATE_LIMIT,
+            HIGH_CONTRAST,
+            DISABLE_PREVIEW,
+            PRIVATE_DIRECTORY,
+            CROP_ARTWORK,
+            EMBED_THUMBNAIL,
+            FORMAT_SELECTION,
+            VIDEO_CLIP,
+            PROXY,
+            DOWNLOAD_ARCHIVE,
+            EMBED_METADATA,
+            RESTRICT_FILENAMES,
+            AV1_HARDWARE_ACCELERATED,
+            FORCE_IPV4,
+            MERGE_OUTPUT_MKV,
+            USE_CUSTOM_AUDIO_PRESET,
+            MERGE_MULTI_AUDIO_STREAM,
+            EXTERNAL_DELEGATE_ENABLED,
+            EXTERNAL_AUTO_START_ENABLED,
+            EXTERNAL_WHITELIST_MODE,
+        )
+
+    private val intPreferenceKeys =
+        setOf(
+            CONCURRENT,
+            AUDIO_CONVERSION_FORMAT,
+            AUDIO_FORMAT,
+            AUDIO_QUALITY,
+            VIDEO_FORMAT,
+            VIDEO_QUALITY,
+            DARK_THEME_VALUE,
+            THEME_COLOR,
+            PALETTE_STYLE,
+            CONVERT_SUBTITLE,
+            TEMPLATE_ID,
+            UPDATE_CHANNEL,
+            DOWNLOAD_TYPE_INITIALIZATION,
+            DOWNLOAD_TYPE,
+            YT_DLP_UPDATE_CHANNEL,
+            WELCOME_DIALOG,
+            SHOW_SPONSOR_MSG,
+            LANGUAGE,
+        )
+
+    private val longPreferenceKeys = setOf(YT_DLP_UPDATE_INTERVAL, YT_DLP_UPDATE_TIME)
+
+    private val stringPreferenceKeys =
+        setOf(
+            YT_DLP_VERSION,
+            VIDEO_DIRECTORY,
+            AUDIO_DIRECTORY,
+            COMMAND_DIRECTORY,
+            SDCARD_URI,
+            SUBTITLE_LANGUAGE,
+            SPONSORBLOCK_CATEGORIES,
+            USER_AGENT_STRING,
+            MAX_RATE,
+            PROXY_URL,
+            OUTPUT_TEMPLATE,
+            CUSTOM_OUTPUT_TEMPLATE,
+            SORTING_FIELDS,
+            EXTERNAL_CALLER_WHITELIST,
+        )
+
+    init {
+        migrateLegacyIfNeeded()
+    }
+
+    private fun storeFor(key: String): MMKV =
+        if (key in runtimeKeys) runtime else prefs
+
+    private fun migrateLegacyIfNeeded() {
+        if (prefs.decodeBool(MMKV_STORAGE_MIGRATED, false)) return
+        val keys = legacy.allKeys()
+        if (keys.isNullOrEmpty()) {
+            prefs.encode(MMKV_STORAGE_MIGRATED, true)
+            return
+        }
+        var migrated = 0
+        for (key in keys) {
+            if (key == MMKV_STORAGE_MIGRATED) continue
+            val target = storeFor(key)
+            if (target.containsKey(key)) continue
+            if (copyLegacyKey(key, target)) migrated++
+        }
+        prefs.encode(MMKV_STORAGE_MIGRATED, true)
+        android.util.Log.i(TAG, "Migrated $migrated preference keys from default MMKV to split stores")
+    }
+
+    private fun copyLegacyKey(key: String, target: MMKV): Boolean {
+        // Known typed keys first for correctness.
+        when {
+            key == SAVED_LINKS -> {
+                target.encode(key, legacy.decodeStringSet(key) ?: emptySet())
+                return true
+            }
+            key == TASK_LIST -> {
+                legacy.decodeString(key)?.let {
+                    target.encode(key, it)
+                    return true
+                }
+            }
+            key in BooleanPreferenceDefaults || key in booleanPreferenceKeys -> {
+                target.encode(key, legacy.decodeBool(key, BooleanPreferenceDefaults[key] ?: false))
+                return true
+            }
+            key in IntPreferenceDefaults || key in intPreferenceKeys -> {
+                target.encode(key, legacy.decodeInt(key, IntPreferenceDefaults[key] ?: 0))
+                return true
+            }
+            key in LongPreferenceDefaults || key in longPreferenceKeys -> {
+                target.encode(key, legacy.decodeLong(key, LongPreferenceDefaults[key] ?: 0L))
+                return true
+            }
+            key in StringPreferenceDefaults || key in stringPreferenceKeys -> {
+                target.encode(
+                    key,
+                    legacy.decodeString(key) ?: StringPreferenceDefaults[key].orEmpty(),
+                )
+                return true
+            }
+        }
+
+        // Generic fallback: string, then string-set, then int/long/bool.
+        legacy.decodeString(key)?.let {
+            target.encode(key, it)
+            return true
+        }
+        legacy.decodeStringSet(key)?.let {
+            target.encode(key, it)
+            return true
+        }
+        // For pure numeric/bool keys without string form.
+        if (!legacy.containsKey(key)) return false
+        val asInt = legacy.decodeInt(key, Int.MIN_VALUE / 2)
+        val asLong = legacy.decodeLong(key, Long.MIN_VALUE / 2)
+        return when {
+            asLong != Long.MIN_VALUE / 2 && asLong !in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong() -> {
+                target.encode(key, asLong)
+                true
+            }
+            asInt != Int.MIN_VALUE / 2 -> {
+                target.encode(key, asInt)
+                true
+            }
+            else -> {
+                target.encode(key, legacy.decodeBool(key, false))
+                true
+            }
+        }
+    }
+
+    fun String.getInt(default: Int = IntPreferenceDefaults.getOrElse(this) { 0 }): Int {
+        val store = storeFor(this)
+        return if (store.containsKey(this)) store.decodeInt(this, default)
+        else if (legacy.containsKey(this)) legacy.decodeInt(this, default)
+        else default
+    }
 
     fun String.getString(
         default: String = StringPreferenceDefaults.getOrElse(this) { "" }
-    ): String = kv.decodeString(this) ?: default
+    ): String {
+        val store = storeFor(this)
+        return store.decodeString(this)
+            ?: legacy.decodeString(this)
+            ?: default
+    }
 
     fun String.getBoolean(
         default: Boolean = BooleanPreferenceDefaults.getOrElse(this) { false }
-    ): Boolean = kv.decodeBool(this, default)
+    ): Boolean {
+        val store = storeFor(this)
+        return if (store.containsKey(this)) store.decodeBool(this, default)
+        else if (legacy.containsKey(this)) legacy.decodeBool(this, default)
+        else default
+    }
 
-    fun String.getLong(default: Long = LongPreferenceDefaults.getOrElse(this) { 0L }) =
-        kv.decodeLong(this, default)
+    fun String.getLong(default: Long = LongPreferenceDefaults.getOrElse(this) { 0L }): Long {
+        val store = storeFor(this)
+        return if (store.containsKey(this)) store.decodeLong(this, default)
+        else if (legacy.containsKey(this)) legacy.decodeLong(this, default)
+        else default
+    }
 
-    fun String.updateString(newString: String) = kv.encode(this, newString)
+    fun String.updateString(newString: String) {
+        storeFor(this).encode(this, newString)
+        invalidateDownloadPreferencesSnapshotIfNeeded(this)
+    }
 
-    fun String.updateInt(newInt: Int) = kv.encode(this, newInt)
+    fun String.updateInt(newInt: Int) {
+        storeFor(this).encode(this, newInt)
+        invalidateDownloadPreferencesSnapshotIfNeeded(this)
+    }
 
-    fun String.updateLong(newLong: Long) = kv.encode(this, newLong)
+    fun String.updateLong(newLong: Long) {
+        storeFor(this).encode(this, newLong)
+        invalidateDownloadPreferencesSnapshotIfNeeded(this)
+    }
 
-    fun String.updateBoolean(newValue: Boolean) = kv.encode(this, newValue)
+    fun String.updateBoolean(newValue: Boolean) {
+        storeFor(this).encode(this, newValue)
+        invalidateDownloadPreferencesSnapshotIfNeeded(this)
+    }
 
     fun updateValue(key: String, b: Boolean) = key.updateBoolean(b)
 
@@ -288,7 +593,33 @@ object PreferenceUtil {
 
     fun encodeString(key: String, string: String) = key.updateString(string)
 
-    fun containsKey(key: String) = kv.containsKey(key)
+    fun containsKey(key: String): Boolean =
+        storeFor(key).containsKey(key) || legacy.containsKey(key)
+
+    fun invalidateDownloadPreferencesSnapshot() {
+        downloadPreferencesSnapshot = null
+    }
+
+    private fun invalidateDownloadPreferencesSnapshotIfNeeded(key: String) {
+        if (PreferenceStorageKeys.isDownloadPreferenceKey(key)) {
+            downloadPreferencesSnapshot = null
+        }
+    }
+
+    /**
+     * Cached download preferences for hot UI paths.
+     * Snapshot is invalidated whenever a related preference key is written.
+     */
+    fun getCachedDownloadPreferences(): DownloadUtil.DownloadPreferences {
+        downloadPreferencesSnapshot?.let { return it }
+        val fresh = DownloadUtil.DownloadPreferences.buildFromPreferenceStore()
+        downloadPreferencesSnapshot = fresh
+        return fresh
+    }
+
+    fun replaceDownloadPreferencesSnapshot(snapshot: DownloadUtil.DownloadPreferences) {
+        downloadPreferencesSnapshot = snapshot
+    }
 
     fun getAudioConvertFormat(): Int = AUDIO_CONVERSION_FORMAT.getInt()
 
@@ -397,14 +728,13 @@ object PreferenceUtil {
         MutableStateFlow(
             AppSettings(
                 DarkThemePreference(
-                    darkThemeValue =
-                        kv.decodeInt(DARK_THEME_VALUE, DarkThemePreference.FOLLOW_SYSTEM),
-                    isHighContrastModeEnabled = kv.decodeBool(HIGH_CONTRAST, false),
+                    darkThemeValue = DARK_THEME_VALUE.getInt(DarkThemePreference.FOLLOW_SYSTEM),
+                    isHighContrastModeEnabled = HIGH_CONTRAST.getBoolean(false),
                 ),
                 isDynamicColorEnabled =
-                    kv.decodeBool(DYNAMIC_COLOR, DynamicColors.isDynamicColorAvailable()),
-                seedColor = kv.decodeInt(THEME_COLOR, DEFAULT_SEED_COLOR),
-                paletteStyleIndex = kv.decodeInt(PALETTE_STYLE, 0),
+                    DYNAMIC_COLOR.getBoolean(DynamicColors.isDynamicColorAvailable()),
+                seedColor = THEME_COLOR.getInt(DEFAULT_SEED_COLOR),
+                paletteStyleIndex = PALETTE_STYLE.getInt(0),
             )
         )
     val AppSettingsStateFlow = mutableAppSettingsStateFlow.asStateFlow()
@@ -424,8 +754,8 @@ object PreferenceUtil {
                         )
                 )
             }
-            kv.encode(DARK_THEME_VALUE, darkThemeValue)
-            kv.encode(HIGH_CONTRAST, isHighContrastModeEnabled)
+            prefs.encode(DARK_THEME_VALUE, darkThemeValue)
+            prefs.encode(HIGH_CONTRAST, isHighContrastModeEnabled)
         }
     }
 
@@ -434,8 +764,8 @@ object PreferenceUtil {
             mutableAppSettingsStateFlow.update {
                 it.copy(seedColor = colorArgb, paletteStyleIndex = paletteStyleIndex)
             }
-            kv.encode(THEME_COLOR, colorArgb)
-            kv.encode(PALETTE_STYLE, paletteStyleIndex)
+            prefs.encode(THEME_COLOR, colorArgb)
+            prefs.encode(PALETTE_STYLE, paletteStyleIndex)
         }
     }
 
@@ -444,27 +774,32 @@ object PreferenceUtil {
     ) {
         applicationScope.launch(Dispatchers.IO) {
             mutableAppSettingsStateFlow.update { it.copy(isDynamicColorEnabled = enabled) }
-            kv.encode(DYNAMIC_COLOR, enabled)
+            prefs.encode(DYNAMIC_COLOR, enabled)
         }
     }
 
     fun encodeTaskListBackup(map: Map<Task, Task.State>) =
         runCatching { json.encodeToString<Map<Task, Task.State>>(map) }
-            .onSuccess { kv.encode(TASK_LIST, it) }
+            .onSuccess { runtime.encode(TASK_LIST, it) }
             .onFailure { it.printStackTrace() }
 
     fun decodeTaskListBackup(): Map<Task, Task.State> =
         runCatching {
-                kv.decodeString(TASK_LIST)?.let { json.decodeFromString<Map<Task, Task.State>>(it) }
+                (runtime.decodeString(TASK_LIST) ?: legacy.decodeString(TASK_LIST))?.let {
+                    json.decodeFromString<Map<Task, Task.State>>(it)
+                }
             }
             .onFailure { it.printStackTrace() }
             .getOrNull() ?: emptyMap()
 
-    fun getSavedLinks(): Set<String> = kv.decodeStringSet(SAVED_LINKS) ?: emptySet()
+    fun getSavedLinks(): Set<String> =
+        runtime.decodeStringSet(SAVED_LINKS)
+            ?: legacy.decodeStringSet(SAVED_LINKS)
+            ?: emptySet()
 
-    fun updateSavedLinks(links: Set<String>) = kv.encode(SAVED_LINKS, links)
-
-    private const val TAG = "PreferenceUtil"
+    fun updateSavedLinks(links: Set<String>) {
+        runtime.encode(SAVED_LINKS, links)
+    }
 }
 
 data class DarkThemePreference(

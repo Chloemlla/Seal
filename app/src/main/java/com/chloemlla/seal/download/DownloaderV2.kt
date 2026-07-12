@@ -32,6 +32,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -41,6 +42,7 @@ import org.koin.core.component.KoinComponent
 private const val TAG = "DownloaderV2"
 
 private const val MAX_CONCURRENCY = 3
+private const val TASK_BACKUP_DEBOUNCE_MS = 750L
 
 interface DownloaderV2 {
     fun getTaskStateMap(): SnapshotStateMap<Task, Task.State>
@@ -114,6 +116,8 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
             snapshotFlow
                 .map { it.filter { it.value.downloadState !is Completed } }
                 .distinctUntilChanged()
+                // Debounce MMKV writes so progress ticks do not rewrite large JSON every frame.
+                .debounce(TASK_BACKUP_DEBOUNCE_MS)
                 .collect {
                     it.forEach { Log.d(TAG, it.value.viewState.title) }
                     PreferenceUtil.encodeTaskListBackup(it)
