@@ -141,6 +141,7 @@ android {
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
         jniLibs {
+            // Replaces android:extractNativeLibs=true (AGP forbids that manifest attr).
             useLegacyPackaging = true
             // youtubedl-android ships zip payloads named *.zip.so; llvm-strip cannot process them
             keepDebugSymbols += setOf("**/libaria2c.zip.so", "**/libffmpeg.zip.so", "**/libpython.zip.so")
