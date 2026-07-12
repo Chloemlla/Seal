@@ -617,8 +617,27 @@ object PreferenceUtil {
         return fresh
     }
 
+    /**
+     * Pre-build the download preference snapshot after MMKV is ready.
+     * Speeds up the first configure / download UI open after cold start.
+     */
+    fun warmDownloadPreferencesSnapshot() {
+        if (downloadPreferencesSnapshot != null) return
+        downloadPreferencesSnapshot = DownloadUtil.DownloadPreferences.buildFromPreferenceStore()
+    }
+
     fun replaceDownloadPreferencesSnapshot(snapshot: DownloadUtil.DownloadPreferences) {
         downloadPreferencesSnapshot = snapshot
+    }
+
+    /** Sync MMKV pages for high-churn runtime keys (queue, links). */
+    fun syncRuntime() {
+        runtime.sync()
+    }
+
+    /** Sync MMKV pages for stable settings. */
+    fun syncPrefs() {
+        prefs.sync()
     }
 
     fun getAudioConvertFormat(): Int = AUDIO_CONVERSION_FORMAT.getInt()

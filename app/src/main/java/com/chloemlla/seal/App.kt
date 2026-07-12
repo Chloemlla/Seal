@@ -14,6 +14,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.content.getSystemService
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.android.material.color.DynamicColors
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.DownloaderV2Impl
@@ -53,6 +56,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.context.GlobalContext
 import org.koin.dsl.module
 
 class App : Application() {
@@ -129,6 +133,25 @@ class App : Application() {
             }
         }
         if (Build.VERSION.SDK_INT >= 26) NotificationUtil.createNotificationChannel()
+
+        // Warm download prefs snapshot after split-MMKV migration so configure UI is snappy.
+        applicationScope.launch(Dispatchers.IO) {
+            runCatching { PreferenceUtil.warmDownloadPreferencesSnapshot() }
+        }
+
+        // Flush debounced queue backup when process goes to background.
+        ProcessLifecycleOwner.get()
+            .lifecycle
+            .addObserver(
+                object : DefaultLifecycleObserver {
+                    override fun onStop(owner: LifecycleOwner) {
+                        runCatching {
+                            GlobalContext.get().get<DownloaderV2>().flushPendingBackup()
+                            PreferenceUtil.syncRuntime()
+                        }
+                    }
+                }
+            )
 
         Thread.setDefaultUncaughtExceptionHandler { _, e -> startCrashReportActivity(e) }
     }

@@ -34,6 +34,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -43,6 +44,10 @@ private const val TAG = "DownloaderV2"
 
 private const val MAX_CONCURRENCY = 3
 private const val TASK_BACKUP_DEBOUNCE_MS = 750L
+/** Quantize progress into 5% steps for backup fingerprinting. */
+private const val PROGRESS_BUCKETS = 20
+private const val PROGRESS_BUCKET_NONE = -2
+private const val PROGRESS_MISSING = -1f
 
 interface DownloaderV2 {
     fun getTaskStateMap(): SnapshotStateMap<Task, Task.State>
@@ -66,6 +71,12 @@ interface DownloaderV2 {
     }
 
     fun remove(task: Task): Boolean
+
+    /**
+     * Persist the current non-completed queue immediately.
+     * Used when the process is backgrounded so debounced MMKV writes are not lost.
+     */
+    fun flushPendingBackup() {}
 }
 
 internal object FakeDownloaderV2 : DownloaderV2 {
@@ -115,7 +126,8 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
 
             snapshotFlow
                 .map { it.filter { it.value.downloadState !is Completed } }
-                .distinctUntilChanged()
+                // Skip pure progress noise: only 5% buckets / structure / titles matter.
+                .distinctUntilChangedBy { it.toTaskBackupFingerprint() }
                 // Debounce MMKV writes so progress ticks do not rewrite large JSON every frame.
                 .debounce(TASK_BACKUP_DEBOUNCE_MS)
                 .collect {
@@ -123,6 +135,11 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
                     PreferenceUtil.encodeTaskListBackup(it)
                 }
         }
+    }
+
+    override fun flushPendingBackup() {
+        val pending = taskStateMap.filterValues { it.downloadState !is Completed }
+        PreferenceUtil.encodeTaskListBackup(pending)
     }
 
     private fun enqueueFromBackup() {
@@ -457,3 +474,34 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
             .also { downloadState = Running(job = it, taskId = id) }
     }
 }
+
+/**
+ * Structural fingerprint for queue MMKV backups.
+ * Progress is quantized to ~5% buckets so frequent progress callbacks do not force
+ * full JSON rewrites while still retaining coarse resume progress.
+ */
+internal fun Map<Task, Task.State>.toTaskBackupFingerprint(): List<String> =
+    entries
+        .sortedBy { it.key.id }
+        .map { (task, state) ->
+            val downloadState = state.downloadState
+            val kind =
+                when (downloadState) {
+                    Idle -> "I"
+                    is FetchingInfo -> "F"
+                    ReadyWithInfo -> "W"
+                    is Running -> "R"
+                    is Canceled -> "C:${downloadState.action}"
+                    is Error -> "E:${downloadState.action}"
+                    is Completed -> "D"
+                }
+            val progressBucket =
+                when (downloadState) {
+                    is Running -> (downloadState.progress * PROGRESS_BUCKETS).toInt()
+                    is Canceled ->
+                        ((downloadState.progress ?: PROGRESS_MISSING) * PROGRESS_BUCKETS).toInt()
+                    else -> PROGRESS_BUCKET_NONE
+                }
+            "${task.id}|$kind|$progressBucket|${state.viewState.title}"
+        }
+

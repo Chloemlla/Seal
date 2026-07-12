@@ -30,4 +30,14 @@ class PreferenceStorageKeysTest {
         assertTrue(PreferenceStorageKeys.PREFS_MMAP_ID == "seal_prefs")
         assertTrue(PreferenceStorageKeys.RUNTIME_MMAP_ID == "seal_runtime")
     }
+
+    @Test
+    fun downloadPreferenceKeysCoverHotConfigureFields() {
+        // Keys commonly flipped in configure dialog must invalidate snapshot.
+        assertTrue(PreferenceStorageKeys.isDownloadPreferenceKey(CUSTOM_COMMAND))
+        assertTrue(PreferenceStorageKeys.isDownloadPreferenceKey(FORMAT_SELECTION))
+        assertTrue(PreferenceStorageKeys.isDownloadPreferenceKey(COOKIES))
+        assertTrue(PreferenceStorageKeys.isDownloadPreferenceKey(ARIA2C))
+        assertFalse(PreferenceStorageKeys.isDownloadPreferenceKey(EXTERNAL_DELEGATE_ENABLED))
+    }
 }

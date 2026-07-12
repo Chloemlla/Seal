@@ -23,6 +23,12 @@ Migration flag: `mmkv_storage_migrated_v1` (in `seal_prefs`).
 
 - Written by `DownloaderV2` via `PreferenceUtil.encodeTaskListBackup`.
 - Debounced ~750ms (`TASK_BACKUP_DEBOUNCE_MS`) to avoid progress-tick thrash.
+- Structural fingerprint with ~5% progress buckets skips pure progress noise.
+- Immediate flush on process background (`ProcessLifecycleOwner.onStop`) + `runtime.sync()`.
+
+## Download preference warm-up
+
+- `PreferenceUtil.warmDownloadPreferencesSnapshot()` runs on cold start (IO) so the first configure/download path hits a warm cache.
 
 ## Compatibility
 
