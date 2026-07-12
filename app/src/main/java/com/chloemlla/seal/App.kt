@@ -236,6 +236,7 @@ class App : Application() {
                 .append("Device information: Android $release (API ${Build.VERSION.SDK_INT})\n")
                 .append("Supported ABIs: ${Build.SUPPORTED_ABIS.contentToString()}\n")
                 .append("Yt-dlp version: ${YT_DLP_VERSION.getString()}\n")
+                .append("Yt-dlp bundled (build): ${BuildConfig.YT_DLP_BUNDLED_VERSION}\n")
                 .toString()
         }
 

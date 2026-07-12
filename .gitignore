@@ -26,3 +26,7 @@ setup-android-signing.ps1
 keystore_base64.txt
 seal-release.jks
 1/
+
+# Generated at build time from yt-dlp Stable release
+app/src/main/res/raw/ytdlp
+app/src/main/res/raw/ytdlp.version

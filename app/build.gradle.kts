@@ -3,6 +3,8 @@
 import com.android.build.api.variant.FilterConfiguration
 import java.io.FileInputStream
 import java.util.Properties
+import java.net.URI
+import java.nio.file.Files
 
 plugins {
     alias(libs.plugins.android.application)
@@ -195,4 +197,133 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso.core)
     implementation(libs.androidx.compose.ui.tooling)
+}
+
+// Bundle latest Stable yt-dlp over youtubedl-android res/raw/ytdlp at packaging time.
+val skipYtDlpDownload: Boolean = project.hasProperty("skipYtDlpDownload")
+val ytDlpRawFile: File = file("src/main/res/raw/ytdlp")
+val ytDlpVersionFile: File = file("src/main/res/raw/ytdlp.version")
+
+abstract class DownloadStableYtDlpTask : DefaultTask() {
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @get:OutputFile
+    abstract val versionFile: RegularFileProperty
+
+    @get:Input
+    abstract val skipDownload: Property<Boolean>
+
+    @TaskAction
+    fun run() {
+        val out = outputFile.get().asFile
+        val ver = versionFile.get().asFile
+        out.parentFile.mkdirs()
+
+        if (skipDownload.get()) {
+            if (!out.isFile || out.length() < 100_000L) {
+                throw GradleException(
+                    "skipYtDlpDownload is set but ${out.absolutePath} is missing/too small. " +
+                        "Run a full build once without -PskipYtDlpDownload."
+                )
+            }
+            logger.lifecycle(
+                "skipYtDlpDownload: reusing ${out.absolutePath} (${out.length()} bytes)"
+            )
+            return
+        }
+
+        val apiUrl = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
+        val assetUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp"
+        val userAgent = "Seal-Gradle-YtDlp-Bundler"
+
+        fun connect(url: String): java.net.URLConnection =
+            URI(url).toURL().openConnection().apply {
+                setRequestProperty("User-Agent", userAgent)
+                setRequestProperty("Accept", "application/octet-stream, application/json")
+                connectTimeout = 30_000
+                readTimeout = 180_000
+            }
+
+        var tag =
+            if (ver.isFile) ver.readText().trim().ifEmpty { "unknown" } else "unknown"
+        try {
+            connect(apiUrl).getInputStream().bufferedReader().use { reader ->
+                val body = reader.readText()
+                val match = Regex("\"tag_name\"\\s*:\\s*\"([^\"]+)\"").find(body)
+                if (match != null) {
+                    tag = match.groupValues[1]
+                }
+            }
+        } catch (t: Throwable) {
+            logger.warn("Could not resolve yt-dlp latest tag: ${t.message}")
+        }
+
+        val tmp = File(out.parentFile, "ytdlp.download.tmp")
+        try {
+            logger.lifecycle("Downloading yt-dlp Stable ($tag) ...")
+            connect(assetUrl).getInputStream().use { input ->
+                tmp.outputStream().use { output -> input.copyTo(output) }
+            }
+            if (tmp.length() < 100_000L) {
+                throw GradleException("Downloaded yt-dlp is too small: ${tmp.length()} bytes")
+            }
+            val prefixLen = minOf(64, tmp.length().toInt())
+            val prefix = Files.readAllBytes(tmp.toPath()).copyOfRange(0, prefixLen)
+            val hasShebang =
+                prefix.size >= 2 &&
+                    prefix[0] == '#'.code.toByte() &&
+                    prefix[1] == '!'.code.toByte()
+            val hasZipMagic = prefix.toString(Charsets.ISO_8859_1).contains("PK")
+            if (!hasShebang && !hasZipMagic) {
+                throw GradleException("Downloaded file does not look like a yt-dlp zipapp")
+            }
+            tmp.copyTo(out, overwrite = true)
+            ver.writeText("$tag\n")
+            logger.lifecycle(
+                "Bundled yt-dlp Stable $tag -> ${out.absolutePath} (${out.length()} bytes)"
+            )
+        } catch (t: Throwable) {
+            if (out.isFile && out.length() > 100_000L) {
+                logger.warn(
+                    "yt-dlp download failed (${t.message}); reusing cached ${out.absolutePath}"
+                )
+            } else {
+                throw GradleException(
+                    "Failed to download Stable yt-dlp for packaging: ${t.message}",
+                    t,
+                )
+            }
+        } finally {
+            if (tmp.exists()) {
+                tmp.delete()
+            }
+        }
+    }
+}
+
+val downloadStableYtDlp by
+    tasks.registering(DownloadStableYtDlpTask::class) {
+        group = "build"
+        description =
+            "Download latest Stable yt-dlp into res/raw/ytdlp (overrides library bundle)"
+        outputFile.set(ytDlpRawFile)
+        versionFile.set(ytDlpVersionFile)
+        skipDownload.set(skipYtDlpDownload)
+    }
+
+tasks.named("preBuild").configure { dependsOn(downloadStableYtDlp) }
+
+run {
+    val bundled =
+        if (ytDlpVersionFile.isFile) {
+            ytDlpVersionFile.readText().trim().ifEmpty { "pending" }
+        } else {
+            "pending"
+        }
+    android.defaultConfig.buildConfigField(
+        "String",
+        "YT_DLP_BUNDLED_VERSION",
+        "\"$bundled\"",
+    )
 }
