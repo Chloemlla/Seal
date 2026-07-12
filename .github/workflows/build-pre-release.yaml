@@ -10,6 +10,283 @@ permissions:
   contents: write
 
 jobs:
+  Lint:
+    # Only the repository owner account may run the release workflow.
+    if: ${{ github.actor == 'Chloemlla' || github.triggering_actor == 'Chloemlla' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set release metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import os
+
+          text = Path("buildSrc/src/main/kotlin/Version.kt").read_text(encoding="utf-8")
+          match = re.search(
+              r"currentVersion:\s*Version\s*=\s*Version\.(Alpha|Beta|Stable|ReleaseCandidate)\((.*?)\)",
+              text,
+              re.S,
+          )
+          if not match:
+              raise SystemExit("unable to parse currentVersion from Version.kt")
+
+          kind, args = match.group(1), match.group(2)
+          values = {
+              key: int(value)
+              for key, value in re.findall(r"(\w+)\s*=\s*(\d+)", args)
+          }
+          major = values["versionMajor"]
+          minor = values["versionMinor"]
+          patch = values["versionPatch"]
+          build = values.get("versionBuild", 0)
+
+          if kind == "Stable":
+              version_name = f"{major}.{minor}.{patch}"
+          elif kind == "Alpha":
+              version_name = f"{major}.{minor}.{patch}-alpha.{build}"
+          elif kind == "Beta":
+              version_name = f"{major}.{minor}.{patch}-beta.{build}"
+          else:
+              version_name = f"{major}.{minor}.{patch}-rc.{build}"
+
+          env_file = Path(os.environ["GITHUB_ENV"])
+          with env_file.open("a", encoding="utf-8") as handle:
+              handle.write(f"SEAL_VERSION_NAME={version_name}\n")
+          print(version_name)
+          PY
+          SEAL_VERSION_NAME=$(grep '^SEAL_VERSION_NAME=' "$GITHUB_ENV" | tail -n1 | cut -d= -f2-)
+          SHORT_HASH=$(git rev-parse --short=7 HEAD)
+          echo "SEAL_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
+          echo "SEAL_REPORT_DIR=$RUNNER_TEMP/seal-build-report" >> "$GITHUB_ENV"
+          test -n "$SEAL_VERSION_NAME"
+          test -n "$SHORT_HASH"
+          mkdir -p "$RUNNER_TEMP/seal-build-report"
+          echo "Pre-release version: $SEAL_VERSION_NAME-$SHORT_HASH"
+
+      - name: set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 37 platform
+        run: sdkmanager "platforms;android-37" || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Android Lint
+        id: lint
+        shell: bash
+        run: |
+          set -o pipefail
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR"
+          LOG_FILE="$REPORT_DIR/gradle-lintGenericRelease.log"
+          {
+            echo "=== seal pre-release android lint ==="
+            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "sha=$GITHUB_SHA"
+            echo "ref=$GITHUB_REF"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "actor=$GITHUB_ACTOR"
+            echo "version=${SEAL_VERSION_NAME:-unknown}-${SEAL_SHORT_HASH:-unknown}"
+            echo "=== gradle lintGenericRelease ==="
+          } | tee "$LOG_FILE"
+          # Continue on lint failure so the following print/upload steps always dump all findings.
+          set +e
+          ./gradlew --no-daemon --stacktrace lintGenericRelease 2>&1 | tee -a "$LOG_FILE"
+          lint_exit=${PIPESTATUS[0]}
+          set -e
+          echo "lint_exit=$lint_exit" | tee -a "$LOG_FILE"
+          echo "lint_exit=$lint_exit" >> "$GITHUB_ENV"
+          if [[ "$lint_exit" -ne 0 ]]; then
+            echo "Android Lint failed (exit=$lint_exit); full reports will still be printed/uploaded."
+            exit "$lint_exit"
+          fi
+
+      - name: Print full Android Lint reports
+        if: always() && (steps.lint.outcome == 'success' || steps.lint.outcome == 'failure')
+        shell: bash
+        run: |
+          set +e
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR/logs"
+          LOG_FILE="$REPORT_DIR/print-lint-reports.log"
+          chmod +x .github/scripts/print-lint-reports.sh
+          bash .github/scripts/print-lint-reports.sh 2>&1 | tee "$LOG_FILE"
+          cp -a "$LOG_FILE" "$REPORT_DIR/logs/" 2>/dev/null || true
+
+      - name: Upload Android Lint reports
+        if: always() && (steps.lint.outcome == 'success' || steps.lint.outcome == 'failure')
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-release-android-lint-reports-${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            **/build/reports/lint-results-*.*
+            **/build/intermediates/lint_intermediate_text_report/**/lint-results-*.txt
+            **/build/reports/lint-results-*.html
+            ${{ env.SEAL_REPORT_DIR }}/gradle-lintGenericRelease.log
+            ${{ env.SEAL_REPORT_DIR }}/print-lint-reports.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Package full lint error report
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
+          mkdir -p "$REPORT_DIR/logs" "$REPORT_DIR/reports" "$REPORT_DIR/diagnostics"
+          STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          VERSION_LABEL="${SEAL_VERSION_NAME:-unknown}-${SEAL_SHORT_HASH:-unknown}"
+
+          {
+            echo "=== Seal pre-release lint failure report ==="
+            echo "generated_utc=$STAMP"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "workflow=$GITHUB_WORKFLOW"
+            echo "job=$GITHUB_JOB"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "run_number=$GITHUB_RUN_NUMBER"
+            echo "sha=$GITHUB_SHA"
+            echo "ref=$GITHUB_REF"
+            echo "actor=$GITHUB_ACTOR"
+            echo "version=$VERSION_LABEL"
+            echo "runner_os=$RUNNER_OS"
+            echo "runner_arch=$RUNNER_ARCH"
+            echo "runner_name=$RUNNER_NAME"
+            echo "server_url=$GITHUB_SERVER_URL"
+            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "=== java -version ==="
+            java -version 2>&1
+            echo
+            echo "=== gradle wrapper ==="
+            if [[ -f gradle/wrapper/gradle-wrapper.properties ]]; then
+              cat gradle/wrapper/gradle-wrapper.properties
+            fi
+            echo
+            echo "=== df -h ==="
+            df -h
+            echo
+            echo "=== free -h ==="
+            free -h 2>/dev/null || true
+            echo
+            echo "=== env (redacted) ==="
+            env | sort | sed -E 's/(PASSWORD|TOKEN|SECRET|KEYSTORE|KEY_)=.*/\1=<redacted>/I'
+          } > "$REPORT_DIR/diagnostics/environment.txt"
+
+          while IFS= read -r -d '' f; do
+            rel="${f#./}"
+            dest="$REPORT_DIR/reports/$rel"
+            mkdir -p "$(dirname "$dest")"
+            cp -a "$f" "$dest" 2>/dev/null || true
+          done < <(find . \
+            \( -path './.git' -o -path './.gradle' -o -path '*/.gradle/*' \) -prune -o \
+            \( \
+              -name '*-error-report.html' -o \
+              -name 'errors.txt' -o \
+              -name 'output.txt' -o \
+              -name 'report.html' -o \
+              -name 'report.xml' -o \
+              -name 'lint-results*.html' -o \
+              -name 'lint-results*.xml' -o \
+              -name 'lint-results*.txt' -o \
+              -name '*Test.txt' -o \
+              -name 'TEST-*.xml' -o \
+              -path '*/build/reports/*' -o \
+              -path '*/build/outputs/logs/*' \
+            \) -type f -print0 2>/dev/null)
+
+          if [[ -f "$REPORT_DIR/gradle-lintGenericRelease.log" ]]; then
+            cp -a "$REPORT_DIR/gradle-lintGenericRelease.log" "$REPORT_DIR/logs/" 2>/dev/null || true
+          fi
+          if [[ -f "$REPORT_DIR/print-lint-reports.log" ]]; then
+            cp -a "$REPORT_DIR/print-lint-reports.log" "$REPORT_DIR/logs/" 2>/dev/null || true
+          fi
+
+          {
+            echo "=== failure excerpts ==="
+            echo "generated_utc=$STAMP"
+            echo
+            for log in \
+              "$REPORT_DIR/gradle-lintGenericRelease.log" \
+              "$REPORT_DIR/print-lint-reports.log" \
+              "$REPORT_DIR/logs"/*.log
+            do
+              [[ -f "$log" ]] || continue
+              echo "----- file: $log -----"
+              grep -nE \
+                -e '^e: ' \
+                -e 'e: file://' \
+                -e 'FAILURE: Build failed' \
+                -e 'What went wrong:' \
+                -e 'Execution failed for task' \
+                -e 'Could not resolve' \
+                -e 'Could not find' \
+                -e 'Compilation error' \
+                -e 'Inconsistent JVM-target' \
+                -e 'error: ' \
+                -e 'Error:' \
+                -e 'Caused by:' \
+                "$log" | tail -n 400
+              echo
+              echo "----- tail of $log (last 200 lines) -----"
+              tail -n 200 "$log"
+              echo
+            done
+          } > "$REPORT_DIR/FAILURE_SUMMARY.txt"
+
+          {
+            echo "Seal pre-release lint error report"
+            echo "================================="
+            echo "See FAILURE_SUMMARY.txt first, then logs/ for full Gradle output."
+            echo "Contents: FAILURE_SUMMARY.txt, logs/, reports/, diagnostics/, MANIFEST.txt"
+            echo "version: $VERSION_LABEL"
+            echo "sha: $GITHUB_SHA"
+            echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "generated_utc: $STAMP"
+          } > "$REPORT_DIR/README.txt"
+
+          (
+            cd "$REPORT_DIR"
+            find . -type f | sort > MANIFEST.txt
+          )
+
+          ARCHIVE="$RUNNER_TEMP/seal-lint-error-report-${VERSION_LABEL}-${STAMP}.tar.gz"
+          tar -C "$REPORT_DIR" -czf "$ARCHIVE" .
+          echo "SEAL_ERROR_ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          ls -lah "$REPORT_DIR" "$ARCHIVE" || true
+          echo "==== FAILURE_SUMMARY (first 120 lines) ===="
+          head -n 120 "$REPORT_DIR/FAILURE_SUMMARY.txt" || true
+
+      - name: Upload full lint error report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seal-lint-error-report-${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.SEAL_REPORT_DIR }}
+            ${{ env.SEAL_ERROR_ARCHIVE }}
+          if-no-files-found: warn
+          retention-days: 30
+
   BuildPreRelease:
     # Only the repository owner account may run the release workflow.
     if: ${{ github.actor == 'Chloemlla' || github.triggering_actor == 'Chloemlla' }}
@@ -135,63 +412,6 @@ jobs:
           # Full console + file capture for later failure packaging
           ./gradlew --no-daemon --stacktrace assembleGenericRelease 2>&1 | tee -a "$LOG_FILE"
 
-      - name: Android Lint
-        id: lint
-        shell: bash
-        run: |
-          set -o pipefail
-          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
-          mkdir -p "$REPORT_DIR"
-          LOG_FILE="$REPORT_DIR/gradle-lintGenericRelease.log"
-          {
-            echo "=== seal pre-release android lint ==="
-            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "sha=$GITHUB_SHA"
-            echo "ref=$GITHUB_REF"
-            echo "run_id=$GITHUB_RUN_ID"
-            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
-            echo "actor=$GITHUB_ACTOR"
-            echo "version=${SEAL_VERSION_NAME:-unknown}-${SEAL_SHORT_HASH:-unknown}"
-            echo "=== gradle lintGenericRelease ==="
-          } | tee "$LOG_FILE"
-          # Continue on lint failure so the following print/upload steps always dump all findings.
-          set +e
-          ./gradlew --no-daemon --stacktrace lintGenericRelease 2>&1 | tee -a "$LOG_FILE"
-          lint_exit=${PIPESTATUS[0]}
-          set -e
-          echo "lint_exit=$lint_exit" | tee -a "$LOG_FILE"
-          echo "lint_exit=$lint_exit" >> "$GITHUB_ENV"
-          if [[ "$lint_exit" -ne 0 ]]; then
-            echo "Android Lint failed (exit=$lint_exit); full reports will still be printed/uploaded."
-            exit "$lint_exit"
-          fi
-
-      - name: Print full Android Lint reports
-        if: always() && (steps.lint.outcome == 'success' || steps.lint.outcome == 'failure')
-        shell: bash
-        run: |
-          set +e
-          REPORT_DIR="${SEAL_REPORT_DIR:-$RUNNER_TEMP/seal-build-report}"
-          mkdir -p "$REPORT_DIR/logs"
-          LOG_FILE="$REPORT_DIR/print-lint-reports.log"
-          chmod +x .github/scripts/print-lint-reports.sh
-          bash .github/scripts/print-lint-reports.sh 2>&1 | tee "$LOG_FILE"
-          cp -a "$LOG_FILE" "$REPORT_DIR/logs/" 2>/dev/null || true
-
-      - name: Upload Android Lint reports
-        if: always() && (steps.lint.outcome == 'success' || steps.lint.outcome == 'failure')
-        uses: actions/upload-artifact@v4
-        with:
-          name: pre-release-android-lint-reports-${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            **/build/reports/lint-results-*.*
-            **/build/intermediates/lint_intermediate_text_report/**/lint-results-*.txt
-            **/build/reports/lint-results-*.html
-            ${{ env.SEAL_REPORT_DIR }}/gradle-lintGenericRelease.log
-            ${{ env.SEAL_REPORT_DIR }}/print-lint-reports.log
-          if-no-files-found: warn
-          retention-days: 30
-
       - name: Verify signed APKs
         id: verify
         env:
@@ -234,30 +454,15 @@ jobs:
             )
           } 2>&1 | tee "$LOG_FILE"
 
-      - name: Automatic release
-        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+      - name: Upload signed APKs
+        uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          make_latest: true
-          generate_release_notes: true
-          tag_name: v${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}
-          prerelease: false
-          name: Seal ${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}
-          files: |
+          name: pre-release-apks-${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
             app/build/outputs/apk/generic/release/*.apk
             app/build/outputs/apk/generic/release/SHA256SUMS
-
-      # Movable pointer for consumers that pin ref "latest" (same commit as this pre-release).
-      - name: Update latest tag
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f latest "${GITHUB_SHA}"
-          git push -f origin "refs/tags/latest"
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Package full build error report
         if: failure()
@@ -334,12 +539,6 @@ jobs:
           if [[ -f "$REPORT_DIR/verify-signed-apks.log" ]]; then
             cp -a "$REPORT_DIR/verify-signed-apks.log" "$REPORT_DIR/logs/" 2>/dev/null || true
           fi
-          if [[ -f "$REPORT_DIR/gradle-lintGenericRelease.log" ]]; then
-            cp -a "$REPORT_DIR/gradle-lintGenericRelease.log" "$REPORT_DIR/logs/" 2>/dev/null || true
-          fi
-          if [[ -f "$REPORT_DIR/print-lint-reports.log" ]]; then
-            cp -a "$REPORT_DIR/print-lint-reports.log" "$REPORT_DIR/logs/" 2>/dev/null || true
-          fi
 
           {
             echo "=== failure excerpts ==="
@@ -347,8 +546,6 @@ jobs:
             echo
             for log in \
               "$REPORT_DIR/gradle-assembleGenericRelease.log" \
-              "$REPORT_DIR/gradle-lintGenericRelease.log" \
-              "$REPORT_DIR/print-lint-reports.log" \
               "$REPORT_DIR/verify-signed-apks.log" \
               "$REPORT_DIR/logs"/*.log
             do
@@ -412,3 +609,113 @@ jobs:
       - name: Remove signing credentials
         if: always()
         run: rm -f keystore.properties "$RUNNER_TEMP/seal-release.keystore"
+
+  Publish:
+    # Release only after both lint and build succeed (parallel jobs).
+    if: ${{ github.actor == 'Chloemlla' || github.triggering_actor == 'Chloemlla' }}
+    needs: [Lint, BuildPreRelease]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set release metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import os
+
+          text = Path("buildSrc/src/main/kotlin/Version.kt").read_text(encoding="utf-8")
+          match = re.search(
+              r"currentVersion:\s*Version\s*=\s*Version\.(Alpha|Beta|Stable|ReleaseCandidate)\((.*?)\)",
+              text,
+              re.S,
+          )
+          if not match:
+              raise SystemExit("unable to parse currentVersion from Version.kt")
+
+          kind, args = match.group(1), match.group(2)
+          values = {
+              key: int(value)
+              for key, value in re.findall(r"(\w+)\s*=\s*(\d+)", args)
+          }
+          major = values["versionMajor"]
+          minor = values["versionMinor"]
+          patch = values["versionPatch"]
+          build = values.get("versionBuild", 0)
+
+          if kind == "Stable":
+              version_name = f"{major}.{minor}.{patch}"
+          elif kind == "Alpha":
+              version_name = f"{major}.{minor}.{patch}-alpha.{build}"
+          elif kind == "Beta":
+              version_name = f"{major}.{minor}.{patch}-beta.{build}"
+          else:
+              version_name = f"{major}.{minor}.{patch}-rc.{build}"
+
+          env_file = Path(os.environ["GITHUB_ENV"])
+          with env_file.open("a", encoding="utf-8") as handle:
+              handle.write(f"SEAL_VERSION_NAME={version_name}\n")
+          print(version_name)
+          PY
+          SEAL_VERSION_NAME=$(grep '^SEAL_VERSION_NAME=' "$GITHUB_ENV" | tail -n1 | cut -d= -f2-)
+          SHORT_HASH=$(git rev-parse --short=7 HEAD)
+          echo "SEAL_SHORT_HASH=$SHORT_HASH" >> "$GITHUB_ENV"
+          test -n "$SEAL_VERSION_NAME"
+          test -n "$SHORT_HASH"
+          echo "Pre-release version: $SEAL_VERSION_NAME-$SHORT_HASH"
+
+      - name: Download signed APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: pre-release-apks-${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-artifacts
+
+      - name: Normalize APK layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/build/outputs/apk/generic/release
+          # download-artifact may preserve nested dirs or flatten; collect APKs + SUMS
+          mapfile -t apks < <(find release-artifacts -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -gt 0
+          for apk in "${apks[@]}"; do
+            cp -a "$apk" app/build/outputs/apk/generic/release/
+          done
+          if sums=$(find release-artifacts -type f -name 'SHA256SUMS' | head -n 1); then
+            cp -a "$sums" app/build/outputs/apk/generic/release/SHA256SUMS
+          else
+            (
+              cd app/build/outputs/apk/generic/release
+              sha256sum ./*.apk > SHA256SUMS
+            )
+          fi
+          ls -lah app/build/outputs/apk/generic/release
+
+      - name: Automatic release
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          tag_name: v${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}
+          prerelease: false
+          name: Seal ${{ env.SEAL_VERSION_NAME }}-${{ env.SEAL_SHORT_HASH }}
+          files: |
+            app/build/outputs/apk/generic/release/*.apk
+            app/build/outputs/apk/generic/release/SHA256SUMS
+
+      # Movable pointer for consumers that pin ref "latest" (same commit as this pre-release).
+      - name: Update latest tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f latest "${GITHUB_SHA}"
+          git push -f origin "refs/tags/latest"
