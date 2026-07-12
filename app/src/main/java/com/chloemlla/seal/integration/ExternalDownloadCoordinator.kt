@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.Task
@@ -13,6 +14,7 @@ import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.FileUtil.getFileProvider
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -44,6 +46,7 @@ object ExternalDownloadCoordinator {
         val taskId: String,
         val callerPackage: String?,
         val callerRequestId: String?,
+        val terminalSent: AtomicBoolean = AtomicBoolean(false),
         var job: Job? = null,
     )
 
@@ -55,7 +58,7 @@ object ExternalDownloadCoordinator {
             } else {
                 ExternalSession(callerPackage = pkg, callerRequestId = callerRequestId)
             }
-        Log.d(TAG, "beginExternalSession pkg=${externalSession?.callerPackage} reqId=$callerRequestId")
+        Log.i(TAG, "beginExternalSession pkg=${externalSession?.callerPackage} reqId=$callerRequestId")
     }
 
     fun endExternalSession(notifyCanceledIfEmpty: Boolean = false, context: Context? = null) {
@@ -74,9 +77,12 @@ object ExternalDownloadCoordinator {
                 errorCode = ExternalDownloadProtocol.ERROR_CANCELED,
                 callerRequestId = session.callerRequestId,
             )
-            Log.d(TAG, "endExternalSession canceled (no enqueue) pkg=${session.callerPackage}")
+            Log.i(TAG, "endExternalSession canceled (no enqueue) pkg=${session.callerPackage}")
         } else {
-            Log.d(TAG, "endExternalSession pkg=${session?.callerPackage}")
+            Log.d(
+                TAG,
+                "endExternalSession pkg=${session?.callerPackage} enqueued=${session?.enqueuedDuringSession}",
+            )
         }
     }
 
@@ -106,7 +112,15 @@ object ExternalDownloadCoordinator {
         tasks: List<Task>,
         alsoNotifyAccepted: Boolean = true,
     ) {
-        val session = externalSession ?: return
+        val session = externalSession
+        if (session == null) {
+            Log.w(
+                TAG,
+                "watchEnqueuedTasksIfExternal skipped: no external session " +
+                    "(tasks=${tasks.size}). UI path needs beginExternalSession first.",
+            )
+            return
+        }
         if (tasks.isEmpty()) return
         session.enqueuedDuringSession = true
         val appContext = context.applicationContext
@@ -128,6 +142,11 @@ object ExternalDownloadCoordinator {
         if (externalSession === session) {
             externalSession = null
         }
+        Log.i(
+            TAG,
+            "watchEnqueuedTasksIfExternal count=${taskIds.size} pkg=${session.callerPackage} " +
+                "reqId=${session.callerRequestId} ids=$taskIds",
+        )
     }
 
     fun notifyAcceptedForSession(context: Context, taskIds: List<String>) {
@@ -151,7 +170,7 @@ object ExternalDownloadCoordinator {
             taskIds = taskIds,
             callerRequestId = session.callerRequestId,
         )
-        Log.d(
+        Log.i(
             TAG,
             "notifyAccepted count=${taskIds.size} pkg=${session.callerPackage} reqId=${session.callerRequestId}",
         )
@@ -220,9 +239,15 @@ object ExternalDownloadCoordinator {
         callerPackage: String?,
         callerRequestId: String?,
     ) {
-        if (callerPackage.isNullOrBlank()) return
+        if (callerPackage.isNullOrBlank()) {
+            Log.w(TAG, "watchTask skipped: blank callerPackage taskId=$taskId")
+            return
+        }
         val existing = watchedTasks[taskId]
-        if (existing != null) return
+        if (existing != null) {
+            Log.d(TAG, "watchTask already watching taskId=$taskId")
+            return
+        }
 
         val watched =
             WatchedTask(
@@ -231,53 +256,91 @@ object ExternalDownloadCoordinator {
                 callerRequestId = callerRequestId,
             )
         watchedTasks[taskId] = watched
+        Log.i(TAG, "watchTask start taskId=$taskId pkg=$callerPackage reqId=$callerRequestId")
 
         watched.job =
             scope.launch {
-                snapshotFlow { downloader.getTaskStateMap().entries.associate { it.key.id to it.value } }
-                    .map { it[taskId] }
-                    .distinctUntilChanged()
+                // SnapshotStateMap mutations are observed via snapshotFlow.
+                // Map by task.id string so Task instance identity changes never drop the watch.
+                snapshotFlow {
+                        downloader
+                            .getTaskStateMap()
+                            .entries
+                            .associate { (task, state) -> task.id to state }
+                    }
+                    .map { states -> states[taskId] }
+                    .distinctUntilChanged { old, new ->
+                        // Progress ticks on Running must not thrash collectors; only
+                        // downloadState class + terminal payload fields matter for L3.
+                        old.sameTerminalObservation(new)
+                    }
                     .collect { state ->
-                        if (state == null) return@collect
+                        if (state == null) {
+                            // Task not yet present or temporarily removed — keep watching.
+                            return@collect
+                        }
                         when (val downloadState = state.downloadState) {
                             is DownloadState.Completed -> {
-                                val contentUri =
-                                    downloadState.filePath?.let {
-                                        createContentUri(context, it, callerPackage)
-                                    }
-                                ExternalDownloadStatusReporter.sendStatus(
-                                    context = context,
-                                    targetPackage = callerPackage,
-                                    status = ExternalDownloadProtocol.STATUS_COMPLETED,
-                                    errorCode = ExternalDownloadProtocol.ERROR_OK,
-                                    taskId = taskId,
-                                    callerRequestId = callerRequestId,
-                                    contentUri = contentUri,
-                                )
-                                clearWatch(taskId)
+                                emitTerminalOnce(watched) {
+                                    val filePath = downloadState.filePath
+                                    val contentUri =
+                                        filePath?.let {
+                                            createContentUri(context, it, callerPackage)
+                                        }
+                                    val displayName =
+                                        resolveDisplayName(
+                                            viewTitle = state.viewState.title,
+                                            filePath = filePath,
+                                        )
+                                    val mimeType = resolveMimeType(filePath)
+                                    Log.i(
+                                        TAG,
+                                        "terminal COMPLETED taskId=$taskId " +
+                                            "uri=${contentUri != null} name=$displayName mime=$mimeType",
+                                    )
+                                    ExternalDownloadStatusReporter.sendStatus(
+                                        context = context,
+                                        targetPackage = callerPackage,
+                                        status = ExternalDownloadProtocol.STATUS_COMPLETED,
+                                        errorCode = ExternalDownloadProtocol.ERROR_OK,
+                                        taskId = taskId,
+                                        callerRequestId = callerRequestId,
+                                        contentUri = contentUri,
+                                        displayName = displayName,
+                                        mimeType = mimeType,
+                                    )
+                                }
                             }
                             is DownloadState.Error -> {
-                                ExternalDownloadStatusReporter.sendStatus(
-                                    context = context,
-                                    targetPackage = callerPackage,
-                                    status = ExternalDownloadProtocol.STATUS_FAILED,
-                                    errorCode = ExternalDownloadProtocol.ERROR_DOWNLOAD_FAILED,
-                                    errorMessage = downloadState.throwable.message,
-                                    taskId = taskId,
-                                    callerRequestId = callerRequestId,
-                                )
-                                clearWatch(taskId)
+                                emitTerminalOnce(watched) {
+                                    Log.i(
+                                        TAG,
+                                        "terminal FAILED taskId=$taskId msg=${downloadState.throwable.message}",
+                                    )
+                                    ExternalDownloadStatusReporter.sendStatus(
+                                        context = context,
+                                        targetPackage = callerPackage,
+                                        status = ExternalDownloadProtocol.STATUS_FAILED,
+                                        errorCode =
+                                            ExternalDownloadProtocol.ERROR_DOWNLOAD_FAILED,
+                                        errorMessage = downloadState.throwable.message,
+                                        taskId = taskId,
+                                        callerRequestId = callerRequestId,
+                                    )
+                                }
                             }
                             is DownloadState.Canceled -> {
-                                ExternalDownloadStatusReporter.sendStatus(
-                                    context = context,
-                                    targetPackage = callerPackage,
-                                    status = ExternalDownloadProtocol.STATUS_CANCELED,
-                                    errorCode = ExternalDownloadProtocol.ERROR_CANCELED,
-                                    taskId = taskId,
-                                    callerRequestId = callerRequestId,
-                                )
-                                clearWatch(taskId)
+                                emitTerminalOnce(watched) {
+                                    Log.i(TAG, "terminal CANCELED taskId=$taskId")
+                                    ExternalDownloadStatusReporter.sendStatus(
+                                        context = context,
+                                        targetPackage = callerPackage,
+                                        status = ExternalDownloadProtocol.STATUS_CANCELED,
+                                        errorCode = ExternalDownloadProtocol.ERROR_CANCELED,
+                                        taskId = taskId,
+                                        callerRequestId = callerRequestId,
+                                    )
+                                }
                             }
                             else -> Unit
                         }
@@ -285,8 +348,58 @@ object ExternalDownloadCoordinator {
             }
     }
 
+    private fun emitTerminalOnce(watched: WatchedTask, block: () -> Unit) {
+        if (!watched.terminalSent.compareAndSet(false, true)) {
+            Log.d(TAG, "terminal already sent taskId=${watched.taskId}")
+            return
+        }
+        runCatching(block).onFailure {
+            // Allow a later retry if broadcast construction failed hard.
+            watched.terminalSent.set(false)
+            Log.e(TAG, "emit terminal failed taskId=${watched.taskId}", it)
+        }
+        if (watched.terminalSent.get()) {
+            clearWatch(watched.taskId)
+        }
+    }
+
     private fun clearWatch(taskId: String) {
         watchedTasks.remove(taskId)?.job?.cancel()
+    }
+
+    private fun Task.State?.sameTerminalObservation(other: Task.State?): Boolean {
+        if (this === other) return true
+        if (this == null || other == null) return this == other
+        val a = downloadState
+        val b = other.downloadState
+        return when {
+            a is DownloadState.Completed && b is DownloadState.Completed ->
+                a.filePath == b.filePath && viewState.title == other.viewState.title
+            a is DownloadState.Error && b is DownloadState.Error ->
+                a.throwable.message == b.throwable.message && a.action == b.action
+            a is DownloadState.Canceled && b is DownloadState.Canceled -> a.action == b.action
+            // Collapse Idle/Fetching/Ready/Running progress noise into one observation.
+            a::class == b::class -> true
+            else -> false
+        }
+    }
+
+    private fun resolveDisplayName(viewTitle: String?, filePath: String?): String? {
+        val fromPath =
+            filePath
+                ?.takeIf { it.isNotBlank() && !it.startsWith("content:", ignoreCase = true) }
+                ?.let { File(it).name }
+                ?.takeIf { it.isNotBlank() }
+        if (!fromPath.isNullOrBlank()) return fromPath
+        val title = viewTitle?.trim().orEmpty()
+        return title.takeIf { it.isNotEmpty() && !it.startsWith("http://") && !it.startsWith("https://") }
+    }
+
+    private fun resolveMimeType(filePath: String?): String? {
+        if (filePath.isNullOrBlank()) return null
+        if (filePath.startsWith("content:", ignoreCase = true)) return null
+        val ext = File(filePath).extension.lowercase().ifBlank { return null }
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
     }
 
     fun createContentUri(context: Context, path: String, callerPackage: String?): Uri? {
@@ -296,7 +409,10 @@ object ExternalDownloadCoordinator {
                         Uri.parse(path)
                     } else {
                         val file = File(path)
-                        if (!file.exists()) return null
+                        if (!file.exists()) {
+                            Log.w(TAG, "createContentUri file missing: $path")
+                            return null
+                        }
                         FileProvider.getUriForFile(context, context.getFileProvider(), file)
                     }
                 if (!callerPackage.isNullOrBlank()) {
@@ -333,7 +449,10 @@ object ExternalDownloadStatusReporter {
         displayName: String? = null,
         mimeType: String? = null,
     ) {
-        if (targetPackage.isNullOrBlank()) return
+        if (targetPackage.isNullOrBlank()) {
+            Log.w("ExternalDownloadStatus", "sendStatus skipped: blank target status=$status")
+            return
+        }
         val intent =
             Intent(ExternalDownloadProtocol.ACTION_DOWNLOAD_STATUS).apply {
                 setPackage(targetPackage)
@@ -361,8 +480,14 @@ object ExternalDownloadStatusReporter {
                 mimeType?.let { putExtra(ExternalDownloadProtocol.EXTRA_MIME_TYPE, it) }
                 putExtra(ExternalDownloadProtocol.EXTRA_CALLER_PACKAGE, targetPackage)
             }
-        runCatching { context.sendBroadcast(intent) }
-            .onFailure { Log.e("ExternalDownloadStatus", "broadcast failed", it) }
+        runCatching {
+                context.sendBroadcast(intent)
+                Log.i(
+                    "ExternalDownloadStatus",
+                    "broadcast status=$status task=$taskId pkg=$targetPackage reqId=$callerRequestId",
+                )
+            }
+            .onFailure { Log.e("ExternalDownloadStatus", "broadcast failed status=$status", it) }
     }
 
     fun activityResultBundle(

@@ -70,6 +70,8 @@ FileProvider authority：`${applicationId}.provider`
 
 推荐新集成优先使用 **L2/L3 自定义 action**。
 
+> **UI 路径终态**：uto_start=false 打开 Seal 配置页后，用户确认下载时 Seal **仍会** watchTask 并发送 ccepted 与终态 completed / ailed / canceled（定向广播到 callingPackage）。调用方不要假设「只有 auto-start 才有 L3 终态」。详见 [third-party-ui-path-status-callback.md](./third-party-ui-path-status-callback.md)。
+
 Manifest 已导出入口：
 
 - `QuickDownloadActivity`（对话框式配置 UI，`singleInstance`）

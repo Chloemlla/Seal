@@ -335,6 +335,7 @@ adb 补充（仅验证广播 action；真实 callingPackage 仍以 App 启动为
 |------|------|
 | 2026-07-12 | 初版：记录 UI 路径缺 watchTask 根因与 Seal 适配方案；联调对象 PiliPlus |
 | 2026-07-12 | 代码落地：ExternalSession + UI 入队 watch + accepted；文档与 TODO 同步 |
+| 2026-07-12 | 联调加固：终态一次性广播 + completed 元数据 + PiliPlus needs_ui 不回退 |
 
 ---
 
@@ -347,3 +348,68 @@ adb 补充（仅验证广播 action；真实 callingPackage 仍以 App 启动为
 **修复**：`Config(downloadType = if (preferences.extractAudio) Audio else Video)`。
 
 **文件**：`QuickDownloadActivity.kt`
+
+---
+
+## 11. 2026-07-12 联调加固：UI 确认后必须可靠切到完成态
+
+### 11.1 现象复现链
+
+PiliPlus 自有动画状态面板在「等待 Seal 确认」后，**有时始终不进入完成态**。
+
+可能原因（叠加）：
+
+1. Seal UI 入队后 `watchTask` 虽已挂钩，但终态广播日志不足，难以判断是否真正发出
+2. `completed` 缺 `display_name` / `mime_type`，调用方打开/分享体验弱（面板仍应切完成）
+3. PiliPlus 侧 **Activity Result 晚到的 `needs_ui`** 覆盖了已到 `accepted` 的面板状态
+4. 空会话 `canceled`（用户关 UI 未入队）与已入队任务的时序竞态
+
+### 11.2 Seal 侧加固（本轮）
+
+文件：`ExternalDownloadCoordinator.kt`
+
+| 项 | 说明 |
+|----|------|
+| 终态只发一次 | `AtomicBoolean terminalSent`，避免重复 completed/failed/canceled |
+| 更强日志 | `watchTask start` / `notifyAccepted` / `terminal COMPLETED` / broadcast |
+| session 缺失告警 | UI enqueue 时若无 external session，打 `watchEnqueuedTasksIfExternal skipped` |
+| completed 元数据 | 补 `display_name`（文件名或标题）、`mime_type`（扩展名推断） |
+| 观测去抖 | Running 进度变化不触发重复 collect，仅状态机迁移进入终态分支 |
+| 任务查找 | 始终按 `task.id` 字符串索引，不依赖 `Task` 实例相等 |
+
+### 11.3 调用方（PiliPlus）侧加固
+
+文件：`lib/utils/seal_download_utils.dart`
+
+| 项 | 说明 |
+|----|------|
+| `needs_ui` 不回退 | 已 `accepted` / 终态时忽略晚到的 Activity Result `needs_ui` |
+| 空 `canceled` 不回退 | 已 `accepted`/`completed` 或已有 `taskId` 时忽略无 task 的 cancel |
+| 后台等待 | 关闭面板仍保留 session 映射，终态到来可重新弹出完成面板 |
+
+### 11.4 期望状态机（UI 路径）
+
+```text
+PiliPlus: launching
+  → needs_ui / waitingUi（可选）
+  → accepted（用户在 Seal 确认后，必达）
+  → completed | failed | canceled（终态广播，必达其一）
+```
+
+### 11.5 logcat 过滤
+
+```text
+adb logcat -s ExternalDownloadCoord:I ExternalDownloadStatus:I SealDownloadStatus:I
+```
+
+期望顺序（音频/视频 UI 确认后）：
+
+1. `beginExternalSession pkg=com.chloemlla.piliplus...`
+2. `watchTask start taskId=...`
+3. `notifyAccepted ...`
+4. `terminal COMPLETED ...` 或 FAILED / CANCELED
+5. `broadcast status=completed ...`
+
+若只有 1 没有 2/3：用户未确认，或 session 在确认前被 `endExternalSession` 清掉。  
+若有 2/3 没有 4：下载队列未到终态，或进程被杀；看 Seal 下载列表。  
+若有 4 但 PiliPlus 无 UI：检查 PiliPlus 是否安装了本轮 Dart 防护，以及 `readyForStatus` 是否调用。

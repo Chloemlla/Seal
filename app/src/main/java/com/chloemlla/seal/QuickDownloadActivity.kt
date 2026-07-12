@@ -212,6 +212,9 @@ class QuickDownloadActivity : ComponentActivity() {
 
     override fun onDestroy() {
         // Stops binding new UI enqueues; already-watched tasks keep terminal reporting.
+        // notifyCanceledIfEmpty only fires when the user never confirmed a download.
+        // After watchEnqueuedTasksIfExternal the session is cleared, so this will not
+        // emit a late canceled that races accepted/completed.
         if (isFinishing) {
             ExternalDownloadCoordinator.endExternalSession(
                 notifyCanceledIfEmpty = true,
