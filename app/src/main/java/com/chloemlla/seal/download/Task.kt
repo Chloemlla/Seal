@@ -52,6 +52,7 @@ data class Task(
         val downloadState: DownloadState,
         val videoInfo: VideoInfo?,
         val viewState: ViewState,
+        val outputLog: String = "",
     )
 
     @Serializable

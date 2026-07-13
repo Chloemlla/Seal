@@ -22,7 +22,9 @@ import com.chloemlla.seal.download.Task.TypeInfo
 import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.FileUtil
 import com.chloemlla.seal.util.NotificationUtil
+import com.chloemlla.seal.util.COMMAND_DIRECTORY
 import com.chloemlla.seal.util.PreferenceUtil
+import com.chloemlla.seal.util.PreferenceUtil.getString
 import com.chloemlla.seal.util.VideoInfo
 import com.yausername.youtubedl_android.YoutubeDL
 import kotlin.collections.component1
@@ -48,6 +50,7 @@ private const val TASK_BACKUP_DEBOUNCE_MS = 750L
 private const val PROGRESS_BUCKETS = 20
 private const val PROGRESS_BUCKET_NONE = -2
 private const val PROGRESS_MISSING = -1f
+private const val OUTPUT_LOG_BUCKET_CHARS = 4 * 1024
 
 interface DownloaderV2 {
     fun getTaskStateMap(): SnapshotStateMap<Task, Task.State>
@@ -100,10 +103,7 @@ internal object FakeDownloaderV2 : DownloaderV2 {
 }
 
 /**
- * TODO:
- *     - Notification
- *     - Custom commands
- *     - States for ViewModels
+ * Primary download engine (queue, backup, notifications, custom commands).
  */
 @OptIn(FlowPreview::class)
 class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComponent {
@@ -302,11 +302,11 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
     }
 
     private fun Task.download() {
-        check(downloadState == ReadyWithInfo && info != null)
         if (type is TypeInfo.CustomCommand) {
             execute()
             return
         }
+        check(downloadState == ReadyWithInfo && info != null)
         scope
             .launch(Dispatchers.Default) {
                 DownloadUtil.downloadVideo(
@@ -420,9 +420,11 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
      * @see Task.TypeInfo.CustomCommand
      */
     private fun Task.execute() {
-        check(downloadState == Idle)
         check(type is TypeInfo.CustomCommand)
+        check(downloadState == Idle || downloadState == ReadyWithInfo)
         val template = type.template
+        // Fresh run: reset accumulated log (matches V1 restart behavior).
+        state = state.copy(outputLog = "")
         scope
             .launch {
                 DownloadUtil.executeCustomCommandTask(url, id, template, preferences) {
@@ -432,8 +434,14 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
                         val progress = progressPercentage / 100f
                         when (val preState = downloadState) {
                             is Running -> {
-                                downloadState =
-                                    preState.copy(progress = progress, progressText = text)
+                                val line = if (text.endsWith("\n")) text else "$text\n"
+                                val nextLog = appendOutputLog(state.outputLog, line)
+                                state =
+                                    state.copy(
+                                        downloadState =
+                                            preState.copy(progress = progress, progressText = text),
+                                        outputLog = nextLog,
+                                    )
                                 NotificationUtil.makeNotificationForCustomCommand(
                                     notificationId = notificationId,
                                     taskId = id,
@@ -450,16 +458,36 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
                         if (throwable is YoutubeDL.CanceledException) {
                             return@onFailure
                         }
-                        downloadState = Error(throwable = throwable, action = Download)
+                        val report = throwable.stackTraceToString()
+                        state =
+                            state.copy(
+                                downloadState = Error(throwable = throwable, action = Download),
+                                outputLog = appendOutputLog(state.outputLog, report + "\n"),
+                            )
                         NotificationUtil.notifyError(
                             title = viewState.title,
                             textId = R.string.fetch_info_error_msg,
                             notificationId = notificationId,
-                            report = throwable.stackTraceToString(),
+                            report = report,
                         )
                     }
-                    .onSuccess {
-                        downloadState = Completed(null)
+                    .onSuccess { response ->
+                        val combined =
+                            listOf(response.out, response.err)
+                                .filter { it.isNotBlank() }
+                                .joinToString("\n")
+                        val nextLog =
+                            when {
+                                combined.isBlank() -> state.outputLog
+                                state.outputLog.contains(combined) -> state.outputLog
+                                else -> appendOutputLog(state.outputLog, combined + "\n")
+                            }
+                        state =
+                            state.copy(
+                                downloadState = Completed(null),
+                                outputLog = nextLog,
+                            )
+                        FileUtil.scanDownloadDirectoryToMediaLibrary(COMMAND_DIRECTORY.getString())
 
                         val text = appContext.getString(R.string.status_completed)
 
@@ -475,10 +503,23 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
     }
 }
 
+/** Cap retained custom-command logs to avoid unbounded MMKV growth. */
+private const val MAX_OUTPUT_LOG_CHARS = 512 * 1024
+
+private fun appendOutputLog(existing: String, addition: String): String {
+    if (addition.isEmpty()) return existing
+    val merged = existing + addition
+    return if (merged.length <= MAX_OUTPUT_LOG_CHARS) {
+        merged
+    } else {
+        merged.takeLast(MAX_OUTPUT_LOG_CHARS)
+    }
+}
+
 /**
  * Structural fingerprint for queue MMKV backups.
- * Progress is quantized to ~5% buckets so frequent progress callbacks do not force
- * full JSON rewrites while still retaining coarse resume progress.
+ * Progress is quantized to ~5% buckets and logs to 4 KiB buckets so frequent callbacks
+ * do not force full JSON rewrites while still retaining coarse resume state and logs.
  */
 internal fun Map<Task, Task.State>.toTaskBackupFingerprint(): List<String> =
     entries
@@ -502,6 +543,7 @@ internal fun Map<Task, Task.State>.toTaskBackupFingerprint(): List<String> =
                         ((downloadState.progress ?: PROGRESS_MISSING) * PROGRESS_BUCKETS).toInt()
                     else -> PROGRESS_BUCKET_NONE
                 }
-            "${task.id}|$kind|$progressBucket|${state.viewState.title}"
+            val outputLogBucket = state.outputLog.length / OUTPUT_LOG_BUCKET_CHARS
+            "${task.id}|$kind|$progressBucket|$outputLogBucket|${state.viewState.title}"
         }
 

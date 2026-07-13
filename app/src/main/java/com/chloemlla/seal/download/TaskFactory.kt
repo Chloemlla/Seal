@@ -1,6 +1,7 @@
 package com.chloemlla.seal.download
 
 import androidx.annotation.CheckResult
+import com.chloemlla.seal.database.objects.CommandTemplate
 import com.chloemlla.seal.download.Task.DownloadState.Idle
 import com.chloemlla.seal.download.Task.DownloadState.ReadyWithInfo
 import com.chloemlla.seal.util.DownloadUtil.DownloadPreferences
@@ -109,6 +110,34 @@ object TaskFactory {
             }
 
         return taskList
+    }
+
+    /** Custom-command task bound to a [CommandTemplate] and raw URL text (multi-URL allowed). */
+    @CheckResult
+    fun createCustomCommand(
+        url: String,
+        template: CommandTemplate,
+        preferences: DownloadPreferences = DownloadPreferences.createFromPreferences(),
+    ): TaskWithState {
+        val task =
+            Task(
+                url = url,
+                preferences = preferences,
+                type = Task.TypeInfo.CustomCommand(template),
+            )
+        val state =
+            Task.State(
+                downloadState = Idle,
+                videoInfo = null,
+                viewState =
+                    Task.ViewState(
+                        url = url,
+                        title = template.name,
+                        uploader = template.name,
+                    ),
+                outputLog = "",
+            )
+        return TaskWithState(task, state)
     }
 
     data class TaskWithState(val task: Task, val state: Task.State)

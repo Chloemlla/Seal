@@ -11,13 +11,6 @@ import com.chloemlla.seal.App
 import com.chloemlla.seal.App.Companion.audioDownloadDir
 import com.chloemlla.seal.App.Companion.context
 import com.chloemlla.seal.App.Companion.videoDownloadDir
-import com.chloemlla.seal.Downloader
-import com.chloemlla.seal.Downloader.onProcessEnded
-import com.chloemlla.seal.Downloader.onProcessStarted
-import com.chloemlla.seal.Downloader.onTaskEnded
-import com.chloemlla.seal.Downloader.onTaskError
-import com.chloemlla.seal.Downloader.onTaskStarted
-import com.chloemlla.seal.Downloader.toNotificationId
 import com.chloemlla.seal.R
 import com.chloemlla.seal.database.objects.CommandTemplate
 import com.chloemlla.seal.database.objects.DownloadedVideoInfo
@@ -926,87 +919,6 @@ object DownloadUtil {
         return runCatching {
             YoutubeDL.getInstance()
                 .execute(request = request, processId = taskId, callback = progressCallback)
-        }
-    }
-
-    suspend fun executeCommandInBackground(
-        url: String,
-        template: CommandTemplate = PreferenceUtil.getTemplate(),
-        downloadPreferences: DownloadPreferences = DownloadPreferences.createFromPreferences(),
-    ) {
-        downloadPreferences.run {
-            val validation = CommandTemplateSanitizer.validate(template.template)
-            if (!validation.ok) {
-                val msg =
-                    "Blocked unsafe custom command option(s): ${validation.blockedOptions.joinToString()}"
-                ToastUtil.makeToastSuspend(msg)
-                withContext(Dispatchers.Main) {
-                    onTaskError(msg, template, url)
-                }
-                return
-            }
-            val taskId = Downloader.makeKey(url = url, templateName = template.name)
-            val notificationId = taskId.toNotificationId()
-            val urlList = url.split(Regex("[\n ]")).filter { it.isNotBlank() }
-
-            ToastUtil.makeToastSuspend(context.getString(R.string.start_execute))
-            val request =
-                YoutubeDLRequest(urlList).apply {
-                    commandDirectory.takeIf { it.isNotEmpty() }?.let { addOption("-P", it) }
-                    addOption("--newline")
-                    if (aria2c) {
-                        enableAria2c()
-                    }
-                    if (useDownloadArchive) {
-                        useDownloadArchive()
-                    }
-                    if (restrictFilenames) {
-                        addOption("--restrict-filenames")
-                    }
-                    addOption(
-                        "--config-locations",
-                        FileUtil.writeContentToFile(template.template, context.getConfigFile())
-                            .absolutePath,
-                    )
-                    if (cookies) {
-                        enableCookies(userAgentString)
-                    }
-                }
-
-            onProcessStarted()
-            withContext(Dispatchers.Main) { onTaskStarted(template, url) }
-            runCatching {
-                    val response =
-                        YoutubeDL.getInstance().execute(request = request, processId = taskId) {
-                            progress,
-                            _,
-                            text ->
-                            NotificationUtil.makeNotificationForCustomCommand(
-                                notificationId = notificationId,
-                                taskId = taskId,
-                                progress = progress.toInt(),
-                                templateName = template.name,
-                                taskUrl = url,
-                                text = text,
-                            )
-                            Downloader.updateTaskOutput(
-                                template = template,
-                                url = url,
-                                line = text,
-                                progress = progress,
-                            )
-                        }
-                    onTaskEnded(template, url, response.out + "\n" + response.err)
-                }
-                .onFailure {
-                    it.printStackTrace()
-                    if (it is YoutubeDL.CanceledException) return@onFailure
-                    it.message.run {
-                        if (isNullOrEmpty()) onTaskEnded(template, url)
-                        else onTaskError(this, template, url)
-                    }
-                }
-            onProcessEnded()
         }
     }
 

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.NewLabel
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -57,8 +59,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.chloemlla.seal.Downloader
 import com.chloemlla.seal.R
+import com.chloemlla.seal.download.DownloaderV2
+import com.chloemlla.seal.download.Task
+import com.chloemlla.seal.download.Task.DownloadState.Canceled
+import com.chloemlla.seal.download.Task.DownloadState.Completed
+import com.chloemlla.seal.download.Task.DownloadState.Error
+import com.chloemlla.seal.download.Task.DownloadState.Running
+import com.chloemlla.seal.download.Task.TypeInfo
+import com.chloemlla.seal.download.TaskFactory
 import com.chloemlla.seal.database.objects.CommandTemplate
 import com.chloemlla.seal.ui.common.HapticFeedback.slightHapticFeedback
 import com.chloemlla.seal.ui.common.intState
@@ -77,17 +86,21 @@ import com.chloemlla.seal.ui.page.settings.command.CommandTemplateDialog
 import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.PreferenceUtil.updateInt
 import com.chloemlla.seal.util.TEMPLATE_ID
+import com.chloemlla.seal.util.ToastUtil
+import com.chloemlla.seal.util.copyToClipboard
+import com.chloemlla.seal.util.findURLsFromString
+import com.chloemlla.seal.util.readClipboardText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.chloemlla.seal.util.findURLsFromString
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.platform.LocalContext
-import com.chloemlla.seal.util.copyToClipboard
-import com.chloemlla.seal.util.readClipboardText
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) {
+fun TaskListPage(
+    onNavigateBack: () -> Unit,
+    onNavigateToDetail: (Int) -> Unit,
+    downloader: DownloaderV2 = koinInject(),
+) {
     val scope = rememberCoroutineScope()
     val view = LocalView.current
     val context = LocalContext.current
@@ -99,6 +112,12 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
             skipHalfExpanded = true,
             initialValue = ModalBottomSheetValue.Hidden,
         )
+
+    val taskStateMap = downloader.getTaskStateMap()
+    val customTasks =
+        taskStateMap.entries
+            .filter { (task, _) -> task.type is TypeInfo.CustomCommand }
+            .sortedBy { (_, state) -> state.downloadState.toTaskStatus() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -130,33 +149,47 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
             }
         },
     ) { paddings ->
-                LazyColumn(
+        LazyColumn(
             modifier = Modifier.padding(paddings),
             contentPadding = PaddingValues(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(
-                Downloader.mutableTaskList.values.toList().sortedBy { it.state.toStatus() },
-                key = { it.toKey() },
-            ) {
-                it.run {
-                    CustomCommandTaskItem(
-                        status = state.toStatus(),
-                        progress =
-                            if (state is Downloader.CustomCommandTask.State.Running)
-                                state.progress / 100f
-                            else 0f,
-                        progressText = currentLine,
-                        url = url,
-                        templateName = template.name,
-                        onCancel = { onCancel() },
-                        onCopyError = { onCopyError() },
-                        onRestart = { onRestart() },
-                        onCopyLog = { onCopyLog() },
-                        onShowLog = { onNavigateToDetail(hashCode()) },
-                        modifier = Modifier.animateItem(),
-                    )
-                }
+            items(customTasks, key = { it.key.id }) { (task, state) ->
+                val templateName = (task.type as TypeInfo.CustomCommand).template.name
+                val downloadState = state.downloadState
+                val status = downloadState.toTaskStatus()
+                val progress =
+                    when (downloadState) {
+                        is Running -> downloadState.progress.coerceIn(0f, 1f)
+                        else -> 0f
+                    }
+                val progressText =
+                    when (downloadState) {
+                        is Running -> downloadState.progressText
+                        is Error ->
+                            downloadState.throwable.message
+                                ?: state.outputLog.lineSequence().lastOrNull().orEmpty()
+                        else -> state.outputLog.lineSequence().lastOrNull().orEmpty()
+                    }
+                CustomCommandTaskItem(
+                    status = status,
+                    progress = progress,
+                    progressText = progressText,
+                    url = task.url,
+                    templateName = templateName,
+                    onCancel = { downloader.cancel(task) },
+                    onCopyError = {
+                        val err =
+                            (downloadState as? Error)?.throwable?.message
+                                ?: progressText
+                        context.copyToClipboard(err)
+                        ToastUtil.makeToast(R.string.error_copied)
+                    },
+                    onRestart = { downloader.restart(task) },
+                    onCopyLog = { context.copyToClipboard(state.outputLog) },
+                    onShowLog = { onNavigateToDetail(task.id.hashCode()) },
+                    modifier = Modifier.animateItem(),
+                )
             }
         }
     }
@@ -170,7 +203,6 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
         SealModalBottomSheetM2(
             sheetState = sheetState,
             sheetContent = {
-                
                 var showTemplateSelectionDialog by remember { mutableStateOf(false) }
                 var showTemplateCreatorDialog by remember { mutableStateOf(false) }
                 var showTemplateEditorDialog by remember { mutableStateOf(false) }
@@ -188,7 +220,12 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
 
                 LaunchedEffect(sheetState.targetValue) {
                     if (sheetState.targetValue == ModalBottomSheetValue.Expanded)
-                        url = findURLsFromString(context.readClipboardText().orEmpty(), firstMatchOnly = false).joinToString(separator = "\n")
+                        url =
+                            findURLsFromString(
+                                    context.readClipboardText().orEmpty(),
+                                    firstMatchOnly = false,
+                                )
+                                .joinToString(separator = "\n")
                 }
 
                 Column(Modifier.fillMaxWidth()) {
@@ -216,7 +253,12 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
                             FilledButtonWithIcon(
                                 onClick = {
                                     view.slightHapticFeedback()
-                                    Downloader.executeCommandWithUrl(url)
+                                    downloader.enqueue(
+                                        TaskFactory.createCustomCommand(
+                                            url = url,
+                                            template = template,
+                                        )
+                                    )
                                     onDismissRequest()
                                 },
                                 icon = Icons.Outlined.DownloadDone,
@@ -226,7 +268,7 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
                     }
                 }
                 if (showTemplateSelectionDialog) {
-                    TemplatePickerDialog() { showTemplateSelectionDialog = false }
+                    TemplatePickerDialog { showTemplateSelectionDialog = false }
                 }
                 if (showTemplateCreatorDialog) {
                     CommandTemplateDialog(
@@ -244,12 +286,13 @@ fun TaskListPage(onNavigateBack: () -> Unit, onNavigateToDetail: (Int) -> Unit) 
         )
 }
 
-private fun Downloader.CustomCommandTask.State.toStatus(): TaskStatus =
+private fun Task.DownloadState.toTaskStatus(): TaskStatus =
     when (this) {
-        Downloader.CustomCommandTask.State.Canceled -> TaskStatus.CANCELED
-        Downloader.CustomCommandTask.State.Completed -> TaskStatus.FINISHED
-        is Downloader.CustomCommandTask.State.Error -> TaskStatus.ERROR
-        is Downloader.CustomCommandTask.State.Running -> TaskStatus.RUNNING
+        is Canceled -> TaskStatus.CANCELED
+        is Completed -> TaskStatus.FINISHED
+        is Error -> TaskStatus.ERROR
+        is Running -> TaskStatus.RUNNING
+        else -> TaskStatus.RUNNING
     }
 
 @Composable

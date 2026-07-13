@@ -80,4 +80,34 @@ class TaskBackupFingerprintTest {
             )
         assertNotEquals(idle.toTaskBackupFingerprint(), canceled.toTaskBackupFingerprint())
     }
+
+    @Test
+    fun outputLogCrossingBucketChangesFingerprint() {
+        val task = sampleTask()
+        val belowBucket =
+            mapOf(
+                task to
+                    Task.State(
+                        Running(taskId = task.id, progress = 0.10f),
+                        null,
+                        Task.ViewState(url = task.url, title = "t"),
+                        outputLog = "a".repeat(4095),
+                    )
+            )
+        val nextBucket =
+            mapOf(
+                task to
+                    Task.State(
+                        Running(taskId = task.id, progress = 0.10f),
+                        null,
+                        Task.ViewState(url = task.url, title = "t"),
+                        outputLog = "a".repeat(4096),
+                    )
+            )
+
+        assertNotEquals(
+            belowBucket.toTaskBackupFingerprint(),
+            nextBucket.toTaskBackupFingerprint(),
+        )
+    }
 }
