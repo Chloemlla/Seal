@@ -1,6 +1,6 @@
 # Downloader (V1) → DownloaderV2 Migration Plan
 
-> Status: implemented on `main`
+> Status: implemented and CI-verified on `main`
 > Related task: `.trellis/tasks/07-12-fix-kotlin-deprecation-warnings-from-pre-release-ci/`
 > Last updated: 2026-07-13
 
@@ -163,7 +163,7 @@ Target:
 
 ---
 
-### Milestone 3 — Delete V1 singleton ✅
+### Milestone 3 — Delete V1 singleton ✅ (`ac00f1de`, follow-up `3f664a58`)
 
 **Goals**
 
@@ -230,7 +230,7 @@ Do **not** “fix” warnings by `@file:Suppress` on call sites as a long-term s
 
 - [x] Only files for the current milestone (no unrelated BOM/lint churn)
 - [x] Repo-wide count of `import com.chloemlla.seal.Downloader` reaches zero
-- [ ] CI `compile*Kotlin` deprecation lines for Downloader compared before/after
+- [x] CI Run #53 succeeds with zero `Prefer DownloaderV2` warnings
 - [ ] Manual: custom command start → log → cancel → finish notification (from Milestone 2+)
 - [ ] Manual: auto-update does not corrupt in-flight download
 - [ ] Manual/external: integration `enqueue` + `watchTask` still reports terminal states
@@ -258,11 +258,11 @@ Do **not** “fix” warnings by `@file:Suppress` on call sites as a long-term s
 | 2026-07-13 | Full V1→V2 migration is **out of scope** for the small Kotlin deprecation-warning task; tracked here as a dedicated plan. |
 | 2026-07-13 | Prefer multi-milestone PRs over one rewrite; home path already V2; custom command is the critical path. |
 | 2026-07-13 | Migration implemented: dead V1 UI removed, custom commands moved to V2, and `Downloader.kt` deleted. |
+| 2026-07-13 | Build Pre-Release Run #53 passed; Downloader warnings/imports are zero. |
 
 ---
 
 ## Next actions
 
-1. Confirm the GitHub workflow compiles without `Prefer DownloaderV2` warnings.
-2. Manually exercise custom command start → log → cancel/restart → completion notification.
-3. Confirm external integration `enqueue` + `watchTask` terminal states remain green.
+1. Manually exercise custom command start → log → cancel/restart → completion notification.
+2. Confirm external integration `enqueue` + `watchTask` terminal states remain green.
