@@ -120,6 +120,8 @@ class QuickDownloadActivity : ComponentActivity() {
                     val selectionState =
                         viewModel.selectionStateFlow.collectAsStateWithLifecycle().value
                     var showDialog by remember(request.generation) { mutableStateOf(false) }
+                    // Ignore the ViewModel's initial Hidden state until this request opens once.
+                    var hasExpanded by remember(request.generation) { mutableStateOf(false) }
 
                     LaunchedEffect(request.generation) {
                         viewModel.postAction(Action.ShowSheet(request.urls))
@@ -127,8 +129,12 @@ class QuickDownloadActivity : ComponentActivity() {
 
                     LaunchedEffect(sheetValue, selectionState, request.generation) {
                         if (sheetValue == DownloadDialogViewModel.SheetValue.Expanded) {
+                            hasExpanded = true
                             showDialog = true
-                        } else if (sheetValue == DownloadDialogViewModel.SheetValue.Hidden) {
+                        } else if (
+                            sheetValue == DownloadDialogViewModel.SheetValue.Hidden &&
+                                hasExpanded
+                        ) {
                             launch { sheetState.hide() }
                                 .invokeOnCompletion {
                                     showDialog = false
