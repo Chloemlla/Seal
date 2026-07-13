@@ -1,6 +1,6 @@
 # Downloader (V1) → DownloaderV2 Migration Plan
 
-> Status: planning document (not yet fully implemented)
+> Status: implemented on `main`
 > Related task: `.trellis/tasks/07-12-fix-kotlin-deprecation-warnings-from-pre-release-ci/`
 > Last updated: 2026-07-13
 
@@ -21,7 +21,7 @@ Retire the deprecated singleton `com.chloemlla.seal.Downloader` so that:
 
 ---
 
-## Current architecture (as of main)
+## Current architecture (implemented)
 
 ### Already on V2
 
@@ -33,24 +33,18 @@ Retire the deprecated singleton `com.chloemlla.seal.Downloader` so that:
 | Quick download | `QuickDownloadActivity` injects `DownloaderV2` |
 | Main activity wiring | `MainActivity` injects `DownloaderV2` into UI graph |
 
-### Still on V1 (live residual)
+### Migration result
 
-| File | V1 usage | Notes |
-|------|----------|-------|
-| `ui/page/YtdlpUpdater.kt` | `Downloader.downloaderState`, `updateState(Updating/Idle)` | Global mutex for auto-update vs download |
-| `ui/page/command/TaskListPage.kt` | `mutableTaskList`, `executeCommandWithUrl`, `CustomCommandTask.State` | Custom-command UI list + start |
-| `ui/page/command/TaskLogPage.kt` | `mutableTaskList` lookup by hashCode | Custom-command log detail |
-| `util/DownloadUtil.kt` | `onTaskStarted/Ended/Error`, `updateTaskOutput`, `onProcessStarted/Ended`, `makeKey` | Background custom-command callbacks into V1 |
-| `NotificationActionReceiver.kt` | After V2 `cancel(taskId)`, still calls `Downloader.onProcessCanceled` | Dual cancel path |
-
-### Dead / likely unused V1 UI (confirm before delete)
-
-| File | Notes |
-|------|-------|
-| `ui/page/download/DownloadPage.kt` | Heavy V1 Flow consumer; **not** registered in `AppEntry` navigation |
-| `ui/page/download/HomePageViewModel.kt` | V1 download entry (`getInfoAndDownload`, etc.); only used by V1 `DownloadPage` |
-
-Confirm: no navigation, reflection, or product flavor still opens `DownloadPage` before deleting.
+| Area | Result |
+|------|--------|
+| V1 singleton | `Downloader.kt` deleted; no product imports remain |
+| Dead home UI | V1 `DownloadPage`, `HomePageViewModel`, and exclusive dialogs removed |
+| yt-dlp update | `YtDlpUpdateGate` plus V2 active-task checks |
+| Custom commands | `Task.TypeInfo.CustomCommand` in the V2 queue |
+| Command logs | Bounded `Task.State.outputLog`, serialized in pending-task backup |
+| Command UI | List/log/cancel/restart read and mutate the V2 state map |
+| Notifications | Cancel action targets `DownloaderV2.cancel(taskId)` |
+| Execution utility | `DownloadUtil` exposes the pure custom-command executor only |
 
 ### V2 surface (target)
 
@@ -61,7 +55,7 @@ Confirm: no navigation, reflection, or product flavor still opens `DownloadPage`
 
 ---
 
-## Dual-stack capability matrix
+## Pre-migration capability matrix
 
 | Capability | V1 `Downloader` | V2 `DownloaderV2` | Migration difficulty |
 |------------|-----------------|-------------------|----------------------|
@@ -76,11 +70,11 @@ Confirm: no navigation, reflection, or product flavor still opens `DownloadPage`
 
 ---
 
-## Strategy: four milestones
+## Implementation history
 
-Do **not** delete `object Downloader` until Milestone 3. Keep CI green after each milestone.
+The migration was implemented in milestone order so each commit remained independently reviewable.
 
-### Milestone 0 — Inventory and freeze (0.5–1 day)
+### Milestone 0 — Inventory and freeze ✅
 
 **Goals**
 
@@ -100,7 +94,7 @@ Do **not** delete `object Downloader` until Milestone 3. Keep CI green after eac
 
 ---
 
-### Milestone 1 — Low-risk cleanup (1–2 days)
+### Milestone 1 — Low-risk cleanup ✅ (`6da505d9`)
 
 **Goals**
 
@@ -126,7 +120,7 @@ Do **not** delete `object Downloader` until Milestone 3. Keep CI green after eac
 
 ---
 
-### Milestone 2 — Custom commands on V2 (core, 3–6 days)
+### Milestone 2 — Custom commands on V2 ✅ (`6ac6b867`)
 
 This is the bulk of remaining risk and warnings.
 
@@ -169,7 +163,7 @@ Target:
 
 ---
 
-### Milestone 3 — Delete V1 singleton (2–4 days)
+### Milestone 3 — Delete V1 singleton ✅
 
 **Goals**
 
@@ -234,8 +228,8 @@ Do **not** “fix” warnings by `@file:Suppress` on call sites as a long-term s
 
 ## Per-PR acceptance checklist
 
-- [ ] Only files for the current milestone (no unrelated BOM/lint churn)
-- [ ] Repo-wide count of `import com.chloemlla.seal.Downloader` strictly decreases
+- [x] Only files for the current milestone (no unrelated BOM/lint churn)
+- [x] Repo-wide count of `import com.chloemlla.seal.Downloader` reaches zero
 - [ ] CI `compile*Kotlin` deprecation lines for Downloader compared before/after
 - [ ] Manual: custom command start → log → cancel → finish notification (from Milestone 2+)
 - [ ] Manual: auto-update does not corrupt in-flight download
@@ -247,13 +241,12 @@ Do **not** “fix” warnings by `@file:Suppress` on call sites as a long-term s
 
 | Path | Role |
 |------|------|
-| `app/src/main/java/com/chloemlla/seal/Downloader.kt` | Deprecated V1 singleton |
 | `app/src/main/java/com/chloemlla/seal/download/DownloaderV2.kt` | V2 interface + `DownloaderV2Impl` |
 | `app/src/main/java/com/chloemlla/seal/download/Task.kt` | Unified task model |
 | `app/src/main/java/com/chloemlla/seal/download/TaskFactory.kt` | Task construction helpers |
 | `app/src/main/java/com/chloemlla/seal/ui/page/downloadv2/` | Current home download UI |
-| `app/src/main/java/com/chloemlla/seal/ui/page/command/` | Custom-command UI still on V1 |
-| `app/src/main/java/com/chloemlla/seal/util/DownloadUtil.kt` | Executor + residual V1 hooks |
+| `app/src/main/java/com/chloemlla/seal/ui/page/command/` | V2 custom-command list and logs |
+| `app/src/main/java/com/chloemlla/seal/util/DownloadUtil.kt` | Stateless download/custom-command executor |
 | `app/src/main/java/com/chloemlla/seal/ui/page/AppEntry.kt` | Navigation: HOME → V2 |
 
 ---
@@ -264,11 +257,12 @@ Do **not** “fix” warnings by `@file:Suppress` on call sites as a long-term s
 |------|----------|
 | 2026-07-13 | Full V1→V2 migration is **out of scope** for the small Kotlin deprecation-warning task; tracked here as a dedicated plan. |
 | 2026-07-13 | Prefer multi-milestone PRs over one rewrite; home path already V2; custom command is the critical path. |
+| 2026-07-13 | Migration implemented: dead V1 UI removed, custom commands moved to V2, and `Downloader.kt` deleted. |
 
 ---
 
 ## Next actions
 
-1. Create / start a Trellis task dedicated to this migration (separate from warning-only cleanup), **or** attach this doc as research for an existing task.
-2. Execute Milestone 0 audit (confirm `DownloadPage` is dead across flavors).
-3. Ship Milestone 1 PR first for safe warning reduction.
+1. Confirm the GitHub workflow compiles without `Prefer DownloaderV2` warnings.
+2. Manually exercise custom command start → log → cancel/restart → completion notification.
+3. Confirm external integration `enqueue` + `watchTask` terminal states remain green.

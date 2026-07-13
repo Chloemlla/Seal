@@ -283,13 +283,13 @@
   - Severity: Medium
   - Confidence: High
   - Category: Stability / Performance
-  - Status: Confirmed
-  - Affected area: Downloader.addToDownloadQueue
-  - Evidence: while (!isDownloaderAvailable()) delay(3000) 然后启动下载（~316–340）
+  - Status: Resolved (2026-07-13)
+  - Affected area: legacy `Downloader.addToDownloadQueue` (removed)
+  - Evidence: V1 singleton and its delay-based queue were deleted; all live paths use `DownloaderV2`.
   - Problem: 非真正队列；无取消/优先级；进程被杀任务丢；最多 3s 调度延迟。
   - Why it matters: 多任务分享场景丢任务或乱序。
-  - Minimal fix: 显式队列 + 状态机（V2 已有雏形）。
-  - Better long-term fix: 全部迁 V2。
+  - Minimal fix: 已由 `DownloaderV2` 显式任务队列与状态机实现。
+  - Better long-term fix: 已完成全部 live path 迁移并删除 V1。
   - Regression test: 连续入队 5 个任务按序完成。
   - Estimated effort: 1–2 天
 

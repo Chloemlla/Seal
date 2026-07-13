@@ -1,6 +1,5 @@
 package com.chloemlla.seal.ui.page.command
 
-import android.util.Log
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,8 +56,6 @@ import com.chloemlla.seal.util.ToastUtil
 import com.chloemlla.seal.util.copyToClipboard
 import org.koin.compose.koinInject
 
-private const val TAG = "TaskLogPage"
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskLogPage(
@@ -66,7 +63,6 @@ fun TaskLogPage(
     taskHashCode: Int,
     downloader: DownloaderV2 = koinInject(),
 ) {
-    Log.d(TAG, "TaskLogPage: $taskHashCode")
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val entry =
         downloader
