@@ -5,7 +5,7 @@ All notable changes (starting from v1.7.3) to stable releases will be documented
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v2.0.0][2.0.0] - unreleased
+## [v2.1.0][2.1.0] - unreleased
 
 ### Notable changes from v1.13
 
@@ -381,3 +381,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [1.12.1]: https://github.com/Chloemlla/Seal/releases/tag/v1.12.1
 
 [1.13.0]: https://github.com/Chloemlla/Seal/releases/tag/v1.13.0
+
+[2.1.0]: https://github.com/Chloemlla/Seal/releases/tag/v2.1.0

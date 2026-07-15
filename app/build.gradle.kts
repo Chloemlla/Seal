@@ -51,7 +51,7 @@ android {
         applicationId = "com.chloemlla.seal"
         minSdk = 26
         targetSdk = 37
-        versionCode = 200_000_150
+        versionCode = 201_000_400
         check(versionCode == currentVersionCode)
 
         versionName = baseVersionName
