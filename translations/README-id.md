@@ -7,16 +7,16 @@
 ### Pengunduh Video/Audio untuk Android
 
 
-<a href="https://github.com/JunkFood02/Seal/blob/main/README.md">English</a>
+<a href="https://github.com/Chloemlla/Seal/blob/main/README.md">English</a>
 &nbsp;&nbsp;|&nbsp;&nbsp;
 Indonesia
 
 [![F-Droid](https://img.shields.io/f-droid/v/com.junkfood.seal?color=b4eb12&label=F-Droid&logo=fdroid&logoColor=1f78d2)](https://f-droid.org/en/packages/com.junkfood.seal)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/JunkFood02/Seal?color=black&label=Stable&logo=github)](https://github.com/JunkFood02/Seal/releases/latest/)
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/JunkFood02/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/JunkFood02/Seal/releases/)
-[![Keep a Changelog](https://img.shields.io/badge/Changelog-lightgray?style=flat&color=gray&logo=keep-a-changelog)](https://github.com/JunkFood02/Seal/blob/main/CHANGELOG.md)
-[![GitHub all releases](https://img.shields.io/github/downloads/JunkFood02/Seal/total?label=Downloads&logo=github)](https://github.com/JunkFood02/Seal/releases/)
-[![GitHub Repo stars](https://img.shields.io/github/stars/JunkFood02/Seal?color=informational&label=Stars)](https://github.com/JunkFood02/Seal/stargazers)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Chloemlla/Seal?color=black&label=Stable&logo=github)](https://github.com/Chloemlla/Seal/releases/latest/)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/Chloemlla/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/Chloemlla/Seal/releases/)
+[![Keep a Changelog](https://img.shields.io/badge/Changelog-lightgray?style=flat&color=gray&logo=keep-a-changelog)](https://github.com/Chloemlla/Seal/blob/main/CHANGELOG.md)
+[![GitHub all releases](https://img.shields.io/github/downloads/Chloemlla/Seal/total?label=Downloads&logo=github)](https://github.com/Chloemlla/Seal/releases/)
+[![GitHub Repo stars](https://img.shields.io/github/stars/Chloemlla/Seal?color=informational&label=Stars)](https://github.com/Chloemlla/Seal/stargazers)
 [![Supported Sites](https://img.shields.io/badge/Supported-Sites-9cf.svg?style=flat)](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Seal-blue?style=flat&logo=telegram)](https://t.me/seal_app)
 [![Matrix Space](https://img.shields.io/badge/Matrix-Seal-Black?style=flat&color=black&logo=matrix)](https://matrix.to/#/#seal-space:matrix.org)
@@ -71,8 +71,8 @@ tujuan yang dapat dikomposisikan.
 
 Untuk sebagian besar perangkat, disarankan untuk menginstal versi **arm64-v8a** dari aplikasi
 
-- Unduh versi stabil terbaru dari [GitHub releases](https://github.com/JunkFood02/Seal/releases/latest)
-  - Instal versi [Pra-rilis](https://github.com/JunkFood02/Seal/releases/) untuk membantu kami menguji fitur & perubahan baru
+- Unduh versi stabil terbaru dari [GitHub releases](https://github.com/Chloemlla/Seal/releases/latest)
+  - Instal versi [Pra-rilis](https://github.com/Chloemlla/Seal/releases/) untuk membantu kami menguji fitur & perubahan baru
 
 - Rilis stabil juga tersedia di [F-Droid](https://f-droid.org/packages/com.junkfood.seal/)
 
@@ -89,7 +89,7 @@ Bergabunglah dengan [Telegram Channel](https://t.me/seal_app) atau [Matrix Space
 <p><!-- sponsors --><a href="https://github.com/4kaimar"><img src="https://github.com/4kaimar.png" width="60px" alt="" /></a><a href="https://github.com/gordongw"><img src="https://github.com/gordongw.png" width="60px" alt="Gordon" /></a><a href="https://github.com/t1hta"><img src="https://github.com/t1hta.png" width="60px" alt="t1hta" /></a><a href="https://github.com/nameoneeman"><img src="https://github.com/nameoneeman.png" width="60px" alt="James" /></a><a href="https://github.com/iguanaguy44"><img src="https://github.com/iguanaguy44.png" width="60px" alt="" /></a><!-- sponsors --></p>
 
 
-Seal akan selalu gratis dan open source untuk semua orang. Jika Anda menyukainya, mohon pertimbangkan untuk [mensponsori saya](https://github.com/sponsors/JunkFood02)!
+Seal akan selalu gratis dan open source untuk semua orang. Jika Anda menyukainya, mohon pertimbangkan untuk [mensponsori saya](https://github.com/sponsors/Chloemlla)!
 
 ## 🤝 Berkontribusi
 
@@ -101,11 +101,11 @@ Anda dapat membantu menerjemahkan Seal di [Hosted Weblate](https://hosted.weblat
 	
 >**Catatan**
 >
->Untuk mengirimkan laporan bug, permintaan fitur, pertanyaan, atau ide lain untuk perbaikan, silakan baca [CONTRIBUTING.md](https://github.com/JunkFood02/Seal/blob/main/CONTRIBUTING.md) untuk petunjuk dan panduan terlebih dahulu.
+>Untuk mengirimkan laporan bug, permintaan fitur, pertanyaan, atau ide lain untuk perbaikan, silakan baca [CONTRIBUTING.md](https://github.com/Chloemlla/Seal/blob/main/CONTRIBUTING.md) untuk petunjuk dan panduan terlebih dahulu.
 
 ## ⭐️ Sejarah bintang
 
-[![Star History Chart](https://api.star-history.com/svg?repos=JunkFood02/Seal&type=Timeline)](https://star-history.com/#JunkFood02/Seal&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=Chloemlla/Seal&type=Timeline)](https://star-history.com/#Chloemlla/Seal&Timeline)
 
 
 ## 🧱 Kredit
@@ -122,7 +122,7 @@ Beberapa desain dan kode UI dipinjam dari [Read You](https://github.com/Ashinch/
 
 ## 📃 Lisensi
 
-[![GitHub](https://img.shields.io/github/license/JunkFood02/Seal?style=for-the-badge)](https://github.com/JunkFood02/Seal/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/github/license/Chloemlla/Seal?style=for-the-badge)](https://github.com/Chloemlla/Seal/blob/main/LICENSE)
 
 >**Peringatan**
 >

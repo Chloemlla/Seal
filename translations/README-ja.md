@@ -10,10 +10,10 @@ Seal
 <div align="center">
 
 [![F-Droid](https://img.shields.io/f-droid/v/com.junkfood.seal.svg?logo=F-Droid&color=green&style=flat-square)](https://f-droid.org/en/packages/com.junkfood.seal)
-[![Releases](https://img.shields.io/github/release/JunkFood02/Seal.svg?logo=github&color=171515&label=stable&style=flat-square)](https://github.com/JunkFood02/Seal/releases/latest)
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/JunkFood02/Seal?include_prereleases&label=preview&logo=github)](https://github.com/JunkFood02/Seal/releases)
-[![GitHub all releases](https://img.shields.io/github/downloads/JunkFood02/Seal/total?style=flat-square)](https://github.com/JunkFood02/Seal/releases)
-[![GitHub Repo stars](https://img.shields.io/github/stars/JunkFood02/Seal?style=flat-square)](https://github.com/JunkFood02/Seal/stargazers)
+[![Releases](https://img.shields.io/github/release/Chloemlla/Seal.svg?logo=github&color=171515&label=stable&style=flat-square)](https://github.com/Chloemlla/Seal/releases/latest)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/Chloemlla/Seal?include_prereleases&label=preview&logo=github)](https://github.com/Chloemlla/Seal/releases)
+[![GitHub all releases](https://img.shields.io/github/downloads/Chloemlla/Seal/total?style=flat-square)](https://github.com/Chloemlla/Seal/releases)
+[![GitHub Repo stars](https://img.shields.io/github/stars/Chloemlla/Seal?style=flat-square)](https://github.com/Chloemlla/Seal/stargazers)
 [![Supported Sites](https://img.shields.io/badge/Supported-Sites-9cf.svg?style=flat-square)](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Seal-blue?style=flat-square&logo=telegram)](https://t.me/seal_app)
 [![Matrix Space](https://img.shields.io/badge/Matrix-Seal-Black?style=flat-square&color=black&logo=matrix)](https://matrix.to/#/#seal-space:matrix.org)
@@ -23,7 +23,7 @@ Seal
 Android用動画・音声ダウンローダー
 </p>
 <p align="center">
-<a href="https://github.com/JunkFood02/Seal/blob/main/README.md">English</a>
+<a href="https://github.com/Chloemlla/Seal/blob/main/README.md">English</a>
 &nbsp;&nbsp;| &nbsp;&nbsp;
 日本語
 </p>
@@ -70,8 +70,8 @@ Android用動画・音声ダウンローダー
 ## ⬇️ ダウンロード
 ほとんどの端末上では、**arm64-v8a**版のapkのインストールをお勧めします。
 
--  [GitHub releases](https://github.com/JunkFood02/Seal/releases/latest)から最新の安定板をダウンロードしてください
-    - 新機能や変更点をテストをするには[プレリリース版](https://github.com/JunkFood02/Seal/releases/)をインストールしてください
+-  [GitHub releases](https://github.com/Chloemlla/Seal/releases/latest)から最新の安定板をダウンロードしてください
+    - 新機能や変更点をテストをするには[プレリリース版](https://github.com/Chloemlla/Seal/releases/)をインストールしてください
 
 - F-Droid からも安定板をダウンロードできます 
 
@@ -85,7 +85,7 @@ height="70">](https://f-droid.org/packages/com.junkfood.seal/)
 
 ## 💖 スポンサー
 
-Seal は誰にとっても常にフリーでオープンソースです。気に入っていただけたら[スポンサーになることもご検討ください](https://github.com/sponsors/JunkFood02)!
+Seal は誰にとっても常にフリーでオープンソースです。気に入っていただけたら[スポンサーになることもご検討ください](https://github.com/sponsors/Chloemlla)!
 
 ## 🤝 貢献
 
@@ -97,11 +97,11 @@ Sealの翻訳を [Hosted Weblate](https://hosted.weblate.org/projects/seal/) で
 
 >**備考**
 >
->バグ報告、機能要望、質問、その他改善のためのアイデアを投稿する場合は、まず [CONTRIBUTING.md](https://github.com/JunkFood02/Seal/blob/main/CONTRIBUTING.md) を読んで、手順とガイドラインを確認してください。
+>バグ報告、機能要望、質問、その他改善のためのアイデアを投稿する場合は、まず [CONTRIBUTING.md](https://github.com/Chloemlla/Seal/blob/main/CONTRIBUTING.md) を読んで、手順とガイドラインを確認してください。
 
 ## ⭐️星の推移
 
-[![Star History Chart](https://api.star-history.com/svg?repos=JunkFood02/Seal&type=Timeline)](https://star-history.com/#JunkFood02/Seal&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=Chloemlla/Seal&type=Timeline)](https://star-history.com/#Chloemlla/Seal&Timeline)
 
 ## 🧱 クレジット
 
@@ -119,7 +119,7 @@ UIとソースコードの一部は、[Read You](https://github.com/Ashinch/Read
 
 ## 📃ライセンス
 
-[![GitHub](https://img.shields.io/github/license/JunkFood02/Seal?style=for-the-badge)](https://github.com/JunkFood02/Seal/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/github/license/Chloemlla/Seal?style=for-the-badge)](https://github.com/Chloemlla/Seal/blob/main/LICENSE)
 
 <div align="right">
 <table><td>

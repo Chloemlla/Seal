@@ -55,14 +55,14 @@ import androidx.compose.ui.text.TextLinkStyles
 import com.chloemlla.seal.util.copyToClipboard
 import com.chloemlla.seal.util.readClipboardText
 
-private const val releaseURL = "https://github.com/JunkFood02/Seal/releases"
-private const val repoUrl = "https://github.com/JunkFood02/Seal"
+private const val releaseURL = "https://github.com/Chloemlla/Seal/releases"
+private const val repoUrl = "https://github.com/Chloemlla/Seal"
 const val weblate = "https://hosted.weblate.org/engage/seal/"
 const val YtdlpRepository = "https://github.com/yt-dlp/yt-dlp"
-private const val githubIssueUrl = "https://github.com/JunkFood02/Seal/issues"
+private const val githubIssueUrl = "https://github.com/Chloemlla/Seal/issues"
 private const val telegramChannelUrl = "https://t.me/seal_app"
 private const val matrixSpaceUrl = "https://matrix.to/#/#seal-space:matrix.org"
-private const val githubSponsor = "https://github.com/sponsors/JunkFood02"
+private const val githubSponsor = "https://github.com/sponsors/Chloemlla"
 private const val TAG = "AboutPage"
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -217,7 +217,7 @@ fun AutoUpdateUnavailableDialog(onDismissRequest: () -> Unit = {}) {
     val hyperLinkText = stringResource(id = R.string.switch_to_github_builds)
     val text = stringResource(id = R.string.auto_update_disabled_msg, "F-Droid", hyperLinkText)
 
-    val linkUrl = "https://github.com/JunkFood02/Seal/releases/latest"
+    val linkUrl = "https://github.com/Chloemlla/Seal/releases/latest"
     val annotatedString = buildAnnotatedString {
         append(text)
         val startIndex = text.indexOf(hyperLinkText)

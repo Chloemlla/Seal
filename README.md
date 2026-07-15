@@ -117,7 +117,7 @@ For most devices, it is recommended to install the **arm64-v8a** version of the 
 - Install [pre-release](https://github.com/Chloemlla/Seal/releases/) builds to help test new features and changes
 
 > This fork uses package id `com.chloemlla.seal` and is **not** published under the upstream F-Droid listing (`com.junkfood.seal`).  
-> Upstream project: [JunkFood02/Seal](https://github.com/JunkFood02/Seal)
+> Upstream project: [Chloemlla/Seal](https://github.com/Chloemlla/Seal)
 
 ## 🚀 Chloemlla fork improvements
 
@@ -266,7 +266,7 @@ You can help translate Seal on [Hosted Weblate](https://hosted.weblate.org/proje
 
 ## 🧱 Credits
 
-This repository is a fork of [JunkFood02/Seal](https://github.com/JunkFood02/Seal).
+This repository is a fork of [Chloemlla/Seal](https://github.com/Chloemlla/Seal).
 
 Seal is a simple GUI of [yt-dlp](https://github.com/yt-dlp/yt-dlp), based on [youtubedl-android](https://github.com/yausername/youtubedl-android).
 

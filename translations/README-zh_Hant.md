@@ -7,16 +7,16 @@
 ### 只為 Android 而生的視訊/音訊下載程式
 
 
-<a href="https://github.com/JunkFood02/Seal/blob/main/README.md">English</a>
+<a href="https://github.com/Chloemlla/Seal/blob/main/README.md">English</a>
 &nbsp;&nbsp;| &nbsp;&nbsp;
 繁體中文
 
 [![F-Droid](https://img.shields.io/f-droid/v/com.junkfood.seal?color=b4eb12&label=F-Droid&logo=fdroid&logoColor=1f78d2)](https://f-droid.org/en/packages/com.junkfood.seal)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/JunkFood02/Seal?color=black&label=Stable&logo=github)](https://github.com/JunkFood02/Seal/releases/latest/)
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/JunkFood02/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/JunkFood02/Seal/releases/)
-[![Keep a Changelog](https://img.shields.io/badge/Changelog-lightgray?style=flat&color=gray&logo=keep-a-changelog)](https://github.com/JunkFood02/Seal/blob/main/CHANGELOG.md)
-[![GitHub all releases](https://img.shields.io/github/downloads/JunkFood02/Seal/total?label=Downloads&logo=github)](https://github.com/JunkFood02/Seal/releases/)
-[![GitHub Repo stars](https://img.shields.io/github/stars/JunkFood02/Seal?color=informational&label=Stars)](https://github.com/JunkFood02/Seal/stargazers)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Chloemlla/Seal?color=black&label=Stable&logo=github)](https://github.com/Chloemlla/Seal/releases/latest/)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/Chloemlla/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/Chloemlla/Seal/releases/)
+[![Keep a Changelog](https://img.shields.io/badge/Changelog-lightgray?style=flat&color=gray&logo=keep-a-changelog)](https://github.com/Chloemlla/Seal/blob/main/CHANGELOG.md)
+[![GitHub all releases](https://img.shields.io/github/downloads/Chloemlla/Seal/total?label=Downloads&logo=github)](https://github.com/Chloemlla/Seal/releases/)
+[![GitHub Repo stars](https://img.shields.io/github/stars/Chloemlla/Seal?color=informational&label=Stars)](https://github.com/Chloemlla/Seal/stargazers)
 [![Supported Sites](https://img.shields.io/badge/Supported-Sites-9cf.svg?style=flat)](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Seal-blue?style=flat&logo=telegram)](https://t.me/seal_app)
 [![Matrix Space](https://img.shields.io/badge/Matrix-Seal-Black?style=flat&color=black&logo=matrix)](https://matrix.to/#/#seal-space:matrix.org)
@@ -71,8 +71,8 @@
 
 我們建議大多數裝置使用 **arm64-v8a** 版本的 APK 檔。
 
-- 從 [GitHub releases](https://github.com/JunkFood02/Seal/releases/latest) 下載最新穩定發行版
-  - 安裝 [預先發行版本](https://github.com/JunkFood02/Seal/releases/)，以幫助我們測試最新功能和變更
+- 從 [GitHub releases](https://github.com/Chloemlla/Seal/releases/latest) 下載最新穩定發行版
+  - 安裝 [預先發行版本](https://github.com/Chloemlla/Seal/releases/)，以幫助我們測試最新功能和變更
 
 - 穩定發行版亦可於 [F-Droid](https://f-droid.org/packages/com.junkfood.seal/) 取得
 
@@ -89,7 +89,7 @@
 <p><!-- sponsors --><a href="https://github.com/4kaimar"><img src="https://github.com/4kaimar.png" width="60px" alt="" /></a><a href="https://github.com/gordongw"><img src="https://github.com/gordongw.png" width="60px" alt="Gordon" /></a><a href="https://github.com/t1hta"><img src="https://github.com/t1hta.png" width="60px" alt="t1hta" /></a><a href="https://github.com/nameoneeman"><img src="https://github.com/nameoneeman.png" width="60px" alt="James" /></a><a href="https://github.com/iguanaguy44"><img src="https://github.com/iguanaguy44.png" width="60px" alt="" /></a><!-- sponsors --></p>
 
 
-Seal 永遠提供眾人免費使用並開放原始碼。若您悅納，請考慮[贊助我](https://github.com/sponsors/JunkFood02)！
+Seal 永遠提供眾人免費使用並開放原始碼。若您悅納，請考慮[贊助我](https://github.com/sponsors/Chloemlla)！
 
 ## 🤝 一同貢獻
 
@@ -101,11 +101,11 @@ Seal 永遠提供眾人免費使用並開放原始碼。若您悅納，請考慮
 	
 >**備註**
 >
->請在回報錯誤、功能請求、求問，或提供任何改進建言之前，先閱讀 [CONTRIBUTING.md](https://github.com/JunkFood02/Seal/blob/main/CONTRIBUTING.md) 相關指引。
+>請在回報錯誤、功能請求、求問，或提供任何改進建言之前，先閱讀 [CONTRIBUTING.md](https://github.com/Chloemlla/Seal/blob/main/CONTRIBUTING.md) 相關指引。
 
 ## ⭐️ Star 歷程
 
-[![Star History Chart](https://api.star-history.com/svg?repos=JunkFood02/Seal&type=Timeline)](https://star-history.com/#JunkFood02/Seal&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=Chloemlla/Seal&type=Timeline)](https://star-history.com/#Chloemlla/Seal&Timeline)
 
 
 ## 🧱 致謝
@@ -122,7 +122,7 @@ Seal 是基於 [youtubedl-android](https://github.com/yausername/youtubedl-andro
 
 ## 📃 授權（本節僅供參考，敬請閱讀原文）
 
-[![GitHub](https://img.shields.io/github/license/JunkFood02/Seal?style=for-the-badge)](https://github.com/JunkFood02/Seal/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/github/license/Chloemlla/Seal?style=for-the-badge)](https://github.com/Chloemlla/Seal/blob/main/LICENSE)
 
 >**警告**
 >

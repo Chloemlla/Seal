@@ -8,7 +8,7 @@
 
 
 <p align="center">
-<a href="https://github.com/JunkFood02/Seal/blob/main/README.md">English</a>
+<a href="https://github.com/Chloemlla/Seal/blob/main/README.md">English</a>
 &nbsp;&nbsp;| &nbsp;&nbsp;
 Српски
 </p>
@@ -16,11 +16,11 @@
 
 
 [![F-Droid](https://img.shields.io/f-droid/v/com.junkfood.seal?color=b4eb12&label=F-Droid&logo=fdroid&logoColor=1f78d2)](https://f-droid.org/en/packages/com.junkfood.seal)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/JunkFood02/Seal?color=black&label=Stable&logo=github)](https://github.com/JunkFood02/Seal/releases/latest/)
-[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/JunkFood02/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/JunkFood02/Seal/releases/)
-[![Keep a Changelog](https://img.shields.io/badge/Changelog-lightgray?style=flat&color=gray&logo=keep-a-changelog)](https://github.com/JunkFood02/Seal/blob/main/CHANGELOG.md)
-[![GitHub all releases](https://img.shields.io/github/downloads/JunkFood02/Seal/total?label=Downloads&logo=github)](https://github.com/JunkFood02/Seal/releases/)
-[![GitHub Repo stars](https://img.shields.io/github/stars/JunkFood02/Seal?color=informational&label=Stars)](https://github.com/JunkFood02/Seal/stargazers)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Chloemlla/Seal?color=black&label=Stable&logo=github)](https://github.com/Chloemlla/Seal/releases/latest/)
+[![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/Chloemlla/Seal?include_prereleases&label=Preview&logo=Github)](https://github.com/Chloemlla/Seal/releases/)
+[![Keep a Changelog](https://img.shields.io/badge/Changelog-lightgray?style=flat&color=gray&logo=keep-a-changelog)](https://github.com/Chloemlla/Seal/blob/main/CHANGELOG.md)
+[![GitHub all releases](https://img.shields.io/github/downloads/Chloemlla/Seal/total?label=Downloads&logo=github)](https://github.com/Chloemlla/Seal/releases/)
+[![GitHub Repo stars](https://img.shields.io/github/stars/Chloemlla/Seal?color=informational&label=Stars)](https://github.com/Chloemlla/Seal/stargazers)
 [![Supported Sites](https://img.shields.io/badge/Supported-Sites-9cf.svg?style=flat)](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Seal-blue?style=flat&logo=telegram)](https://t.me/seal_app)
 [![Matrix Space](https://img.shields.io/badge/Matrix-Seal-Black?style=flat&color=black&logo=matrix)](https://matrix.to/#/#seal-space:matrix.org)
@@ -75,8 +75,8 @@
 
 За већину уређаја, препоручује се инсталирање **arm64-v8a** верзије APK-ова 
 
-- Преузмите најновију стабилну верзију са [GitHub издања](https://github.com/JunkFood02/Seal/releases/latest)
-  - Инсталирајте [бета издања](https://github.com/JunkFood02/Seal/releases/) апликације да бисте нам помогли да тестирамо нове функције и промене 
+- Преузмите најновију стабилну верзију са [GitHub издања](https://github.com/Chloemlla/Seal/releases/latest)
+  - Инсталирајте [бета издања](https://github.com/Chloemlla/Seal/releases/) апликације да бисте нам помогли да тестирамо нове функције и промене 
 
 - Стабилна издања су такође доступна у продавници апликација [F-Droid](https://f-droid.org/packages/com.junkfood.seal/) 
 
@@ -93,7 +93,7 @@
 <p><!-- sponsors --><a href="https://github.com/4kaimar"><img src="https://github.com/4kaimar.png" width="60px" alt="" /></a><a href="https://github.com/Velioris"><img src="https://github.com/Velioris.png" width="60px" alt="" /></a><a href="https://github.com/Driverator"><img src="https://github.com/Driverator.png" width="60px" alt="" /></a><!-- sponsors --></p>
 
 
-Seal ће увек бити бесплатан и отвореног кода за све. Ако вам се свиђа, размислите о томе да ме [спонзоришете](https://github.com/sponsors/JunkFood02)! 
+Seal ће увек бити бесплатан и отвореног кода за све. Ако вам се свиђа, размислите о томе да ме [спонзоришете](https://github.com/sponsors/Chloemlla)! 
 
 ## 🤝 Допринос 
 
@@ -105,10 +105,10 @@ Seal ће увек бити бесплатан и отвореног кода з
 
 >**Напомена**
 >
->За слање извештаја о грешкама, захтева за функције, питања или било које друге идеје за побољшање апликације, прво прочитајте [CONTRIBUTING.md](https://github.com/JunkFood02/Seal/blob/main/CONTRIBUTING.md) за упутства и смернице. 
+>За слање извештаја о грешкама, захтева за функције, питања или било које друге идеје за побољшање апликације, прво прочитајте [CONTRIBUTING.md](https://github.com/Chloemlla/Seal/blob/main/CONTRIBUTING.md) за упутства и смернице. 
 
 ## ⭐️ Графикон раста броја звездица
-[![Star History Chart](https://api.star-history.com/svg?repos=JunkFood02/Seal&type=Timeline)](https://star-history.com/#JunkFood02/Seal&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=Chloemlla/Seal&type=Timeline)](https://star-history.com/#Chloemlla/Seal&Timeline)
 
 
 ## 🧱 Кредити 
@@ -125,7 +125,7 @@ Seal је једноставан графички кориснички инте�
 
 ## 📃 Лиценца 
 
-[![GitHub](https://img.shields.io/github/license/JunkFood02/Seal?style=for-the-badge)](https://github.com/JunkFood02/Seal/blob/main/LICENSE) 
+[![GitHub](https://img.shields.io/github/license/Chloemlla/Seal?style=for-the-badge)](https://github.com/Chloemlla/Seal/blob/main/LICENSE) 
 
 >**Упозорење**
 >
