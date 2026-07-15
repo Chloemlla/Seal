@@ -1,6 +1,8 @@
 package com.chloemlla.seal.ui.component
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
@@ -11,6 +13,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -56,7 +59,8 @@ fun ClearButton(onClick: () -> Unit) {
 fun BackButton(onClick: () -> Unit) {
     val view = LocalView.current
     IconButton(
-        modifier = Modifier,
+        modifier =
+            Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
         onClick = {
             onClick()
             view.slightHapticFeedback()
@@ -65,6 +69,7 @@ fun BackButton(onClick: () -> Unit) {
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
             contentDescription = stringResource(R.string.back),
+            tint = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

@@ -48,7 +48,8 @@ fun ButtonChip(
     ElevatedAssistChip(
         modifier = modifier.padding(horizontal = 4.dp),
         onClick = onClick,
-        label = { Text(label) },
+        shape = MaterialTheme.shapes.large,
+        label = { Text(text = label, style = MaterialTheme.typography.labelLarge) },
         colors = AssistChipDefaults.elevatedAssistChipColors(leadingIconContentColor = iconColor),
         enabled = enabled,
         leadingIcon = {
@@ -82,6 +83,7 @@ fun FlatButtonChip(
             ),
         border = null,
         onClick = onClick,
+        shape = MaterialTheme.shapes.large,
         leadingIcon = {
             Icon(
                 imageVector = icon,
@@ -89,7 +91,7 @@ fun FlatButtonChip(
                 Modifier.size(AssistChipDefaults.IconSize),
             )
         },
-        label = { Text(text = label) },
+        label = { Text(text = label, style = MaterialTheme.typography.labelLarge) },
     )
 }
 
@@ -99,12 +101,13 @@ fun OutlinedButtonChip(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     label: String,
-    shape: Shape = AssistChipDefaults.shape,
+    shape: Shape = MaterialTheme.shapes.large,
     onClick: () -> Unit,
 ) {
     AssistChip(
         modifier = modifier,
         onClick = onClick,
+        shape = shape,
         leadingIcon = {
             icon?.let {
                 Icon(
@@ -114,8 +117,7 @@ fun OutlinedButtonChip(
                 )
             }
         },
-        label = { Text(text = label) },
-        shape = shape,
+        label = { Text(text = label, style = MaterialTheme.typography.labelLarge) },
     )
 }
 
@@ -134,7 +136,7 @@ fun SingleChoiceChip(
         onClick = onClick,
         enabled = enabled,
         shape = MaterialTheme.shapes.large,
-        label = { Text(text = label) },
+        label = { Text(text = label, style = MaterialTheme.typography.labelLarge) },
         leadingIcon = {
             Row {
                 AnimatedVisibility(visible = selected) {
@@ -163,7 +165,8 @@ fun VideoFilterChip(
         selected = selected,
         enabled = enabled,
         onClick = onClick,
-        label = { Text(text = label) },
+        shape = MaterialTheme.shapes.large,
+        label = { Text(text = label, style = MaterialTheme.typography.labelLarge) },
         leadingIcon = { leadingIcon?.let { Icon(imageVector = it, contentDescription = null) } },
     )
 }
@@ -179,7 +182,15 @@ fun ShortcutChip(
     AssistChip(
         modifier = modifier.padding(horizontal = 4.dp),
         onClick = { onClick?.invoke() },
-        label = { Text(text = text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        shape = MaterialTheme.shapes.large,
+        label = {
+            Text(
+                text = text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        },
         trailingIcon = {
             onRemove?.let {
                 IconButton(

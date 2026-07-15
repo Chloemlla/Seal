@@ -54,7 +54,7 @@ fun SealTextField(
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = MaterialTheme.shapes.medium,
     colors: TextFieldColors =
         TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,
@@ -118,7 +118,7 @@ fun SealAutoFocusTextField(
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = MaterialTheme.shapes.medium,
     colors: TextFieldColors =
         TextFieldDefaults.colors(
             unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -197,7 +197,7 @@ fun SealTextField(
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = MaterialTheme.shapes.medium,
     colors: TextFieldColors =
         TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,

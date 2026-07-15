@@ -38,6 +38,9 @@ import com.chloemlla.seal.R
 import com.chloemlla.seal.ui.page.settings.general.ytdlpReference
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 
+private val ButtonWithIconPadding =
+    PaddingValues(start = 16.dp, top = 10.dp, end = 20.dp, bottom = 10.dp)
+
 @Composable
 fun OutlinedButtonWithIcon(
     modifier: Modifier = Modifier,
@@ -49,7 +52,8 @@ fun OutlinedButtonWithIcon(
     OutlinedButton(
         modifier = modifier,
         onClick = onClick,
-        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = ButtonWithIconPadding,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor),
     ) {
         Icon(
@@ -57,7 +61,11 @@ fun OutlinedButtonWithIcon(
             imageVector = icon,
             contentDescription = null,
         )
-        Text(modifier = Modifier.padding(start = 8.dp), text = text)
+        Text(
+            modifier = Modifier.padding(start = 8.dp),
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }
 
@@ -72,12 +80,17 @@ fun TextButtonWithIcon(
     TextButton(
         modifier = modifier,
         onClick = onClick,
-        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = ButtonWithIconPadding,
         colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(modifier = Modifier.size(18.dp), imageVector = icon, contentDescription = null)
-            Text(modifier = Modifier.padding(start = 8.dp), text = text)
+            Text(
+                modifier = Modifier.padding(start = 8.dp),
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }
@@ -93,11 +106,16 @@ fun FilledTonalButtonWithIcon(
     FilledTonalButton(
         modifier = modifier,
         onClick = onClick,
-        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = ButtonWithIconPadding,
         colors = colors,
     ) {
         Icon(modifier = Modifier.size(18.dp), imageVector = icon, contentDescription = null)
-        Text(modifier = Modifier.padding(start = 8.dp), text = text)
+        Text(
+            modifier = Modifier.padding(start = 8.dp),
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }
 
@@ -112,11 +130,16 @@ fun FilledButtonWithIcon(
     Button(
         modifier = modifier,
         onClick = onClick,
-        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = ButtonWithIconPadding,
         enabled = enabled,
     ) {
         Icon(modifier = Modifier.size(18.dp), imageVector = icon, contentDescription = null)
-        Text(modifier = Modifier.padding(start = 6.dp), text = text)
+        Text(
+            modifier = Modifier.padding(start = 8.dp),
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }
 
@@ -126,17 +149,23 @@ fun ConfirmButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    TextButton(onClick = onClick, enabled = enabled) { Text(text) }
+    TextButton(onClick = onClick, enabled = enabled, shape = MaterialTheme.shapes.medium) {
+        Text(text = text, style = MaterialTheme.typography.labelLarge)
+    }
 }
 
 @Composable
 fun DismissButton(text: String = stringResource(R.string.dismiss), onClick: () -> Unit) {
-    TextButton(onClick = onClick) { Text(text) }
+    TextButton(onClick = onClick, shape = MaterialTheme.shapes.medium) {
+        Text(text = text, style = MaterialTheme.typography.labelLarge)
+    }
 }
 
 @Composable
 fun OutlinedDismissButton(text: String = stringResource(R.string.dismiss), onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick) { Text(text) }
+    OutlinedButton(onClick = onClick, shape = MaterialTheme.shapes.medium) {
+        Text(text = text, style = MaterialTheme.typography.labelLarge)
+    }
 }
 
 @Composable
@@ -145,7 +174,9 @@ fun FilledConfirmButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Button(onClick = onClick, enabled = enabled) { Text(text) }
+    Button(onClick = onClick, enabled = enabled, shape = MaterialTheme.shapes.medium) {
+        Text(text = text, style = MaterialTheme.typography.labelLarge)
+    }
 }
 
 @Composable

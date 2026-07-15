@@ -1,12 +1,12 @@
 package com.chloemlla.seal.ui.component
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonColors
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 
 @Composable
@@ -17,7 +17,12 @@ fun SingleChoiceSegmentedButtonRowScope.SingleChoiceSegmentedButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     colors: SegmentedButtonColors =
-        SegmentedButtonDefaults.colors(inactiveContainerColor = Color.Transparent),
+        SegmentedButtonDefaults.colors(
+            inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            inactiveContentColor = MaterialTheme.colorScheme.onSurface,
+            activeContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            activeContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
     icon: @Composable () -> Unit = { SegmentedButtonDefaults.Icon(selected) },
     label: @Composable () -> Unit,
 ) {

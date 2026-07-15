@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,6 +67,10 @@ import com.chloemlla.seal.ui.common.LocalFixedColorRoles
 
 private const val horizontal = 8
 private const val vertical = 12
+private val PreferenceRowShape
+    @Composable get() = MaterialTheme.shapes.large
+private val PreferenceIconContainerShape
+    @Composable get() = MaterialTheme.shapes.small
 
 private val PreferenceTitleVariant: TextStyle
     @Composable get() = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp)
@@ -89,36 +94,57 @@ fun PreferenceItem(
 ) {
     Surface(
         modifier =
-            Modifier.combinedClickable(
-                onClick = onClick,
-                onClickLabel = onClickLabel,
-                enabled = enabled,
-                onLongClickLabel = onLongClickLabel,
-                onLongClick = onLongClick,
-            )
+            Modifier
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+                .clip(PreferenceRowShape)
+                .combinedClickable(
+                    onClick = onClick,
+                    onClickLabel = onClickLabel,
+                    enabled = enabled,
+                    onLongClickLabel = onLongClickLabel,
+                    onLongClick = onLongClick,
+                ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = PreferenceRowShape,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal.dp, vertical.dp),
+            modifier = Modifier.fillMaxWidth().padding((horizontal + 4).dp, (vertical + 2).dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             leadingIcon?.invoke()
 
             when (icon) {
                 is ImageVector -> {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(enabled),
+                    PreferenceLeadingIcon(
+                        enabled = enabled,
+                        content = {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint =
+                                    MaterialTheme.colorScheme.onPrimaryContainer.applyOpacity(
+                                        enabled
+                                    ),
+                            )
+                        },
                     )
                 }
 
                 is Painter -> {
-                    Icon(
-                        painter = icon,
-                        contentDescription = null,
-                        modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(enabled),
+                    PreferenceLeadingIcon(
+                        enabled = enabled,
+                        content = {
+                            Icon(
+                                painter = icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint =
+                                    MaterialTheme.colorScheme.onPrimaryContainer.applyOpacity(
+                                        enabled
+                                    ),
+                            )
+                        },
                     )
                 }
             }
@@ -141,7 +167,7 @@ fun PreferenceItem(
                         Modifier.height(32.dp)
                             .padding(horizontal = 8.dp)
                             .align(Alignment.CenterVertically),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                     thickness = 1.dp,
                 )
                 trailingIcon.invoke()
@@ -188,25 +214,32 @@ fun PreferenceItemVariant(
 ) {
     Surface(
         modifier =
-            Modifier.combinedClickable(
-                enabled = enabled,
-                onClick = onClick,
-                onClickLabel = onClickLabel,
-                onLongClick = onLongClick,
-                onLongClickLabel = onLongClickLabel,
-            )
+            Modifier
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+                .clip(PreferenceRowShape)
+                .combinedClickable(
+                    enabled = enabled,
+                    onClick = onClick,
+                    onClickLabel = onClickLabel,
+                    onLongClick = onLongClick,
+                    onLongClickLabel = onLongClickLabel,
+                ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = PreferenceRowShape,
     ) {
         Row(
-            modifier = modifier.fillMaxWidth().padding(12.dp, 16.dp),
+            modifier = modifier.fillMaxWidth().padding(12.dp, 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon?.let {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(enabled),
-                )
+                PreferenceLeadingIcon(enabled = enabled) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer.applyOpacity(enabled),
+                    )
+                }
             }
             Column(
                 modifier =
@@ -231,7 +264,17 @@ fun PreferenceSingleChoiceItem(
     contentPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
     onClick: () -> Unit,
 ) {
-    Surface(modifier = Modifier.selectable(selected = selected, onClick = onClick)) {
+    Surface(
+        modifier =
+            Modifier
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+                .clip(PreferenceRowShape)
+                .selectable(selected = selected, onClick = onClick),
+        color =
+            if (selected) MaterialTheme.colorScheme.secondaryContainer
+            else MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = PreferenceRowShape,
+    ) {
         Row(
             modifier = modifier.fillMaxWidth().padding(contentPadding),
             verticalAlignment = Alignment.CenterVertically,
@@ -251,6 +294,28 @@ fun PreferenceSingleChoiceItem(
                 modifier = Modifier.padding().clearAndSetSemantics {},
             )
         }
+    }
+}
+
+
+@Composable
+private fun PreferenceLeadingIcon(
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .padding(start = 4.dp, end = 12.dp)
+                .size(40.dp)
+                .clip(PreferenceIconContainerShape)
+                .background(
+                    MaterialTheme.colorScheme.primaryContainer
+                        .copy(alpha = if (enabled) 0.72f else 0.36f)
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 
@@ -353,28 +418,35 @@ fun PreferenceSwitchVariant(
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         modifier =
-            Modifier.toggleable(
-                value = isChecked,
-                enabled = enabled,
-                onValueChange = { onClick() },
-                indication = LocalIndication.current,
-                interactionSource = interactionSource,
-            )
+            Modifier
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+                .clip(PreferenceRowShape)
+                .toggleable(
+                    value = isChecked,
+                    enabled = enabled,
+                    onValueChange = { onClick() },
+                    indication = LocalIndication.current,
+                    interactionSource = interactionSource,
+                ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = PreferenceRowShape,
     ) {
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(horizontal.dp, vertical.dp)
-                    .padding(start = if (icon == null) 12.dp else 0.dp),
+                    .padding((horizontal + 4).dp, (vertical + 2).dp)
+                    .padding(start = if (icon == null) 8.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon?.let {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(enabled),
-                )
+                PreferenceLeadingIcon(enabled = enabled) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer.applyOpacity(enabled),
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 PreferenceItemTitle(text = title, enabled = enabled, style = PreferenceTitleVariant)
@@ -407,28 +479,35 @@ fun PreferenceSwitch(
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         modifier =
-            Modifier.toggleable(
-                value = isChecked,
-                enabled = enabled,
-                onValueChange = { onClick() },
-                indication = LocalIndication.current,
-                interactionSource = interactionSource,
-            )
+            Modifier
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+                .clip(PreferenceRowShape)
+                .toggleable(
+                    value = isChecked,
+                    enabled = enabled,
+                    onValueChange = { onClick() },
+                    indication = LocalIndication.current,
+                    interactionSource = interactionSource,
+                ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = PreferenceRowShape,
     ) {
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(horizontal.dp, vertical.dp)
-                    .padding(start = if (icon == null) 12.dp else 0.dp),
+                    .padding((horizontal + 4).dp, (vertical + 2).dp)
+                    .padding(start = if (icon == null) 8.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon?.let {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(enabled),
-                )
+                PreferenceLeadingIcon(enabled = enabled) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer.applyOpacity(enabled),
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 PreferenceItemTitle(text = title, enabled = enabled)
@@ -462,26 +541,33 @@ fun PreferenceSwitchWithDivider(
 
     Surface(
         modifier =
-            Modifier.clickable(
-                enabled = enabled,
-                onClick = onClick,
-                onClickLabel = stringResource(id = R.string.open_settings),
-            )
+            Modifier
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+                .clip(PreferenceRowShape)
+                .clickable(
+                    enabled = enabled,
+                    onClick = onClick,
+                    onClickLabel = stringResource(id = R.string.open_settings),
+                ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = PreferenceRowShape,
     ) {
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(horizontal.dp, vertical.dp)
+                    .padding((horizontal + 4).dp, (vertical + 2).dp)
                     .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon?.let {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(enabled),
-                )
+                PreferenceLeadingIcon(enabled = enabled) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer.applyOpacity(enabled),
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 PreferenceItemTitle(text = title, enabled = enabled)
@@ -494,7 +580,7 @@ fun PreferenceSwitchWithDivider(
                         .padding(horizontal = 8.dp)
                         .width(1f.dp)
                         .align(Alignment.CenterVertically),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                color = MaterialTheme.colorScheme.outlineVariant,
             )
             Switch(
                 checked = isChecked,
@@ -519,11 +605,11 @@ fun PreferencesCautionCard(
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
                 .clip(MaterialTheme.shapes.extraLarge)
                 .background(MaterialTheme.colorScheme.errorContainer.harmonizeWithPrimary())
                 .clickable { onClick() }
-                .padding(horizontal = 12.dp, vertical = 16.dp),
+                .padding(horizontal = 14.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         icon?.let {
@@ -584,18 +670,18 @@ fun PreferencesHintCard(
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
                 .clip(MaterialTheme.shapes.extraLarge)
                 .background(containerColor)
                 .clickable { onClick() }
-                .padding(horizontal = 12.dp, vertical = 16.dp),
+                .padding(horizontal = 14.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         icon?.let {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
+                modifier = Modifier.padding(start = 4.dp, end = 14.dp).size(24.dp),
                 tint = contentColor,
             )
         }
@@ -651,7 +737,7 @@ fun PreferenceSwitchWithContainer(
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
                 .clip(MaterialTheme.shapes.extraLarge)
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .toggleable(
@@ -660,7 +746,7 @@ fun PreferenceSwitchWithContainer(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current,
                 )
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(horizontal = 14.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         icon?.let {
@@ -815,7 +901,7 @@ fun TemplateItem(
 fun PreferenceSubtitle(
     text: String,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(start = 16.dp, top = 20.dp, bottom = 8.dp),
+    contentPadding: PaddingValues = PaddingValues(start = 20.dp, top = 20.dp, bottom = 8.dp),
     color: Color = MaterialTheme.colorScheme.primary,
 ) {
     Text(
@@ -835,15 +921,26 @@ fun PreferenceInfo(
 ) {
     Column(
         modifier =
-            modifier.fillMaxWidth().run {
-                if (applyPaddings) padding(horizontal = 16.dp, vertical = 16.dp) else this
-            }
+            modifier
+                .fillMaxWidth()
+                .then(
+                    if (applyPaddings) Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    else Modifier
+                )
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 14.dp, vertical = 14.dp)
     ) {
-        Icon(modifier = Modifier.padding(), imageVector = icon, contentDescription = null)
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
         Text(
-            modifier = Modifier.padding(top = 16.dp),
+            modifier = Modifier.padding(top = 12.dp),
             text = text,
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

@@ -92,7 +92,7 @@ object SelectionGroupDefaults {
     fun shape(selected: Boolean): Shape {
         val animatedRoundedCorner by
             animateDpAsState(
-                if (selected) 28.dp else 12.dp,
+                if (selected) 20.dp else 12.dp,
                 label = "itemShape",
                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
             )
@@ -142,7 +142,7 @@ object SelectionGroupDefaults {
             return SelectionGroupItemColors(
                 activeContainerColor = fixedColorRoles.primaryFixed,
                 activeContentColor = fixedColorRoles.onPrimaryFixed,
-                inactiveContainerColor = colorScheme.surfaceContainer,
+                inactiveContainerColor = colorScheme.surfaceContainerLow,
                 inactiveContentColor = colorScheme.onSurface,
                 disabledActiveContainerColor = colorScheme.onSurface.copy(alpha = 0.12f),
                 disabledActiveContentColor = colorScheme.onSurface.copy(alpha = 0.38f),
