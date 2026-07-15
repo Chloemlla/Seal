@@ -304,6 +304,9 @@
     <string name="convert_subtitle_desc">轉換字幕至其他格式</string>
     <string name="split_video">分割影片</string>
     <string name="copy_and_exit">複製並離開</string>
+    <string name="crash_report_title">已儲存崩潰報告</string>
+    <string name="crash_report_message">Seal 已從異常結束中復原。繼續使用前，可以先檢視、複製或分享這份報告。</string>
+    <string name="crash_report_share_subject">Seal 崩潰報告</string>
     <string name="expand">展開</string>
     <string name="new_task">新增下載任務</string>
     <string name="start">開始</string>

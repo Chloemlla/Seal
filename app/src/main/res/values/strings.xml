@@ -316,6 +316,9 @@
     <string name="split_video_msg">Video will be split into %1$d chapters</string>
     <string name="unknown_error_title">Oops! Something went wrong</string>
     <string name="copy_and_exit">Copy and exit</string>
+    <string name="crash_report_title">Crash report saved</string>
+    <string name="crash_report_message">Seal recovered from a crash. Review, copy, or share this report before continuing.</string>
+    <string name="crash_report_share_subject">Seal crash report</string>
     <string name="expand">Expand</string>
     <string name="new_task">New download task</string>
     <string name="start">Start</string>

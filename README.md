@@ -132,7 +132,7 @@ This `main` branch is the **Chloemlla** fork of Seal. Beyond retargeting the pac
 
 ### Android platform
 
-- **Compile / target SDK 37** (Android 16 line), with minSdk kept at 24.
+- **Compile / target SDK 37** (Android 16 line), with minSdk 26.
 - AGP / Gradle / Kotlin toolchain modernized for this target:
   - Android Gradle Plugin **9.2.x**
   - Gradle wrapper **9.4.1**

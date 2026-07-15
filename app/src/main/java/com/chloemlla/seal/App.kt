@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
@@ -18,6 +17,8 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.android.material.color.DynamicColors
+import com.chloemlla.lumen.crash.LumenCrash
+import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.DownloaderV2Impl
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel
@@ -50,7 +51,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -59,8 +59,16 @@ import org.koin.core.context.GlobalContext
 import org.koin.dsl.module
 
 class App : Application() {
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        installLumenCrashSdk()
+        LumenCrash.recordBreadcrumb("Application.attachBaseContext")
+    }
+
     override fun onCreate() {
         super.onCreate()
+        installLumenCrashSdk()
+        LumenCrash.recordBreadcrumb("Application.onCreate")
         MMKV.initialize(this)
 
         startKoin {
@@ -93,8 +101,9 @@ class App : Application() {
                     FileUtil.writeContentToFile(it, getCookiesFile())
                 }
                 UpdateUtil.deleteOutdatedApk()
+                LumenCrash.recordBreadcrumb("Download engines initialized")
             } catch (th: Throwable) {
-                withContext(Dispatchers.Main) { startCrashReportActivity(th) }
+                LumenCrash.record(th)
             }
         }
 
@@ -150,19 +159,38 @@ class App : Application() {
                     }
                 }
             )
-
-        Thread.setDefaultUncaughtExceptionHandler { _, e -> startCrashReportActivity(e) }
     }
 
-    private fun startCrashReportActivity(th: Throwable) {
-        th.printStackTrace()
-        startActivity(
-            Intent(this, CrashReportActivity::class.java)
-                .setAction("$packageName.error_report")
-                .apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    putExtra("error_report", getVersionReport() + "\n" + th.stackTraceToString())
-                }
+    private fun installLumenCrashSdk() {
+        if (LumenCrash.isInstalled()) return
+        val appName = runCatching { getString(R.string.app_name) }.getOrDefault("Seal")
+        val info =
+            runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
+        val versionName = info?.versionName ?: "unknown"
+        val versionCode =
+            if (info == null) {
+                0
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                info.longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                info.versionCode
+            }
+        LumenCrash.install(
+            this,
+            LumenCrashConfig(
+                appDisplayName = appName,
+                versionName = versionName,
+                versionCode = versionCode,
+                commitHash = "unknown",
+                fileProviderAuthority = "$packageName.provider",
+                shareSubject =
+                    runCatching { getString(R.string.crash_report_share_subject) }.getOrNull(),
+                reportTitle =
+                    runCatching { getString(R.string.crash_report_title) }.getOrNull(),
+                reportMessage =
+                    runCatching { getString(R.string.crash_report_message) }.getOrNull(),
+            ),
         )
     }
 

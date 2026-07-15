@@ -88,6 +88,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Configure GitHub Packages credentials
+        env:
+          GPR_USER: ${{ github.actor }}
+          # Prefer a packages-capable PAT; fall back to the default workflow token.
+          GPR_KEY: ${{ secrets.PAT != '' && secrets.PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.gradle"
+          {
+            echo "gpr.user=${GPR_USER}"
+            echo "gpr.key=${GPR_KEY}"
+          } >> "$HOME/.gradle/gradle.properties"
+          echo "GITHUB_ACTOR=${GPR_USER}" >> "$GITHUB_ENV"
+          echo "GITHUB_TOKEN=${GPR_KEY}" >> "$GITHUB_ENV"
+
       - name: Android Lint
         id: lint
         shell: bash
@@ -364,6 +378,20 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Configure GitHub Packages credentials
+        env:
+          GPR_USER: ${{ github.actor }}
+          # Prefer a packages-capable PAT; fall back to the default workflow token.
+          GPR_KEY: ${{ secrets.PAT != '' && secrets.PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.gradle"
+          {
+            echo "gpr.user=${GPR_USER}"
+            echo "gpr.key=${GPR_KEY}"
+          } >> "$HOME/.gradle/gradle.properties"
+          echo "GITHUB_ACTOR=${GPR_USER}" >> "$GITHUB_ENV"
+          echo "GITHUB_TOKEN=${GPR_KEY}" >> "$GITHUB_ENV"
 
       - name: Prepare signing credentials
         env:

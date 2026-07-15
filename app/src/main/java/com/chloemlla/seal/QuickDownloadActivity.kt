@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.integration.ExternalDownloadEntry
@@ -65,6 +66,16 @@ class QuickDownloadActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Crash report UI is owned by MainActivity; block quick-download entry until cleared.
+        if (LumenCrash.loadPendingReport() != null) {
+            startActivity(
+                Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+            )
+            finish()
+            return
+        }
         if (!bindExternalIntent(intent)) {
             return
         }

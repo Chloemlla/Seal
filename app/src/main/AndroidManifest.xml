@@ -41,11 +41,6 @@
             android:name="com.chloemlla.seal.external_download_max_protocol_version"
             android:value="1" />
         <activity
-            android:name=".CrashReportActivity"
-            android:exported="false"
-            android:label="CrashReportActivity"
-            android:theme="@style/Theme.Seal" />
-        <activity
             android:name=".QuickDownloadActivity"
             android:excludeFromRecents="true"
             android:exported="true"

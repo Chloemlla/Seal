@@ -8,6 +8,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.chloemlla.lumen.crash.LumenCrash
+import com.chloemlla.lumen.crash.ui.LumenCrashReportScreen
 import com.chloemlla.seal.App.Companion.context
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.integration.ExternalDownloadCoordinator
@@ -30,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LumenCrash.recordBreadcrumb("MainActivity.onCreate")
 
         if (Build.VERSION.SDK_INT < 33) {
             runBlocking { setLanguage(PreferenceUtil.getLocaleFromPreference()) }
@@ -37,7 +44,23 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         context = this.baseContext
+        val hasPendingCrashReport = LumenCrash.loadPendingReport() != null
         setContent {
+            var pendingReport by remember { mutableStateOf(LumenCrash.loadPendingReport()) }
+            if (pendingReport != null) {
+                SealTheme(darkTheme = true, isHighContrastModeEnabled = false) {
+                    LumenCrashReportScreen(
+                        report = pendingReport!!,
+                        onContinue = {
+                            LumenCrash.clearPendingReport()
+                            pendingReport = null
+                            recreate()
+                        },
+                    )
+                }
+                return@setContent
+            }
+
             val windowSizeClass = calculateWindowSizeClass(this)
             SettingsProvider(windowWidthSizeClass = windowSizeClass.widthSizeClass) {
                 SealTheme(
@@ -49,11 +72,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        handleExternalIntent(intent, isColdStart = true)
+        // Avoid auto-starting external downloads while a crash report blocks normal UI.
+        if (!hasPendingCrashReport) {
+            handleExternalIntent(intent, isColdStart = true)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        LumenCrash.recordBreadcrumb("MainActivity.onNewIntent")
         setIntent(intent)
         handleExternalIntent(intent, isColdStart = false)
     }

@@ -49,7 +49,7 @@ android {
 
     defaultConfig {
         applicationId = "com.chloemlla.seal"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 37
         versionCode = 200_000_150
         check(versionCode == currentVersionCode)
@@ -168,6 +168,8 @@ dependencies {
     implementation(project(":color"))
 
     implementation(libs.bundles.core)
+    // Pinned to latest Project Lumen main auto release (lumen-crash-v0.1.0-2528201a).
+    implementation("com.chloemlla.lumen:lumen-crash:0.1.0-2528201a")
 
     implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.androidx.lifecycle.process)

@@ -27,6 +27,30 @@
 -keep class com.yausername.** { *; }
 -keep class org.apache.commons.compress.archivers.zip.** { *; }
 
+# Lumen Crash SDK minify exemption
+# Artifact: com.chloemlla.lumen:lumen-crash
+# Required when release minify is enabled so author integrity + public API
+# symbols remain available after R8.
+-keep class com.chloemlla.lumen.crash.CrashAuthorAttribution {
+    public static final java.lang.String *;
+}
+-keep class com.chloemlla.lumen.crash.AuthorIntegrity {
+    public static *** verifyOrThrow(...);
+    public static *** fingerprintHex();
+    public static *** verifiedAuthorBlock();
+}
+-keep class com.chloemlla.lumen.crash.LumenCrash { *; }
+-keep class com.chloemlla.lumen.crash.LumenCrashConfig { *; }
+-keep class com.chloemlla.lumen.crash.CrashReport { *; }
+-keep class com.chloemlla.lumen.crash.CrashAppInfo { *; }
+-keep class com.chloemlla.lumen.crash.CrashReportStore { *; }
+-keep class com.chloemlla.lumen.crash.CrashBreadcrumbs { *; }
+-keep class com.chloemlla.lumen.crash.AuthorBlock { *; }
+-keep class com.chloemlla.lumen.crash.ui.LumenCrashReportScreenKt { *; }
+-keep class com.chloemlla.lumen.crash.** { *; }
+-keepclassmembers class com.chloemlla.lumen.crash.** { *; }
+-dontwarn com.chloemlla.lumen.crash.**
+
 # Keep `Companion` object fields of serializable classes.
 # This avoids serializer lookup through `getDeclaredClasses` as done for named companion objects.
 -if @kotlinx.serialization.Serializable class **
