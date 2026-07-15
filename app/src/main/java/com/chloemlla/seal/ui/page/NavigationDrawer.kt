@@ -124,18 +124,22 @@ fun NavigationDrawer(
             ) {
                 Row {
                     Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier.zIndex(1f),
                     ) {
                         Column(
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxHeight().systemBarsPadding().width(92.dp),
+                            modifier = Modifier.fillMaxHeight().systemBarsPadding().width(96.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(12.dp))
                             IconButton(
                                 onClick = { scope.launch { drawerState.open() } },
-                                modifier = Modifier.align(Alignment.CenterHorizontally),
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.CenterHorizontally)
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                             ) {
                                 Icon(Icons.Outlined.Menu, null)
                             }
@@ -173,7 +177,13 @@ fun NavigationDrawerSheetContent(
                 .verticalScroll(rememberScrollState())
                 .systemBarsPadding()
     ) {
-        Spacer(Modifier.height(72.dp))
+        Spacer(Modifier.height(48.dp))
+        Text(
+            text = stringResource(R.string.app_name),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
         ProvideTextStyle(MaterialTheme.typography.labelLarge) {
             NavigationDrawerItem(
                 label = { Text(stringResource(R.string.download_queue)) },

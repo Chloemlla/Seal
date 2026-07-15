@@ -6,6 +6,7 @@ import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.animateTo
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -66,6 +67,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -365,13 +367,13 @@ fun DownloadPageImplV2(
 
     LaunchedEffect(selectedTask, taskDownloadStateMap.size) {
         if (!taskDownloadStateMap.contains(selectedTask)) {
-            selectedTask == null
+            selectedTask = null
         }
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize().statusBarsPadding(),
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         floatingActionButton = { FABs(modifier = Modifier, downloadCallback = downloadCallback) },
     ) { windowInsetsPadding ->
         val lazyListState = rememberLazyGridState()
@@ -408,7 +410,7 @@ fun DownloadPageImplV2(
                     SelectionGroupRow(
                         modifier =
                             Modifier.horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 20.dp)
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
                     ) {
                         Filter.entries.forEach { filter ->
                             SelectionGroupItem(
@@ -440,7 +442,7 @@ fun DownloadPageImplV2(
                             }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
                     if (headerOffset <= 0.1f && spacerHeight > 0f) {
                         HorizontalDivider(thickness = Dp.Hairline)
                     }
@@ -452,8 +454,8 @@ fun DownloadPageImplV2(
                     columns = GridCells.Adaptive(240.dp),
                     contentPadding =
                         windowInsetsPadding +
-                            PaddingValues(start = 20.dp, end = 20.dp, bottom = 80.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                            PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     if (filteredMap.isNotEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -480,7 +482,7 @@ fun DownloadPageImplV2(
                         ) { (task, state) ->
                             with(state.viewState) {
                                 VideoCardV2(
-                                    modifier = Modifier.padding(bottom = 20.dp).padding(),
+                                    modifier = Modifier.padding(bottom = 16.dp),
                                     viewState = this,
                                     actionButton = {
                                         ActionButton(
@@ -507,9 +509,9 @@ fun DownloadPageImplV2(
                             key = { (task, _) -> task.id },
                             span = { GridItemSpan(maxLineSpan) },
                         ) { (task, state) ->
-                            VideoListItem(
-                                modifier = Modifier.padding(bottom = 16.dp),
-                                viewState = state.viewState,
+                                VideoListItem(
+                                    modifier = Modifier.padding(bottom = 12.dp),
+                                    viewState = state.viewState,
                                 stateIndicator = {
                                     ListItemStateText(
                                         modifier = Modifier.padding(top = 3.dp),
@@ -570,16 +572,24 @@ fun Header(modifier: Modifier = Modifier, onMenuOpen: () -> Unit = {}) {
 
 @Composable
 private fun HeaderCompact(modifier: Modifier = Modifier, onMenuOpen: () -> Unit) {
-
-    Row(modifier = modifier.height(64.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onMenuOpen, modifier = Modifier) {
+    Row(
+        modifier = modifier.height(64.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FilledIconButton(
+            onClick = onMenuOpen,
+            colors =
+                IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+        ) {
             Icon(
                 imageVector = Icons.Outlined.Menu,
                 contentDescription = stringResource(R.string.show_navigation_drawer),
-                modifier = Modifier,
             )
         }
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             stringResource(R.string.download_queue),
             style =
@@ -587,6 +597,7 @@ private fun HeaderCompact(modifier: Modifier = Modifier, onMenuOpen: () -> Unit)
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                 ),
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -598,6 +609,7 @@ private fun HeaderExpanded(modifier: Modifier = Modifier) {
         Text(
             stringResource(R.string.download_queue),
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
     Spacer(Modifier.height(4.dp))
@@ -609,6 +621,9 @@ fun FABs(modifier: Modifier = Modifier, downloadCallback: () -> Unit = {}) {
     Column(modifier = modifier.padding(6.dp), horizontalAlignment = Alignment.End) {
         FloatingActionButton(
             onClick = downloadCallback,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shape = MaterialTheme.shapes.large,
             content = {
                 if (expanded) {
                     Row(
@@ -616,8 +631,11 @@ fun FABs(modifier: Modifier = Modifier, downloadCallback: () -> Unit = {}) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Outlined.FileDownload, contentDescription = null)
-                        Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.download))
+                        Spacer(modifier.width(12.dp))
+                        Text(
+                            text = stringResource(R.string.download),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 } else {
                     Icon(
@@ -626,7 +644,7 @@ fun FABs(modifier: Modifier = Modifier, downloadCallback: () -> Unit = {}) {
                     )
                 }
             },
-            modifier = Modifier.padding(vertical = 12.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
         )
     }
 }
@@ -663,12 +681,13 @@ private fun DownloadQueuePlaceholder(modifier: Modifier = Modifier) {
                 Text(
                     text = stringResource(R.string.you_ll_find_your_downloads_here),
                     modifier = Modifier.padding(horizontal = 24.dp),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
                 )
                 Text(
                     text = stringResource(R.string.download_hint),
-                    modifier = Modifier.padding(top = 4.dp).padding(horizontal = 24.dp),
+                    modifier = Modifier.padding(top = 8.dp).padding(horizontal = 28.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -704,15 +723,22 @@ fun SubHeader(
     }
 
     Row(
-        modifier = modifier.padding(top = 12.dp, bottom = 12.dp),
+        modifier = modifier.padding(top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            modifier = Modifier.padding(start = 8.dp),
+            modifier =
+                Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .background(containerColor)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = text, style = MaterialTheme.typography.labelLarge)
-            Spacer(Modifier.width(4.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
 
         Spacer(modifier = Modifier.weight(1f))

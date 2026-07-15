@@ -143,35 +143,47 @@ fun VideoListItem(
     stateIndicator: @Composable (() -> Unit)? = null,
     onButtonClick: () -> Unit,
 ) {
-    Row(modifier = modifier.height(IntrinsicSize.Min), verticalAlignment = Alignment.Top) {
-        Box(modifier = Modifier) {
-            ListItemImage(modifier = Modifier, thumbnailModel = thumbnailModel)
-            VideoInfoLabel(
-                modifier = Modifier.align(Alignment.BottomEnd),
-                duration = duration,
-                fileSizeApprox = fileSizeApprox,
-            )
-        }
-        Box {
-            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-                TitleText(
-                    modifier = Modifier,
-                    title = title,
-                    uploader = uploader,
-                    contentPadding = PaddingValues(),
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .height(IntrinsicSize.Min)
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(modifier = Modifier) {
+                ListItemImage(modifier = Modifier, thumbnailModel = thumbnailModel)
+                VideoInfoLabel(
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    duration = duration,
+                    fileSizeApprox = fileSizeApprox,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                stateIndicator?.invoke()
             }
-            IconButton(
-                onButtonClick,
-                modifier = Modifier.align(Alignment.BottomEnd).offset(x = 8.dp, y = 8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.MoreVert,
-                    contentDescription = stringResource(R.string.show_more_actions),
-                    modifier = Modifier.size(20.dp),
-                )
+            Box(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.fillMaxSize().padding(start = 12.dp, end = 8.dp)) {
+                    TitleText(
+                        modifier = Modifier,
+                        title = title,
+                        uploader = uploader,
+                        contentPadding = PaddingValues(),
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    stateIndicator?.invoke()
+                }
+                IconButton(
+                    onClick = onButtonClick,
+                    modifier = Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = stringResource(R.string.show_more_actions),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }
@@ -239,6 +251,8 @@ fun VideoCardV2(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column {
             Box(Modifier.fillMaxWidth()) {
@@ -251,9 +265,15 @@ fun VideoCardV2(
                     fileSizeApprox = fileSizeApprox,
                 )
             }
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 TitleText(modifier = Modifier.weight(1f), title = title, uploader = uploader)
-                IconButton(onButtonClick, modifier = Modifier.align(Alignment.CenterVertically)) {
+                IconButton(
+                    onClick = onButtonClick,
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.MoreVert,
                         contentDescription = stringResource(R.string.show_more_actions),
@@ -324,9 +344,9 @@ private fun ListItemImage(modifier: Modifier = Modifier, thumbnailModel: Any? = 
         Box(
             modifier =
                 modifier
-                    .width(160.dp)
+                    .width(148.dp)
                     .aspectRatio(16f / 9f, matchHeightConstraintsFirst = true)
-                    .clip(MaterialTheme.shapes.extraSmall)
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest)
         ) {}
     }
@@ -364,14 +384,14 @@ private fun TitleText(
 @Composable
 private fun VideoInfoLabel(modifier: Modifier = Modifier, duration: Int, fileSizeApprox: Double) {
     Surface(
-        modifier = modifier.padding(4.dp),
+        modifier = modifier.padding(6.dp),
         color = LabelContainerColor,
-        shape = MaterialTheme.shapes.extraSmall,
+        shape = MaterialTheme.shapes.small,
     ) {
         val fileSizeText = fileSizeApprox.toFileSizeText()
         val durationText = duration.toDurationText()
         Text(
-            modifier = Modifier.padding(horizontal = 4.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             text = "$fileSizeText  $durationText",
             style = MaterialTheme.typography.labelSmall,
             color = Color.White,
@@ -382,12 +402,12 @@ private fun VideoInfoLabel(modifier: Modifier = Modifier, duration: Int, fileSiz
 @Composable
 fun CardStateIndicator(modifier: Modifier = Modifier, downloadState: Task.DownloadState) {
     Surface(
-        modifier = modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+        modifier = modifier.padding(vertical = 10.dp, horizontal = 8.dp),
         color = LabelContainerColor,
-        shape = MaterialTheme.shapes.extraSmall,
+        shape = MaterialTheme.shapes.small,
     ) {
         CardItemStateText(
-            modifier = Modifier.padding(horizontal = 4.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             downloadState = downloadState,
         )
     }
