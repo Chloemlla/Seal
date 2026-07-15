@@ -441,6 +441,11 @@
     <string name="issue_tracker">議題追蹤工具</string>
     <string name="trouble_shooting_desc">修復常見錯誤並檢查已知問題</string>
     <string name="issue_tracker_hint">發生錯誤？在回報新問題之前，請先檢查議題追蹤工具。許多常見問題已經解決，並且記錄在案。</string>
+    <string name="known_issues_faqs">已知問題與常見問答</string>
+    <string name="known_issues_faqs_desc">Seal 下載相關的常見問題與處理方式</string>
+    <string name="known_issues_intro">提交新回饋前，請先查看這些已知問題與解決辦法。請不要重複提交既有問題。</string>
+    <string name="known_issue_solution">解決辦法</string>
+    <string name="open_seal_issue_tracker">開啟 Seal 議題追蹤</string>
     <string name="saved_urls">已儲存的連結</string>
     <string name="add_new_url">新增新連結</string>
     <string name="add_to">新增至 %1$s</string>

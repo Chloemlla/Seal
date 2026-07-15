@@ -441,6 +441,11 @@
     <string name="issue_tracker">问题跟踪器</string>
     <string name="trouble_shooting_desc">修复常见问题并检查已知问题</string>
     <string name="issue_tracker_hint">遇到问题了？报告新问题前，请搜索我们的问题跟踪器。许多常见问题已在那里被解决并有记录。</string>
+    <string name="known_issues_faqs">已知问题与常见问答</string>
+    <string name="known_issues_faqs_desc">Seal 下载相关的常见问题与处理方式</string>
+    <string name="known_issues_intro">提交新反馈前，请先查看这些已知问题与解决办法。请不要重复提交已有问题。</string>
+    <string name="known_issue_solution">解决办法</string>
+    <string name="open_seal_issue_tracker">打开 Seal 问题跟踪</string>
     <string name="saved_urls">保存的链接</string>
     <string name="add_new_url">添加新链接</string>
     <string name="add_to">添加到 %1$s</string>

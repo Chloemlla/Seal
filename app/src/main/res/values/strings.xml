@@ -440,6 +440,11 @@
     <string name="issue_tracker">Issue tracker</string>
     <string name="trouble_shooting_desc">Fix common errors and check for known issues</string>
     <string name="issue_tracker_hint">Encountered an error? Before reporting a new issue, please search our issue tracker. Many common problems have already been addressed and documented there.</string>
+    <string name="known_issues_faqs">Known Issues &amp; FAQs</string>
+    <string name="known_issues_faqs_desc">Common problems and fixes for Seal downloads</string>
+    <string name="known_issues_intro">Check these known issues and solutions before opening a new report. Please do not post duplicate issues.</string>
+    <string name="known_issue_solution">Solution</string>
+    <string name="open_seal_issue_tracker">Open Seal issue tracker</string>
     <string name="saved_urls">Saved links</string>
     <string name="add_new_url">Add new link</string>
     <string name="add_to">Add to %1$s</string>

@@ -65,6 +65,7 @@ import com.chloemlla.seal.ui.page.settings.network.CookiesViewModel
 import com.chloemlla.seal.ui.page.settings.network.NetworkPreferences
 import com.chloemlla.seal.ui.page.settings.network.WebViewPage
 import com.chloemlla.seal.ui.page.settings.troubleshooting.TroubleShootingPage
+import com.chloemlla.seal.ui.page.settings.troubleshooting.KnownIssuesPage
 import com.chloemlla.seal.ui.page.videolist.VideoListPage
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -261,6 +262,9 @@ fun NavGraphBuilder.settingsGraph(
         }
         animatedComposable(Route.TROUBLESHOOTING) {
             TroubleShootingPage(onNavigateTo = onNavigateTo, onBack = onNavigateBack)
+        }
+        animatedComposable(Route.KNOWN_ISSUES) {
+            KnownIssuesPage(onBack = onNavigateBack)
         }
     }
 }

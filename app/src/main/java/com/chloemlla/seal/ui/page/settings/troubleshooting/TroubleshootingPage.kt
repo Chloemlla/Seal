@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.Cookie
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Spellcheck
 import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,9 +74,15 @@ fun TroubleShootingPage(
                         modifier = Modifier,
                         text = stringResource(R.string.issue_tracker_hint),
                     )
+                    PreferenceItem(
+                        title = stringResource(R.string.known_issues_faqs),
+                        description = stringResource(R.string.known_issues_faqs_desc),
+                        icon = Icons.Outlined.HelpOutline,
+                        onClick = { onNavigateTo(Route.KNOWN_ISSUES) },
+                    )
                     val knownIssueUrlSeal = "https://github.com/Chloemlla/Seal/issues"
                     PreferenceItem(
-                        title = "Seal Issue Tracker",
+                        title = stringResource(R.string.issue_tracker),
                         description = null,
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         onClick = { uriHandler.openUri(knownIssueUrlSeal) },
