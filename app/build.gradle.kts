@@ -168,8 +168,10 @@ dependencies {
     implementation(project(":color"))
 
     implementation(libs.bundles.core)
-    // Pinned to latest Project Lumen main auto release (lumen-crash-v0.1.0-2528201a).
-    implementation("com.chloemlla.lumen:lumen-crash:0.1.0-2528201a")
+    // Auto-resolve latest Project Lumen main release (`lumen-crash-v*`).
+    // Override with -PlumenCrashVersion=... or LUMEN_CRASH_VERSION when needed.
+    val lumenCrashVersion = LumenCrashVersion.resolve(project)
+    implementation("com.chloemlla.lumen:lumen-crash:$lumenCrashVersion")
 
     implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.androidx.lifecycle.process)
