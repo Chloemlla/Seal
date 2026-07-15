@@ -67,7 +67,7 @@ class QuickDownloadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Crash report UI is owned by MainActivity; block quick-download entry until cleared.
-        if (LumenCrash.loadPendingReport() != null) {
+        if (runCatching { LumenCrash.loadPendingReport() }.getOrNull() != null) {
             startActivity(
                 Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)

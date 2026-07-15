@@ -61,14 +61,21 @@ import org.koin.dsl.module
 class App : Application() {
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
-        installLumenCrashSdk()
-        LumenCrash.recordBreadcrumb("Application.attachBaseContext")
+        // Never let crash-sdk install failures take down process startup.
+        runCatching {
+            installLumenCrashSdk()
+            LumenCrash.recordBreadcrumb("Application.attachBaseContext")
+        }
+            .onFailure { it.printStackTrace() }
     }
 
     override fun onCreate() {
         super.onCreate()
-        installLumenCrashSdk()
-        LumenCrash.recordBreadcrumb("Application.onCreate")
+        runCatching {
+            installLumenCrashSdk()
+            LumenCrash.recordBreadcrumb("Application.onCreate")
+        }
+            .onFailure { it.printStackTrace() }
         MMKV.initialize(this)
 
         startKoin {
@@ -101,9 +108,9 @@ class App : Application() {
                     FileUtil.writeContentToFile(it, getCookiesFile())
                 }
                 UpdateUtil.deleteOutdatedApk()
-                LumenCrash.recordBreadcrumb("Download engines initialized")
+                runCatching { LumenCrash.recordBreadcrumb("Download engines initialized") }
             } catch (th: Throwable) {
-                LumenCrash.record(th)
+                runCatching { LumenCrash.record(th) }.onFailure { th.printStackTrace() }
             }
         }
 

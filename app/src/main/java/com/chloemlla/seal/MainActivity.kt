@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        LumenCrash.recordBreadcrumb("MainActivity.onCreate")
+        runCatching { LumenCrash.recordBreadcrumb("MainActivity.onCreate") }
 
         if (Build.VERSION.SDK_INT < 33) {
             runBlocking { setLanguage(PreferenceUtil.getLocaleFromPreference()) }
@@ -44,15 +44,18 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         context = this.baseContext
-        val hasPendingCrashReport = LumenCrash.loadPendingReport() != null
+        // loadPendingReport can throw if integrity fails; treat as no pending report.
+        val pending =
+            runCatching { LumenCrash.loadPendingReport() }.onFailure { it.printStackTrace() }.getOrNull()
+        val hasPendingCrashReport = pending != null
         setContent {
-            var pendingReport by remember { mutableStateOf(LumenCrash.loadPendingReport()) }
+            var pendingReport by remember { mutableStateOf(pending) }
             if (pendingReport != null) {
                 SealTheme(darkTheme = true, isHighContrastModeEnabled = false) {
                     LumenCrashReportScreen(
                         report = pendingReport!!,
                         onContinue = {
-                            LumenCrash.clearPendingReport()
+                            runCatching { LumenCrash.clearPendingReport() }
                             pendingReport = null
                             recreate()
                         },
@@ -80,7 +83,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        LumenCrash.recordBreadcrumb("MainActivity.onNewIntent")
+        runCatching { LumenCrash.recordBreadcrumb("MainActivity.onNewIntent") }
         setIntent(intent)
         handleExternalIntent(intent, isColdStart = false)
     }
