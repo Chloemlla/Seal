@@ -1,11 +1,12 @@
 package com.chloemlla.seal.ui.page.videolist
 
 import android.content.Context
-import android.util.Log
 import android.net.Uri
+import android.util.Log
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.seal.App
 import com.chloemlla.seal.R
 import com.chloemlla.seal.database.backup.BackupUtil
@@ -104,6 +105,10 @@ class VideoListViewModel : ViewModel() {
                             "Local file delete failed path=${item.path} failedPaths=${item.failedPaths}",
                         )
                     }
+                    reportDeleteFileFailures(
+                        requestedCount = infoList.size,
+                        failed = failed,
+                    )
                     val msg =
                         App.context.getString(
                             R.string.delete_file_failed,
@@ -158,6 +163,37 @@ class VideoListViewModel : ViewModel() {
                         )
             )
         }
+    }
+
+
+    private fun reportDeleteFileFailures(
+        requestedCount: Int,
+        failed: List<FileUtil.MediaDeleteResult>,
+    ) {
+        runCatching {
+            LumenCrash.recordBreadcrumb(
+                "download_history_delete_file_failed count=${failed.size}/$requestedCount"
+            )
+            val detail =
+                failed.joinToString(separator = " | ") { item ->
+                    buildString {
+                        append("path=")
+                        append(item.path)
+                        if (!item.primaryDeletedOrMissing) append(" primary=failed")
+                        if (item.failedPaths.isNotEmpty()) {
+                            append(" failedPaths=")
+                            append(item.failedPaths.joinToString(","))
+                        }
+                    }
+                }
+            LumenCrash.record(
+                IllegalStateException(
+                    "Download history local media delete failed " +
+                        "(${failed.size}/$requestedCount): $detail"
+                )
+            )
+        }
+            .onFailure { it.printStackTrace() }
     }
 
     data class VideoListViewState(
