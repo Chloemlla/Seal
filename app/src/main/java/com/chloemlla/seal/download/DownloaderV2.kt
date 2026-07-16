@@ -348,9 +348,10 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
                                     if (this != null)
                                         PendingIntent.getActivity(
                                             appContext,
-                                            0,
+                                            notificationId,
                                             this,
-                                            PendingIntent.FLAG_IMMUTABLE,
+                                            PendingIntent.FLAG_UPDATE_CURRENT or
+                                                PendingIntent.FLAG_IMMUTABLE,
                                         )
                                     else null,
                             )

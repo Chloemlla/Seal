@@ -34,6 +34,7 @@ import com.chloemlla.seal.util.FileUtil.getAppSpecificAudioDownloadDirectory
 import com.chloemlla.seal.util.FileUtil.getPreferredDownloadDirectory
 import com.chloemlla.seal.util.FileUtil.getPreferredPrivateDownloadDirectory
 import com.chloemlla.seal.util.StorageAccess
+import com.chloemlla.seal.util.NativeRuntimeHardener
 import com.chloemlla.seal.util.NotificationUtil
 import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.PreferenceUtil.getString
@@ -104,6 +105,7 @@ class App : Application() {
                 YoutubeDL.init(this@App)
                 FFmpeg.init(this@App)
                 Aria2c.init(this@App)
+                NativeRuntimeHardener.hardenYoutubeDlPackages(this@App)
                 DownloadUtil.getCookiesContentFromDatabase().getOrNull()?.let {
                     FileUtil.writeContentToFile(it, getCookiesFile())
                 }

@@ -77,10 +77,17 @@ object FileUtil {
     fun createIntentForSharingFile(path: String?): Intent? =
         createIntentForFile(path)?.apply {
             action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_STREAM, data)
-            val mimeType = data?.let { context.contentResolver.getType(it) } ?: "media/*"
-            setDataAndType(this.data, mimeType)
-            clipData = ClipData(null, arrayOf(mimeType), ClipData.Item(data))
+            val streamUri = data ?: return@apply
+            putExtra(Intent.EXTRA_STREAM, streamUri)
+            val mimeType =
+                context.contentResolver.getType(streamUri) ?: "media/*"
+            // ACTION_SEND should carry the stream URI in EXTRA_STREAM, not as data.
+            // Keeping data set can make some receivers treat it as ACTION_VIEW-style content
+            // and miss temporary URI grants on newer Android releases.
+            this.data = null
+            type = mimeType
+            clipData = ClipData(null, arrayOf(mimeType), ClipData.Item(streamUri))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
     fun Context.getFileProvider() = "$packageName.provider"

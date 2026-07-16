@@ -129,6 +129,14 @@ object UpdateUtil {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             setDataAndType(contentUri, "application/vnd.android.package-archive")
+                            // Explicit grant for package installer targets that do not inherit
+                            // temporary URI permission from the launching flags alone.
+                            clipData =
+                                android.content.ClipData.newUri(
+                                    contentResolver,
+                                    "apk",
+                                    contentUri,
+                                )
                         }
                     startActivity(intent)
                 }
