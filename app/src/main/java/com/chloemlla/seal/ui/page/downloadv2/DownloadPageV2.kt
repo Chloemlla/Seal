@@ -42,6 +42,8 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -81,7 +83,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -429,6 +430,34 @@ fun DownloadPageImplV2(
         }
     }
 
+    fun cancelActiveDownloads() {
+        taskDownloadStateMap.forEach { (task, state) ->
+            when (state.downloadState) {
+                is FetchingInfo,
+                Idle,
+                ReadyWithInfo,
+                is Running -> onActionPost(task, UiAction.Cancel)
+                else -> Unit
+            }
+        }
+    }
+
+    fun removeFinishedDownloads() {
+        taskDownloadStateMap
+            .filter { (_, state) -> state.downloadState is Completed }
+            .keys
+            .forEach { onActionPost(it, UiAction.Delete) }
+    }
+
+    fun removeCanceledDownloads() {
+        taskDownloadStateMap
+            .filter { (_, state) ->
+                state.downloadState is Canceled || state.downloadState is Error
+            }
+            .keys
+            .forEach { onActionPost(it, UiAction.Delete) }
+    }
+
     LaunchedEffect(selectedTask, taskDownloadStateMap.size) {
         if (!taskDownloadStateMap.contains(selectedTask)) {
             selectedTask = null
@@ -533,7 +562,9 @@ fun DownloadPageImplV2(
                                 audioCount = filteredMap.size - videoCount,
                                 isGridView = isGridView,
                                 onToggleView = { isGridView = !isGridView },
-                                onShowMenu = { context.makeToast("Not implemented yet!") },
+                                onCancelActive = ::cancelActiveDownloads,
+                                onRemoveFinished = ::removeFinishedDownloads,
+                                onRemoveCanceled = ::removeCanceledDownloads,
                             )
                         }
                     }
@@ -591,10 +622,22 @@ fun DownloadPageImplV2(
         }
         if (filteredMap.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize()) {
-                DownloadQueuePlaceholder(
-                    modifier =
-                        Modifier.fillMaxHeight(0.4f).widthIn(max = 360.dp).align(Alignment.Center)
-                )
+                if (taskDownloadStateMap.isEmpty()) {
+                    DownloadQueuePlaceholder(
+                        modifier =
+                            Modifier.fillMaxHeight(0.4f)
+                                .widthIn(max = 360.dp)
+                                .align(Alignment.Center)
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.no_downloads_in_filter),
+                        modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }
@@ -772,7 +815,9 @@ fun SubHeader(
     audioCount: Int = 0,
     isGridView: Boolean = true,
     onToggleView: () -> Unit,
-    onShowMenu: () -> Unit,
+    onCancelActive: () -> Unit = {},
+    onRemoveFinished: () -> Unit = {},
+    onRemoveCanceled: () -> Unit = {},
 ) {
     val text = buildString {
         if (videoCount > 0) {
@@ -785,6 +830,7 @@ fun SubHeader(
             append(pluralStringResource(R.plurals.audio_count, audioCount).format(audioCount))
         }
     }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Row(
         modifier = modifier.padding(top = 8.dp, bottom = 8.dp),
@@ -809,29 +855,57 @@ fun SubHeader(
 
         FilledIconButton(
             onClick = onToggleView,
-            modifier = Modifier.clearAndSetSemantics {}.size(32.dp),
+            modifier = Modifier.size(32.dp),
             colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor),
         ) {
             Icon(
                 imageVector =
                     if (isGridView) Icons.AutoMirrored.Outlined.List else Icons.Outlined.GridView,
-                contentDescription = null,
+                contentDescription =
+                    stringResource(
+                        if (isGridView) R.string.show_list_view else R.string.show_grid_view
+                    ),
                 modifier = Modifier.size(16.dp),
             )
         }
 
-        Spacer(Modifier.width(4.dp))
+        Spacer(modifier.width(4.dp))
 
-        FilledIconButton(
-            onClick = onShowMenu,
-            modifier = Modifier.clearAndSetSemantics {}.size(32.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.MoreVert,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-            )
+        Box {
+            FilledIconButton(
+                onClick = { menuExpanded = true },
+                modifier = Modifier.size(32.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.MoreVert,
+                    contentDescription = stringResource(R.string.queue_actions),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.cancel_active_downloads)) },
+                    onClick = {
+                        menuExpanded = false
+                        onCancelActive()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.remove_finished_downloads)) },
+                    onClick = {
+                        menuExpanded = false
+                        onRemoveFinished()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.remove_canceled_downloads)) },
+                    onClick = {
+                        menuExpanded = false
+                        onRemoveCanceled()
+                    },
+                )
+            }
         }
     }
 }

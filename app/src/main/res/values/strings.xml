@@ -209,6 +209,13 @@
     <string name="invalid_input">Invalid input</string>
     <string name="lowest_quality">Lowest quality</string>
     <string name="download_queue">Download queue</string>
+    <string name="queue_actions">Queue actions</string>
+    <string name="cancel_active_downloads">Cancel active downloads</string>
+    <string name="remove_finished_downloads">Remove finished downloads</string>
+    <string name="remove_canceled_downloads">Remove canceled downloads</string>
+    <string name="no_downloads_in_filter">No downloads in this filter</string>
+    <string name="show_list_view">Switch to list view</string>
+    <string name="show_grid_view">Switch to grid view</string>
     <string name="unavailable">Unavailable</string>
     <string name="format_settings_desc">File format, video quality, subtitles</string>
     <string name="general_settings_desc">Yt-dlp version, notification, playlist</string>
