@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
+import androidx.core.graphics.drawable.IconCompat
 import com.chloemlla.seal.App.Companion.context
 import com.chloemlla.seal.NotificationActionReceiver
 import com.chloemlla.seal.NotificationActionReceiver.Companion.ACTION_CANCEL_TASK
@@ -85,24 +86,37 @@ object NotificationUtil {
                             context.applicationContext,
                             notificationId,
                             this,
-                            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                         )
                     }
             }
 
-        NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_seal)
-            .setContentTitle(title)
-            .setProgress(PROGRESS_MAX, progress, progress <= 0)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .run {
-                pendingIntent?.let {
-                    addAction(R.drawable.outline_cancel_24, context.getString(R.string.cancel), it)
-                }
-                notificationManager.notify(notificationId, build())
+        val clamped = progress.coerceIn(0, PROGRESS_MAX)
+        val indeterminate = progress <= 0
+        val builder =
+            NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_seal)
+                .setContentTitle(title)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setProgress(PROGRESS_MAX, if (indeterminate) 0 else clamped, indeterminate)
+        if (!text.isNullOrBlank()) {
+            builder.setContentText(text)
+            // Keep BigText only when ProgressStyle is unavailable; ProgressStyle replaces Style.
+            if (Build.VERSION.SDK_INT < SdkLevels.BAKLAVA) {
+                builder.setStyle(NotificationCompat.BigTextStyle().bigText(text))
             }
+        }
+        applyProgressStyle(
+            builder = builder,
+            progress = clamped,
+            indeterminate = indeterminate,
+        )
+        pendingIntent?.let {
+            builder.addAction(R.drawable.outline_cancel_24, context.getString(R.string.cancel), it)
+        }
+        notificationManager.notify(notificationId, builder.build())
     }
 
     fun finishNotification(
@@ -231,24 +245,39 @@ object NotificationUtil {
                 context.applicationContext,
                 notificationId,
                 intent,
-                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_seal)
-            .setContentTitle(
-                "[${templateName}_${taskUrl}] " +
-                    context.getString(R.string.execute_command_notification)
-            )
-            .setContentText(text)
-            .setOngoing(true)
-            .setProgress(PROGRESS_MAX, progress, progress == -1)
-            .addAction(
-                R.drawable.outline_cancel_24,
-                context.getString(R.string.cancel),
-                pendingIntent,
-            )
-            .run { notificationManager.notify(notificationId, build()) }
+        val indeterminate = progress < 0
+        val clamped = if (indeterminate) 0 else progress.coerceIn(0, PROGRESS_MAX)
+        val title =
+            "[${templateName}_${taskUrl}] " +
+                context.getString(R.string.execute_command_notification)
+        val builder =
+            NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_seal)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setProgress(PROGRESS_MAX, clamped, indeterminate)
+                .addAction(
+                    R.drawable.outline_cancel_24,
+                    context.getString(R.string.cancel),
+                    pendingIntent,
+                )
+        if (!text.isNullOrBlank()) {
+            if (Build.VERSION.SDK_INT < SdkLevels.BAKLAVA) {
+                builder.setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            }
+        }
+        applyProgressStyle(
+            builder = builder,
+            progress = clamped,
+            indeterminate = indeterminate,
+        )
+        notificationManager.notify(notificationId, builder.build())
     }
 
     fun cancelAllNotifications() {
@@ -258,5 +287,34 @@ object NotificationUtil {
     fun areNotificationsEnabled(): Boolean {
         return if (Build.VERSION.SDK_INT <= 24) true
         else notificationManager.areNotificationsEnabled()
+    }
+
+    /**
+     * Attach Android 16+ progress-centric style when available.
+     *
+     * [NotificationCompat.ProgressStyle] is rendered on API 36+ and falls back to the default
+     * notification style on older platforms; classic [NotificationCompat.Builder.setProgress]
+     * remains as the cross-version progress indicator.
+     */
+    private fun applyProgressStyle(
+        builder: NotificationCompat.Builder,
+        progress: Int,
+        indeterminate: Boolean,
+    ) {
+        // ProgressStyle is only meaningful on Android 16 / API 36+.
+        if (Build.VERSION.SDK_INT < SdkLevels.BAKLAVA) return
+
+        val style =
+            NotificationCompat.ProgressStyle()
+                .setStyledByProgress(true)
+                .setProgressIndeterminate(indeterminate)
+                .addProgressSegment(
+                    NotificationCompat.ProgressStyle.Segment(PROGRESS_MAX)
+                )
+                .setProgress(if (indeterminate) 0 else progress)
+                .setProgressTrackerIcon(
+                    IconCompat.createWithResource(context, R.drawable.ic_stat_seal)
+                )
+        builder.setStyle(style)
     }
 }
