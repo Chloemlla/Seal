@@ -1,6 +1,5 @@
 package com.chloemlla.seal.download
 
-import android.app.PendingIntent
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateMapOf
@@ -339,23 +338,16 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
                                 if (pathList.isEmpty()) R.string.status_completed
                                 else R.string.download_finish_notification
                             )
-                        FileUtil.createIntentForOpeningFile(pathList.firstOrNull()).run {
-                            NotificationUtil.finishNotification(
-                                notificationId,
-                                title = viewState.title,
-                                text = text,
-                                intent =
-                                    if (this != null)
-                                        PendingIntent.getActivity(
-                                            appContext,
-                                            notificationId,
-                                            this,
-                                            PendingIntent.FLAG_UPDATE_CURRENT or
-                                                PendingIntent.FLAG_IMMUTABLE,
-                                        )
-                                    else null,
-                            )
-                        }
+                        NotificationUtil.finishNotification(
+                            notificationId,
+                            title = viewState.title,
+                            text = text,
+                            intent =
+                                NotificationUtil.createOpenFilePendingIntent(
+                                    notificationId = notificationId,
+                                    path = pathList.firstOrNull(),
+                                ),
+                        )
                     }
                     .onFailure { throwable ->
                         if (throwable is YoutubeDL.CanceledException) {

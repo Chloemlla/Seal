@@ -28,6 +28,7 @@ class NotificationActionReceiver : BroadcastReceiver(), KoinComponent {
 
         const val NOTIFICATION_ID_KEY = PACKAGE_NAME_PREFIX + "notificationId"
         const val ERROR_REPORT_KEY = PACKAGE_NAME_PREFIX + "error_report"
+        const val FILE_PATH_KEY = PACKAGE_NAME_PREFIX + "file_path"
     }
 
     override fun onReceive(context: Context?, intent: Intent?) {

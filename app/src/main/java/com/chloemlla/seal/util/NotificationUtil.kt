@@ -20,8 +20,10 @@ import com.chloemlla.seal.NotificationActionReceiver.Companion.ACTION_CANCEL_TAS
 import com.chloemlla.seal.NotificationActionReceiver.Companion.ACTION_ERROR_REPORT
 import com.chloemlla.seal.NotificationActionReceiver.Companion.ACTION_KEY
 import com.chloemlla.seal.NotificationActionReceiver.Companion.ERROR_REPORT_KEY
+import com.chloemlla.seal.NotificationActionReceiver.Companion.FILE_PATH_KEY
 import com.chloemlla.seal.NotificationActionReceiver.Companion.NOTIFICATION_ID_KEY
 import com.chloemlla.seal.NotificationActionReceiver.Companion.TASK_ID_KEY
+import com.chloemlla.seal.OpenDownloadedFileActivity
 import com.chloemlla.seal.R
 import com.chloemlla.seal.util.PreferenceUtil.getBoolean
 
@@ -138,6 +140,30 @@ object NotificationUtil {
         title?.let { builder.setContentTitle(title) }
         intent?.let { builder.setContentIntent(intent) }
         notificationManager.notify(notificationId, builder.build())
+    }
+
+    /**
+     * Build an explicit PendingIntent that opens a finished download path.
+     *
+     * Android 14+ forbids creating PendingIntents from intents without a package/component.
+     * Route through [com.chloemlla.seal.OpenDownloadedFileActivity] instead of a raw ACTION_VIEW
+     * intent so the PendingIntent stays package/component-explicit.
+     */
+    fun createOpenFilePendingIntent(
+        notificationId: Int,
+        path: String?,
+    ): PendingIntent? {
+        if (path.isNullOrBlank()) return null
+        val intent =
+            Intent(context.applicationContext, OpenDownloadedFileActivity::class.java)
+                .putExtra(NOTIFICATION_ID_KEY, notificationId)
+                .putExtra(FILE_PATH_KEY, path)
+        return PendingIntent.getActivity(
+            context.applicationContext,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     fun finishNotificationForCustomCommands(

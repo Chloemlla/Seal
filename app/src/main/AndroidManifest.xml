@@ -154,6 +154,12 @@
         <receiver
             android:name=".NotificationActionReceiver"
             android:exported="false" />
+
+        <activity
+            android:name=".OpenDownloadedFileActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 
 </manifest>
