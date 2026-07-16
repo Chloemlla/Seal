@@ -78,7 +78,7 @@ val LocaleLanguageCodeMap =
         Locale.forLanguageTag("he") to HEBREW,
         Locale.forLanguageTag("hi") to HINDI,
         Locale.forLanguageTag("hu") to HUNGARIAN,
-        Locale.forLanguageTag("in") to INDONESIAN,
+        Locale.forLanguageTag("id") to INDONESIAN,
         Locale.forLanguageTag("it") to ITALIAN,
         Locale.forLanguageTag("ja") to JAPANESE,
         Locale.forLanguageTag("kn") to KANNADA,
@@ -107,12 +107,23 @@ val LocaleLanguageCodeMap =
         Locale.forLanguageTag("vi") to VIETNAMESE,
     )
 
+/** Canonical locale used when applying/saving app language preferences. */
+fun Locale.canonicalAppLocale(): Locale =
+    when (language) {
+        // OpenJDK / Android 15 keep ISO codes; older stacks may still surface legacy tags.
+        "in" -> Locale.forLanguageTag("id")
+        "iw" -> Locale.forLanguageTag("he")
+        "ji" -> Locale.forLanguageTag("yi")
+        else -> this
+    }
+
 @Composable
 fun Locale?.toDisplayName(): String =
     this?.getDisplayName(this) ?: stringResource(id = R.string.follow_system)
 
 fun setLanguage(locale: Locale?) {
     val localeList =
-        locale?.let { LocaleListCompat.create(it) } ?: LocaleListCompat.getEmptyLocaleList()
+        locale?.let { LocaleListCompat.create(it.canonicalAppLocale()) }
+            ?: LocaleListCompat.getEmptyLocaleList()
     AppCompatDelegate.setApplicationLocales(localeList)
 }

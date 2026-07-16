@@ -52,6 +52,7 @@ import com.chloemlla.seal.ui.page.settings.about.weblate
 import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.util.LocaleLanguageCodeMap
 import com.chloemlla.seal.util.PreferenceUtil
+import com.chloemlla.seal.util.canonicalAppLocale
 import com.chloemlla.seal.util.setLanguage
 import com.chloemlla.seal.util.toDisplayName
 import java.util.Locale
@@ -96,8 +97,8 @@ fun LanguagePage(onNavigateBack: () -> Unit = {}) {
                 val matchedLocale =
                     supportedLocales.firstOrNull { supported ->
                         LocaleListCompat.matchesLanguageAndScript(
-                            /* supported = */ desired,
-                            /* desired = */ supported,
+                            /* supported = */ desired.canonicalAppLocale(),
+                            /* desired = */ supported.canonicalAppLocale(),
                         )
                     }
                 if (matchedLocale != null) {

@@ -677,14 +677,30 @@ object PreferenceUtil {
     @DeprecatedSinceApi(api = 33)
     fun getLocaleFromPreference(): Locale? {
         val languageCode = LANGUAGE.getInt()
-        return LocaleLanguageCodeMap.entries.find { it.value == languageCode }?.key
+        return LocaleLanguageCodeMap.entries
+            .find { it.value == languageCode }
+            ?.key
+            ?.canonicalAppLocale()
     }
 
     fun saveLocalePreference(locale: Locale?) {
         if (Build.VERSION.SDK_INT >= 33) {
             // No op
         } else {
-            LANGUAGE.updateInt(locale?.let { LocaleLanguageCodeMap[it] } ?: SYSTEM_DEFAULT)
+            LANGUAGE.updateInt(
+                locale?.let { candidate ->
+                    val canonical = candidate.canonicalAppLocale()
+                    LocaleLanguageCodeMap[canonical]
+                        ?: LocaleLanguageCodeMap.entries
+                            .find {
+                                it.key.language == canonical.language &&
+                                    (canonical.country.isEmpty() ||
+                                        it.key.country == canonical.country)
+                            }
+                            ?.value
+                }
+                    ?: SYSTEM_DEFAULT
+            )
         }
     }
 
