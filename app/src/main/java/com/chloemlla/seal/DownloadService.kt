@@ -20,7 +20,12 @@ class DownloadService : Service() {
     override fun onBind(intent: Intent): IBinder {
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent ->
-                PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+                PendingIntent.getActivity(
+                    this,
+                    SERVICE_NOTIFICATION_ID,
+                    notificationIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
             }
         val notification = NotificationUtil.makeServiceNotification(pendingIntent)
         val serviceType =
