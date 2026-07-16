@@ -1,6 +1,7 @@
 package com.chloemlla.seal.ui.page.videolist
 
 import android.content.Context
+import android.util.Log
 import android.net.Uri
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
@@ -97,6 +98,12 @@ class VideoListViewModel : ViewModel() {
             if (deleteFile) {
                 val failed = result.failedFileDeletes
                 if (failed.isNotEmpty()) {
+                    failed.forEach { item ->
+                        Log.w(
+                            TAG,
+                            "Local file delete failed path=${item.path} failedPaths=${item.failedPaths}",
+                        )
+                    }
                     val msg =
                         App.context.getString(
                             R.string.delete_file_failed,

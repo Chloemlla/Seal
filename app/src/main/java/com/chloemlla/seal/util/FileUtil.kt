@@ -5,8 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.CheckResult
@@ -127,6 +129,9 @@ object FileUtil {
 
         val primaryOk = deleteSinglePath(path)
         record(path, primaryOk)
+        if (!primaryOk) {
+            Log.w(TAG, "Failed to delete media path: $path")
+        }
 
         if (deleteRelated) {
             for (related in findRelatedMediaPaths(path)) {
@@ -158,46 +163,54 @@ object FileUtil {
         )
     }
 
+
     private fun deleteSinglePath(path: String): Boolean {
         if (path.isBlank()) return true
 
+        val normalizedPath = normalizeStoredPath(path)
+
         // 1) Absolute / local filesystem path
         runCatching {
-            val file = File(path)
+            val file = File(normalizedPath)
             if (file.exists()) {
                 if (file.isDirectory) {
-                    return file.deleteRecursively()
+                    if (file.deleteRecursively()) return true
+                } else {
+                    if (file.delete()) return true
+                    val canonical = runCatching { file.canonicalFile }.getOrNull()
+                    if (canonical != null && canonical != file && canonical.exists()) {
+                        if (canonical.delete()) return true
+                    }
                 }
-                if (file.delete()) return true
-                val canonical = runCatching { file.canonicalFile }.getOrNull()
-                if (canonical != null && canonical != file && canonical.exists()) {
-                    if (canonical.delete()) return true
-                }
-                return false
+                // Public Downloads files can still be removed via MediaStore /
+                // DocumentsContract even when direct File.delete() is denied.
+                if (deleteViaMediaStore(file.absolutePath)) return true
+                if (deleteViaPrimaryDocumentsProvider(file.absolutePath)) return true
+                return !file.exists()
             } else if (
-                !path.startsWith("content:", ignoreCase = true) &&
-                    !path.startsWith("file:", ignoreCase = true)
+                !normalizedPath.startsWith("content:", ignoreCase = true) &&
+                    !normalizedPath.startsWith("file:", ignoreCase = true)
             ) {
-                // Non-URI path that does not exist: already gone.
+                // Path may still be indexed by MediaStore even if File.exists() is false.
+                if (deleteViaMediaStore(normalizedPath)) return true
+                if (deleteViaPrimaryDocumentsProvider(normalizedPath)) return true
                 return true
             }
         }
 
         // 2) file:// URI
         runCatching {
-            val uri = Uri.parse(path)
+            val uri = Uri.parse(normalizedPath)
             if (uri.scheme.equals("file", ignoreCase = true)) {
                 val filePath = uri.path ?: return@runCatching
-                val file = File(filePath)
-                if (!file.exists()) return true
-                return if (file.isDirectory) file.deleteRecursively() else file.delete()
+                return deleteSinglePath(filePath)
             }
         }
 
         // 3) content:// document URI
         val contentResult =
             runCatching {
-                val uri = Uri.parse(path)
+                val uri = Uri.parse(normalizedPath)
                 if (!uri.scheme.equals("content", ignoreCase = true)) {
                     return@runCatching null
                 }
@@ -206,6 +219,9 @@ object FileUtil {
                     runCatching { DocumentsContract.deleteDocument(context.contentResolver, uri) }
                         .getOrNull()
                 if (deletedByContract == true) return@runCatching true
+
+                // Tree child URIs sometimes need a document URI rebuild.
+                if (deleteViaTreeDocumentUri(uri)) return@runCatching true
 
                 val doc = DocumentFile.fromSingleUri(context, uri)
                 if (doc == null) {
@@ -222,7 +238,147 @@ object FileUtil {
                 .getOrNull()
         if (contentResult != null) return contentResult
 
+        // Final MediaStore attempt for opaque paths.
+        if (deleteViaMediaStore(normalizedPath)) return true
         return false
+    }
+
+    private fun normalizeStoredPath(path: String): String {
+        val trimmed = path.trim()
+        if (trimmed.startsWith("file:", ignoreCase = true)) {
+            return Uri.parse(trimmed).path?.takeIf { it.isNotBlank() } ?: trimmed
+        }
+        return trimmed
+    }
+
+    private fun deleteViaMediaStore(absolutePath: String): Boolean {
+        if (absolutePath.isBlank() || absolutePath.startsWith("content:", ignoreCase = true)) {
+            return false
+        }
+        val file = File(absolutePath)
+        val resolver = context.contentResolver
+        val collections =
+            buildList {
+                add(MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
+                add(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI)
+                add(MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                add(MediaStore.Files.getContentUri("external"))
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    add(MediaStore.Downloads.EXTERNAL_CONTENT_URI)
+                }
+            }
+
+        // Legacy DATA column match (works on many OEM builds, including for app-owned media).
+        for (collection in collections) {
+            val deleted =
+                runCatching {
+                        resolver.delete(
+                            collection,
+                            MediaStore.MediaColumns.DATA + "=?",
+                            arrayOf(file.absolutePath),
+                        )
+                    }
+                    .getOrDefault(0)
+            if (deleted > 0) return true
+        }
+
+        // Android 10+ preferred lookup by relative path + display name.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val relative = relativePathForMediaStore(file) ?: return false
+            val displayName = file.name
+            if (displayName.isBlank()) return false
+            val selection =
+                MediaStore.MediaColumns.RELATIVE_PATH +
+                    "=? AND " +
+                    MediaStore.MediaColumns.DISPLAY_NAME +
+                    "=?"
+            for (collection in collections) {
+                val deleted =
+                    runCatching {
+                            resolver.delete(collection, selection, arrayOf(relative, displayName))
+                        }
+                        .getOrDefault(0)
+                if (deleted > 0) return true
+
+                // Some providers keep a trailing-slash difference on RELATIVE_PATH.
+                val altRelative =
+                    if (relative.endsWith("/")) relative.dropLast(1) else "$relative/"
+                val altDeleted =
+                    runCatching {
+                            resolver.delete(
+                                collection,
+                                selection,
+                                arrayOf(altRelative, displayName),
+                            )
+                        }
+                        .getOrDefault(0)
+                if (altDeleted > 0) return true
+            }
+        }
+        return false
+    }
+
+    private fun relativePathForMediaStore(file: File): String? {
+        val absolute =
+            runCatching { file.canonicalFile.absolutePath }.getOrDefault(file.absolutePath)
+        val publicRoot = Environment.getExternalStorageDirectory().absolutePath.trimEnd('/', '\\')
+        if (!absolute.startsWith(publicRoot)) return null
+        val relativeFile = absolute.removePrefix(publicRoot).trimStart('/', '\\')
+        val parent = relativeFile.substringBeforeLast('/', missingDelimiterValue = "")
+        if (parent.isBlank()) return ""
+        return parent.replace('\\', '/') + "/"
+    }
+
+    private fun deleteViaPrimaryDocumentsProvider(absolutePath: String): Boolean {
+        val relative = relativePathForMediaStore(File(absolutePath)) ?: return false
+        val displayName = File(absolutePath).name
+        if (displayName.isBlank()) return false
+        val documentId =
+            "primary:" +
+                (relative.trimEnd('/') + "/" + displayName).trimStart('/').replace('\\', '/')
+        val uri =
+            DocumentsContract.buildDocumentUri(
+                "com.android.externalstorage.documents",
+                documentId,
+            )
+        val deleted =
+            runCatching { DocumentsContract.deleteDocument(context.contentResolver, uri) }
+                .getOrNull()
+        if (deleted == true) return true
+
+        // Fallback: tree URI under primary Download/Documents.
+        val treeRoots = listOf("primary:Download", "primary:Downloads", "primary:Documents")
+        for (root in treeRoots) {
+            if (!documentId.startsWith(root, ignoreCase = true)) continue
+            val treeUri =
+                DocumentsContract.buildTreeDocumentUri(
+                    "com.android.externalstorage.documents",
+                    root,
+                )
+            val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
+            val ok =
+                runCatching { DocumentsContract.deleteDocument(context.contentResolver, docUri) }
+                    .getOrNull()
+            if (ok == true) return true
+        }
+        return false
+    }
+
+    private fun deleteViaTreeDocumentUri(uri: Uri): Boolean {
+        return runCatching {
+                if (!DocumentsContract.isDocumentUri(context, uri)) return@runCatching false
+                val docId = DocumentsContract.getDocumentId(uri)
+                val authority = uri.authority ?: return@runCatching false
+                if (uri.path?.contains("/tree/") == true) {
+                    val treeId = DocumentsContract.getTreeDocumentId(uri)
+                    val treeUri = DocumentsContract.buildTreeDocumentUri(authority, treeId)
+                    val rebuilt = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                    DocumentsContract.deleteDocument(context.contentResolver, rebuilt)
+                } else {
+                    false
+                }
+            }
+            .getOrDefault(false)
     }
 
     private fun documentUriExists(uri: Uri): Boolean =
@@ -265,15 +421,16 @@ object FileUtil {
 
     private fun findRelatedMediaPaths(path: String): List<String> {
         val related = mutableListOf<String>()
+        val normalizedPath = normalizeStoredPath(path)
 
         // Filesystem siblings with same basename.
         runCatching {
             val file =
                 when {
-                    path.startsWith("file:", ignoreCase = true) ->
-                        File(Uri.parse(path).path ?: return@runCatching)
-                    path.startsWith("content:", ignoreCase = true) -> return@runCatching
-                    else -> File(path)
+                    normalizedPath.startsWith("file:", ignoreCase = true) ->
+                        File(Uri.parse(normalizedPath).path ?: return@runCatching)
+                    normalizedPath.startsWith("content:", ignoreCase = true) -> return@runCatching
+                    else -> File(normalizedPath)
                 }
             val parent = file.parentFile ?: return@runCatching
             if (!parent.isDirectory) return@runCatching
@@ -291,7 +448,7 @@ object FileUtil {
 
         // content URI siblings under the same parent document (when available).
         runCatching {
-            val uri = Uri.parse(path)
+            val uri = Uri.parse(normalizedPath)
             if (!uri.scheme.equals("content", ignoreCase = true)) return@runCatching
             val doc = DocumentFile.fromSingleUri(context, uri) ?: return@runCatching
             val name = doc.name ?: return@runCatching

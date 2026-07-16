@@ -46,8 +46,8 @@ fun RemoveItemDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    onDismissRequest()
                     onRemoveConfirm(deleteFile)
+                    onDismissRequest()
                 }
             ) {
                 Text(text = stringResource(R.string.confirm))

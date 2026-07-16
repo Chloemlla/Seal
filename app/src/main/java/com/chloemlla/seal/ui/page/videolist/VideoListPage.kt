@@ -535,8 +535,11 @@ fun VideoListPage(viewModel: VideoListViewModel = koinViewModel(), onNavigateBac
             info = currentVideoInfo,
             deleteFile = deleteFile,
             onDeleteFileToggled = { deleteFile = it },
-            onRemoveConfirm = {
-                viewModel.deleteDownloadHistory(listOf(currentVideoInfo), deleteFile = deleteFile)
+            onRemoveConfirm = { shouldDeleteFile ->
+                viewModel.deleteDownloadHistory(
+                    listOf(currentVideoInfo),
+                    deleteFile = shouldDeleteFile,
+                )
                 deleteFile = false
             },
             onDismissRequest = {
