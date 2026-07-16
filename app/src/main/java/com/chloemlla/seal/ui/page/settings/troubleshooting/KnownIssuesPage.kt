@@ -88,7 +88,7 @@ fun KnownIssuesPage(
                     links =
                         listOf(
                             "Latest Seal releases" to
-                                "https://github.com/JunkFood02/Seal/releases/latest"
+                                "https://github.com/Chloemlla/Seal/releases/latest"
                         ),
                 ),
                 KnownIssue(
@@ -125,7 +125,7 @@ fun KnownIssuesPage(
                     )
                     TextButton(
                         onClick = {
-                            uriHandler.openUri("https://github.com/JunkFood02/Seal/issues")
+                            uriHandler.openUri("https://github.com/Chloemlla/Seal/issues")
                         },
                         modifier = Modifier.padding(start = 8.dp, bottom = 8.dp),
                     ) {
