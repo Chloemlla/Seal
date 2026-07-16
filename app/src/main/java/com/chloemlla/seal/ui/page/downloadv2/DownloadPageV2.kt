@@ -1,7 +1,9 @@
 package com.chloemlla.seal.ui.page.downloadv2
 
+import android.Manifest
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.animateTo
 import androidx.compose.animation.rememberSplineBasedDecay
@@ -89,6 +91,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionStatus
+import com.google.accompanist.permissions.rememberPermissionState
 import com.chloemlla.seal.R
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.Task
@@ -115,15 +120,20 @@ import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel
 import com.chloemlla.seal.ui.page.downloadv2.configure.FormatPage
 import com.chloemlla.seal.ui.page.downloadv2.configure.PlaylistSelectionPage
 import com.chloemlla.seal.ui.page.downloadv2.configure.PreferencesMock
+import com.chloemlla.seal.ui.page.download.NotificationPermissionDialog
 import com.chloemlla.seal.ui.svg.DynamicColorImageVectors
 import com.chloemlla.seal.ui.svg.drawablevectors.download
 import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.DownloadType
 import com.chloemlla.seal.util.PreferenceUtil
+import com.chloemlla.seal.util.NOTIFICATION
 import com.chloemlla.seal.util.FileUtil
 import com.chloemlla.seal.util.getErrorReport
 import com.chloemlla.seal.util.makeToast
+import com.chloemlla.seal.util.NotificationUtil
+import com.chloemlla.seal.util.PreferenceUtil.getBoolean
+import com.chloemlla.seal.util.PreferenceUtil.updateBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -195,7 +205,7 @@ sealed interface UiAction {
     data class CopyErrorReport(val throwable: Throwable) : UiAction
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun DownloadPageV2(
     modifier: Modifier = Modifier,
@@ -209,12 +219,45 @@ fun DownloadPageV2(
     val scope = rememberCoroutineScope()
         val uriHandler = LocalUriHandler.current
 
+    var showNotificationPermissionDialog by rememberSaveable { mutableStateOf(false) }
+    var openSheetAfterPermissionPrompt by rememberSaveable { mutableStateOf(false) }
+    var hasPromptedNotificationPermission by rememberSaveable { mutableStateOf(false) }
+    val notificationPermission =
+        if (Build.VERSION.SDK_INT >= 33) {
+            rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            null
+        }
+
+    fun openDownloadSheet() {
+        dialogViewModel.postAction(Action.ShowSheet())
+    }
+
+    fun onDownloadClicked() {
+        view.slightHapticFeedback()
+        val notificationsPreferred = NOTIFICATION.getBoolean()
+        val permissionDenied =
+            Build.VERSION.SDK_INT >= 33 &&
+                notificationPermission?.status is PermissionStatus.Denied &&
+                !NotificationUtil.areNotificationsEnabled()
+        if (
+            notificationsPreferred &&
+                permissionDenied &&
+                !hasPromptedNotificationPermission
+        ) {
+            hasPromptedNotificationPermission = true
+            openSheetAfterPermissionPrompt = true
+            showNotificationPermissionDialog = true
+            return
+        }
+        openDownloadSheet()
+    }
+
     DownloadPageImplV2(
         modifier = modifier,
         taskDownloadStateMap = downloader.getTaskStateMap(),
         downloadCallback = {
-            view.slightHapticFeedback()
-            dialogViewModel.postAction(Action.ShowSheet())
+            onDownloadClicked()
         },
         onMenuOpen = onMenuOpen,
     ) { task, action ->
@@ -318,6 +361,27 @@ fun DownloadPageV2(
         }
 
         DownloadDialogViewModel.SelectionState.Idle -> {}
+    }
+
+    if (showNotificationPermissionDialog) {
+        NotificationPermissionDialog(
+            onDismissRequest = {
+                showNotificationPermissionDialog = false
+                if (openSheetAfterPermissionPrompt) {
+                    openSheetAfterPermissionPrompt = false
+                    openDownloadSheet()
+                }
+            },
+            onPermissionGranted = {
+                notificationPermission?.launchPermissionRequest()
+                NOTIFICATION.updateBoolean(true)
+                showNotificationPermissionDialog = false
+                if (openSheetAfterPermissionPrompt) {
+                    openSheetAfterPermissionPrompt = false
+                    openDownloadSheet()
+                }
+            },
+        )
     }
 }
 
