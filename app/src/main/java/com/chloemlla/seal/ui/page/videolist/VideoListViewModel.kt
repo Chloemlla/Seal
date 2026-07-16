@@ -13,6 +13,7 @@ import com.chloemlla.seal.database.backup.BackupUtil
 import com.chloemlla.seal.database.backup.BackupUtil.decodeToBackup
 import com.chloemlla.seal.database.objects.DownloadedVideoInfo
 import com.chloemlla.seal.util.DatabaseUtil
+import com.chloemlla.seal.util.FileUtil
 import com.chloemlla.seal.util.FileUtil.getFileSize
 import com.chloemlla.seal.util.ToastUtil
 import kotlinx.coroutines.Dispatchers
