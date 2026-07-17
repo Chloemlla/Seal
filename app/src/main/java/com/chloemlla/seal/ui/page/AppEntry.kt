@@ -68,6 +68,7 @@ import com.chloemlla.seal.ui.page.settings.troubleshooting.TroubleShootingPage
 import com.chloemlla.seal.ui.page.settings.troubleshooting.KnownIssuesPage
 import com.chloemlla.seal.ui.page.videolist.VideoListPage
 import com.chloemlla.seal.util.PreferenceUtil.getInt
+import com.chloemlla.seal.util.OSS_NOTICE_DIALOG
 import com.chloemlla.seal.util.WELCOME_DIALOG
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -80,16 +81,12 @@ private val TopDestinations =
 @Composable
 fun AppEntry(dialogViewModel: DownloadDialogViewModel) {
     var showOpenSourceNotice by rememberSaveable {
-        mutableStateOf(WELCOME_DIALOG.getInt() > 0)
+        mutableStateOf(OSS_NOTICE_DIALOG.getInt() > 0)
     }
 
-    // Show the open-source disclosure first; leave WELCOME_DIALOG for the
-    // subsequent onboarding flow (or for re-entry from About) to clear.
+    // OSS notice is a one-time first-run disclosure. Onboarding still uses WELCOME_DIALOG.
     if (showOpenSourceNotice) {
-        OpenSourceNoticePage(
-            onFinished = { showOpenSourceNotice = false },
-            markCompletedOnFinish = false,
-        )
+        OpenSourceNoticePage(onFinished = { showOpenSourceNotice = false })
         return
     }
 

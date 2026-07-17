@@ -520,5 +520,38 @@
     <string name="known_issue_ytdlp_discussion">yt-dlp discussion</string>
     <string name="known_issue_latest_seal_releases">Latest Seal releases</string>
     <string name="known_issue_termux_notice">Termux notice</string>
+
+    <string name="oss_notice_title">Open source notice</string>
+    <string name="oss_notice_intro">Please read this notice before using Seal. It covers the official source, free distribution, project license, and third-party credits.</string>
+    <string name="oss_notice_repo_title">Official open-source repository</string>
+    <string name="oss_notice_repo_body">Get Seal only from the official GitHub repository. That is the only source we maintain.</string>
+    <string name="oss_notice_free_title">Permanently free - beware of scams</string>
+    <string name="oss_notice_free_body">Seal is permanently free and open source. Do not buy paid, cracked, or "VIP" redistributions. Anyone charging money for this app is likely scamming you.</string>
+    <string name="oss_notice_project_license_title">Project license</string>
+    <string name="oss_notice_project_license_body">This project is released under %1$s. You may use, study, share, and improve it under that license.</string>
+    <string name="oss_notice_credits_title">Third-party dependencies</string>
+    <string name="oss_notice_credits_body">Seal stands on the shoulders of these open-source projects and resources. Tap an item to open its homepage.</string>
+    <string name="oss_notice_continue">Continue</string>
+    <string name="credit_ytdlp_desc">Command-line media downloader that powers Seal downloads</string>
+    <string name="credit_readyou_desc">Open-source Android RSS reader that inspired parts of Seal's UI</string>
+    <string name="credit_youtubedl_android_desc">Android wrapper that embeds yt-dlp for mobile apps</string>
+    <string name="credit_termux_desc">Android terminal environment used by related tooling and packaging ideas</string>
+    <string name="credit_ffmpeg_desc">Multimedia framework for decoding, encoding, and post-processing</string>
+    <string name="credit_jetpack_desc">Android Jetpack libraries used across the app UI and architecture</string>
+    <string name="credit_kotlin_desc">Primary programming language for this project</string>
+    <string name="credit_dvd_desc">Reference Android client for youtube-dl based download flows</string>
+    <string name="credit_accompanist_desc">Compose helper libraries for system UI and permissions</string>
+    <string name="credit_material3_desc">Material Design 3 guidelines and Compose components</string>
+    <string name="credit_material_icons_desc">Material icon set used throughout the interface</string>
+    <string name="credit_monet_desc">Dynamic color utilities for Material You theming</string>
+    <string name="credit_material_color_desc">Material color algorithms used for palette generation</string>
+    <string name="credit_mmkv_desc">High-performance key-value storage for preferences</string>
+    <string name="credit_coil_desc">Image loading library for Compose</string>
+    <string name="credit_aria2_desc">Download utility used for external downloader integration</string>
+    <string name="credit_okhttp_desc">HTTP client used for network requests</string>
+    <string name="credit_material_motion_desc">Material motion transitions for Compose navigation</string>
+    <string name="credit_undraw_desc">Open illustration library used for decorative artwork</string>
+    <string name="credit_icons8_desc">Source of the application icon assets</string>
+
 </resources>
 

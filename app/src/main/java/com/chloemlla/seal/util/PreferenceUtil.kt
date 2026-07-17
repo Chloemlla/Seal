@@ -52,6 +52,7 @@ const val FORMAT_SORTING = "format_sorting"
 const val SORTING_FIELDS = "sorting_fields"
 
 const val WELCOME_DIALOG = "welcome_dialog"
+const val OSS_NOTICE_DIALOG = "oss_notice_dialog"
 const val VIDEO_DIRECTORY = "download_dir"
 const val AUDIO_DIRECTORY = "audio_dir"
 const val COMMAND_DIRECTORY = "command_directory"
@@ -239,6 +240,7 @@ private val IntPreferenceDefaults =
         PALETTE_STYLE to 0,
         DARK_THEME_VALUE to DarkThemePreference.FOLLOW_SYSTEM,
         WELCOME_DIALOG to 1,
+        OSS_NOTICE_DIALOG to 1,
         AUDIO_CONVERSION_FORMAT to NOT_SPECIFIED,
         VIDEO_QUALITY to NOT_SPECIFIED,
         VIDEO_FORMAT to FORMAT_QUALITY,
@@ -270,6 +272,7 @@ object PreferenceStorageKeys {
             YT_DLP_UPDATE_TIME,
             SHOW_SPONSOR_MSG,
             WELCOME_DIALOG,
+            OSS_NOTICE_DIALOG,
         )
 
     fun isRuntimeKey(key: String): Boolean = key in runtimeKeys
@@ -423,6 +426,7 @@ object PreferenceUtil {
             DOWNLOAD_TYPE,
             YT_DLP_UPDATE_CHANNEL,
             WELCOME_DIALOG,
+            OSS_NOTICE_DIALOG,
             SHOW_SPONSOR_MSG,
             LANGUAGE,
         )

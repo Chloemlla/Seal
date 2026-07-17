@@ -502,4 +502,37 @@
     <string name="known_issue_ytdlp_discussion">yt-dlp 讨论</string>
     <string name="known_issue_latest_seal_releases">最新 Seal 发布</string>
     <string name="known_issue_termux_notice">Termux 说明</string>
+
+    <string name="oss_notice_title">开源声明</string>
+    <string name="oss_notice_intro">使用 Seal 前请先阅读本声明。内容包括官方开源地址、永久免费说明、本项目协议，以及对第三方依赖的鸣谢。</string>
+    <string name="oss_notice_repo_title">官方开源地址</string>
+    <string name="oss_notice_repo_body">请仅从官方 GitHub 仓库获取 Seal。这是我们维护的唯一来源。</string>
+    <string name="oss_notice_free_title">永久免费，谨防上当受骗</string>
+    <string name="oss_notice_free_body">Seal 永久免费且开源。请勿购买任何收费版、破解版或所谓“VIP 分发”。向你收费的第三方极有可能是诈骗。</string>
+    <string name="oss_notice_project_license_title">本项目开源协议</string>
+    <string name="oss_notice_project_license_body">本项目以 %1$s 发布。你可以在该协议允许的范围内使用、学习、分享和改进本项目。</string>
+    <string name="oss_notice_credits_title">第三方依赖鸣谢</string>
+    <string name="oss_notice_credits_body">Seal 离不开这些开源项目与资源。点击条目可打开对应主页。</string>
+    <string name="oss_notice_continue">继续</string>
+    <string name="credit_ytdlp_desc">为 Seal 下载提供核心能力的命令行媒体下载器</string>
+    <string name="credit_readyou_desc">开源 Android RSS 阅读器，启发了 Seal 部分界面设计</string>
+    <string name="credit_youtubedl_android_desc">在 Android 应用中嵌入 yt-dlp 的封装库</string>
+    <string name="credit_termux_desc">Android 终端环境，相关工具链与打包思路有所参考</string>
+    <string name="credit_ffmpeg_desc">用于解码、编码与后处理的多媒体框架</string>
+    <string name="credit_jetpack_desc">覆盖应用界面与架构的 Android Jetpack 组件库</string>
+    <string name="credit_kotlin_desc">本项目主要使用的编程语言</string>
+    <string name="credit_dvd_desc">基于 youtube-dl 下载流程的 Android 参考实现</string>
+    <string name="credit_accompanist_desc">Compose 系统 UI 与权限相关辅助库</string>
+    <string name="credit_material3_desc">Material Design 3 设计规范与 Compose 组件</string>
+    <string name="credit_material_icons_desc">界面中使用的 Material 图标集</string>
+    <string name="credit_monet_desc">用于 Material You 动态取色的工具库</string>
+    <string name="credit_material_color_desc">用于生成调色板的 Material 颜色算法</string>
+    <string name="credit_mmkv_desc">用于偏好设置的高性能键值存储</string>
+    <string name="credit_coil_desc">Compose 图像加载库</string>
+    <string name="credit_aria2_desc">用于外部下载器集成的下载工具</string>
+    <string name="credit_okhttp_desc">用于网络请求的 HTTP 客户端</string>
+    <string name="credit_material_motion_desc">Compose 导航中的 Material 动效库</string>
+    <string name="credit_undraw_desc">用于装饰插画的开放图库</string>
+    <string name="credit_icons8_desc">应用图标资源来源</string>
+
 </resources>

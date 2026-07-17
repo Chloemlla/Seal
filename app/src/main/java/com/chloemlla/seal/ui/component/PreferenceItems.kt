@@ -781,11 +781,13 @@ fun PreferenceSwitchWithContainer(
 @Composable
 fun CreditItem(
     title: String,
+    author: String? = null,
+    description: String? = null,
     license: String? = null,
     enabled: Boolean = true,
     onClick: () -> Unit = {},
 ) {
-    Surface(modifier = Modifier.clickable { onClick() }) {
+    Surface(modifier = Modifier.clickable(enabled = enabled) { onClick() }) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -798,13 +800,33 @@ fun CreditItem(
                         style = typography.titleMedium,
                         color = colorScheme.onSurface.applyOpacity(enabled),
                     )
+                    if (!author.isNullOrBlank()) {
+                        Text(
+                            text = author,
+                            color = colorScheme.onSurfaceVariant.applyOpacity(enabled),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = typography.bodyMedium,
+                        )
+                    }
+                    if (!description.isNullOrBlank()) {
+                        Text(
+                            text = description,
+                            color = colorScheme.onSurfaceVariant.applyOpacity(enabled),
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            style = typography.bodySmall,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
                     license?.let {
                         Text(
                             text = it,
-                            color = colorScheme.onSurfaceVariant.applyOpacity(enabled),
+                            color = colorScheme.outline.applyOpacity(enabled),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            style = typography.bodyMedium,
+                            style = typography.labelMedium,
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     }
                 }
