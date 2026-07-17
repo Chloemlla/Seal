@@ -127,19 +127,10 @@ object NotificationUtil {
         text: String? = null,
         intent: PendingIntent? = null,
     ) {
-        Log.d(TAG, "finishNotification: ")
+        // Keep signature for call sites, but dismiss the progress notification instead of
+        // replacing it with a completion entry that stays in the shade until tapped.
+        Log.d(TAG, "finishNotification: cancel $notificationId")
         notificationManager.cancel(notificationId)
-        if (!NOTIFICATION.getBoolean()) return
-
-        val builder =
-            NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stat_seal)
-                .setContentText(text)
-                .setOngoing(false)
-                .setAutoCancel(true)
-        title?.let { builder.setContentTitle(title) }
-        intent?.let { builder.setContentIntent(intent) }
-        notificationManager.notify(notificationId, builder.build())
     }
 
     /**
@@ -171,18 +162,8 @@ object NotificationUtil {
         title: String? = null,
         text: String? = null,
     ) {
-        //        notificationManager.cancel(notificationId)
-        val builder =
-            NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stat_seal)
-                .setContentText(text)
-                .setProgress(0, 0, false)
-                .setAutoCancel(true)
-                .setOngoing(false)
-                .setStyle(null)
-        title?.let { builder.setContentTitle(title) }
-
-        notificationManager.notify(notificationId, builder.build())
+        Log.d(TAG, "finishNotificationForCustomCommands: cancel $notificationId")
+        notificationManager.cancel(notificationId)
     }
 
     fun makeServiceNotification(intent: PendingIntent, text: String? = null): Notification {
