@@ -533,7 +533,7 @@
     <string name="oss_notice_credits_body">Seal stands on the shoulders of these open-source projects and resources. Tap an item to open its homepage.</string>
     <string name="oss_notice_continue">Continue</string>
     <string name="credit_ytdlp_desc">Command-line media downloader that powers Seal downloads</string>
-    <string name="credit_readyou_desc">Open-source Android RSS reader that inspired parts of Seal's UI</string>
+    <string name="credit_readyou_desc">Open-source Android RSS reader that inspired parts of Seal\'s UI</string>
     <string name="credit_youtubedl_android_desc">Android wrapper that embeds yt-dlp for mobile apps</string>
     <string name="credit_termux_desc">Android terminal environment used by related tooling and packaging ideas</string>
     <string name="credit_ffmpeg_desc">Multimedia framework for decoding, encoding, and post-processing</string>
