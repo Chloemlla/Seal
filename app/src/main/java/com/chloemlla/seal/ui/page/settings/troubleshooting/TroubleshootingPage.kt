@@ -90,7 +90,7 @@ fun TroubleShootingPage(
 
                     val knownIssueUrlYtdlp = "https://github.com/yt-dlp/yt-dlp/issues/3766"
                     PreferenceItem(
-                        title = "yt-dlp Issue Tracker",
+                        title = stringResource(R.string.ytdlp_issue_tracker),
                         description = null,
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         onClick = { uriHandler.openUri(knownIssueUrlYtdlp) },

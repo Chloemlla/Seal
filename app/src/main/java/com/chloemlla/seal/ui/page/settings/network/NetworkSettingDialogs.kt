@@ -83,7 +83,7 @@ fun RateLimitDialog(onDismissRequest: () -> Unit) {
                         if (it.isDigitsOnly()) maxRate = it
                         isError = false
                     },
-                    trailingIcon = { Text("K") },
+                    trailingIcon = { Text(stringResource(R.string.rate_unit_k)) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 )
             }

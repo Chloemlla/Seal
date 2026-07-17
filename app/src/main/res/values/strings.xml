@@ -476,7 +476,49 @@
     <string name="external_whitelist_mode_desc">Only packages listed below may delegate downloads to Seal.</string>
     <string name="external_caller_whitelist">Allowed packages</string>
     <string name="external_caller_whitelist_desc">One package name per line (for example com.example.browser)</string>
+    <string name="ytdlp_issue_tracker">yt-dlp issue tracker</string>
+    <string name="package_name">Package name</string>
+    <string name="url_label">URL</string>
+    <string name="rate_unit_k">K</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_whats_new">What\'s new in this fork</string>
+    <string name="onboarding_whats_new_desc">Review how Chloemlla/Seal improves on the upstream project</string>
+    <string name="onboarding_page_welcome_title">Welcome to Seal</string>
+    <string name="onboarding_page_welcome_body">This is the Chloemlla fork of Seal. The next pages explain what changed versus upstream and how to get started quickly.</string>
+    <string name="onboarding_page_identity_title">A separate app identity</string>
+    <string name="onboarding_page_identity_body">Package id is com.chloemlla.seal (debug/preview variants included). It is not the upstream F-Droid package, and release links point to Chloemlla/Seal.</string>
+    <string name="onboarding_page_platform_title">Modern Android platform</string>
+    <string name="onboarding_page_platform_body">Built for current Android releases (compile/target SDK 37) with an updated toolchain, dependency stack, and notification/progress behavior.</string>
+    <string name="onboarding_page_storage_title">Safer storage defaults</string>
+    <string name="onboarding_page_storage_body">Normal downloads use scoped storage and no longer depend on MANAGE_EXTERNAL_STORAGE. Preferences use a faster multi-store layout, and history file cleanup is more reliable.</string>
+    <string name="onboarding_page_delegate_title">Third-party download delegation</string>
+    <string name="onboarding_page_delegate_body">Other apps can hand links to Seal via share, open URL, or DOWNLOAD intents. Seal always runs the download itself and can report status back when allowed in settings.</string>
+    <string name="onboarding_page_ytdlp_title">Stable yt-dlp packaging</string>
+    <string name="onboarding_page_ytdlp_body">The app ships the latest Stable yt-dlp binary at build time and defaults the in-app update channel to Stable for more predictable downloads.</string>
+    <string name="onboarding_page_security_title">Security and privacy hardening</string>
+    <string name="onboarding_page_security_body">External entry points are validated more carefully. Third-party callers stay under your control with a master switch, optional auto-start, and package whitelist.</string>
+    <string name="onboarding_page_usage_title">Quick start tips</string>
+    <string name="onboarding_page_usage_body">A few essentials before your first download:</string>
+    <string name="known_issue_app_stop_title">Why does this app suddenly stop working?</string>
+    <string name="known_issue_app_stop_solution">This is usually a site anti-bot change, outdated yt-dlp, or a blocked IP. Update yt-dlp first from Troubleshooting, then retry. For Instagram / Facebook / Twitter / YouTube, generate and enable cookies.</string>
+    <string name="known_issue_social_fail_title">Instagram, Facebook, and Twitter downloads fail</string>
+    <string name="known_issue_social_fail_solution">Generate and enable cookies for these sites in Settings → Network → Cookies, then retry the download with cookies enabled.</string>
+    <string name="known_issue_youtube_bot_title">[youtube] Sign in to confirm you\'re not a bot / HTTP Error 403: Forbidden</string>
+    <string name="known_issue_youtube_bot_solution">Your current IP was likely blocked by YouTube. Change network/IP (or VPN), update yt-dlp, and try enabling cookies if needed.</string>
+    <string name="known_issue_tiktok_post_title">TikTok postprocessing: Error opening input files: Invalid data found when processing input</string>
+    <string name="known_issue_tiktok_post_solution">This is often IP / CDN related. Change your IP and retry, or wait for an upstream yt-dlp / site-side fix.</string>
+    <string name="known_issue_python_title">Python error / Python version is not supported</string>
+    <string name="known_issue_python_solution">Update Seal to the latest release (v1.13.1 or newer) and update yt-dlp.</string>
+    <string name="known_issue_libandroid_title">Cannot link executable: library \"libandroid-support.so\" not found</string>
+    <string name="known_issue_libandroid_solution">Reinstall the app, or clear app data and try again.</string>
+    <string name="known_issue_ffmpeg_oxygen_title">--ffmpeg-location error on OxygenOS 15 beta</string>
+    <string name="known_issue_ffmpeg_oxygen_solution">On some OnePlus / OPPO Android 15 builds, background native processes are killed by the system. Wait for a system update from the vendor.</string>
+    <string name="known_issue_open_related_discussion">Open related discussion</string>
+    <string name="known_issue_ytdlp_discussion">yt-dlp discussion</string>
+    <string name="known_issue_latest_seal_releases">Latest Seal releases</string>
+    <string name="known_issue_termux_notice">Termux notice</string>
 </resources>
-
-
 

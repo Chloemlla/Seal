@@ -3,6 +3,7 @@ package com.chloemlla.seal.ui.common
 object Route {
 
     const val HOME = "home"
+    const val ONBOARDING = "onboarding"
     const val DOWNLOADS = "download_history"
     const val PLAYLIST = "playlist"
     const val SETTINGS = "settings"

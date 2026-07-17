@@ -72,6 +72,7 @@ fun AboutPage(
     onNavigateToCreditsPage: () -> Unit,
     onNavigateToUpdatePage: () -> Unit,
     onNavigateToDonatePage: () -> Unit,
+    onNavigateToOnboarding: () -> Unit = {},
 ) {
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
@@ -199,7 +200,19 @@ fun AboutPage(
                     }
                 }
                 item {
-                    PreferenceItem(title = "Package name", description = context.packageName) {
+                    PreferenceItem(
+                        title = stringResource(R.string.onboarding_whats_new),
+                        description = stringResource(R.string.onboarding_whats_new_desc),
+                        icon = Icons.Outlined.AutoAwesome,
+                    ) {
+                        onNavigateToOnboarding()
+                    }
+                }
+                item {
+                    PreferenceItem(
+                        title = stringResource(R.string.package_name),
+                        description = context.packageName,
+                    ) {
                         context.copyToClipboard(context.packageName)
                         ToastUtil.makeToast(R.string.info_copied)
                     }

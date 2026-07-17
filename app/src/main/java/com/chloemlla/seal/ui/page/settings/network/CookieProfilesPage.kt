@@ -340,7 +340,7 @@ fun CookieGeneratorDialog(
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     value = url,
-                    label = { Text("URL") },
+                    label = { Text(stringResource(R.string.url_label)) },
                     onValueChange = { cookiesViewModel.updateUrl(it) },
                     trailingIcon = {
                         PasteFromClipBoardButton {

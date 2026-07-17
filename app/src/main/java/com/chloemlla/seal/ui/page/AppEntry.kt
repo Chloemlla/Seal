@@ -67,6 +67,8 @@ import com.chloemlla.seal.ui.page.settings.network.WebViewPage
 import com.chloemlla.seal.ui.page.settings.troubleshooting.TroubleShootingPage
 import com.chloemlla.seal.ui.page.settings.troubleshooting.KnownIssuesPage
 import com.chloemlla.seal.ui.page.videolist.VideoListPage
+import com.chloemlla.seal.util.PreferenceUtil.getInt
+import com.chloemlla.seal.util.WELCOME_DIALOG
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -77,6 +79,19 @@ private val TopDestinations =
 
 @Composable
 fun AppEntry(dialogViewModel: DownloadDialogViewModel) {
+    var showOpenSourceNotice by rememberSaveable {
+        mutableStateOf(WELCOME_DIALOG.getInt() > 0)
+    }
+
+    // Show the open-source disclosure first; leave WELCOME_DIALOG for the
+    // subsequent onboarding flow (or for re-entry from About) to clear.
+    if (showOpenSourceNotice) {
+        OpenSourceNoticePage(
+            onFinished = { showOpenSourceNotice = false },
+            markCompletedOnFinish = false,
+        )
+        return
+    }
 
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -139,6 +154,15 @@ fun AppEntry(dialogViewModel: DownloadDialogViewModel) {
                 )
             },
         ) {
+            LaunchedEffect(Unit) {
+                if (WELCOME_DIALOG.getInt() > 0 &&
+                    navController.currentDestination?.route != Route.ONBOARDING) {
+                    navController.navigate(Route.ONBOARDING) {
+                        launchSingleTop = true
+                    }
+                }
+            }
+
             NavHost(
                 modifier = Modifier.align(Alignment.Center),
                 navController = navController,
@@ -151,6 +175,20 @@ fun AppEntry(dialogViewModel: DownloadDialogViewModel) {
                             view.slightHapticFeedback()
                             scope.launch { drawerState.open() }
                         },
+                    )
+                }
+                animatedComposable(Route.ONBOARDING) {
+                    OnboardingPage(
+                        onFinished = {
+                            if (navController.previousBackStackEntry != null) {
+                                navController.popBackStack()
+                            } else {
+                                navController.navigate(Route.HOME) {
+                                    popUpTo(Route.ONBOARDING) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
                     )
                 }
                 animatedComposable(Route.DOWNLOADS) { VideoListPage { onNavigateBack() } }
@@ -214,6 +252,7 @@ fun NavGraphBuilder.settingsGraph(
                 onNavigateToCreditsPage = { onNavigateTo(Route.CREDITS) },
                 onNavigateToUpdatePage = { onNavigateTo(Route.AUTO_UPDATE) },
                 onNavigateToDonatePage = { onNavigateTo(Route.DONATE) },
+                onNavigateToOnboarding = { onNavigateTo(Route.ONBOARDING) },
             )
         }
         animatedComposable(Route.DONATE) { SponsorsPage(onNavigateBack) }

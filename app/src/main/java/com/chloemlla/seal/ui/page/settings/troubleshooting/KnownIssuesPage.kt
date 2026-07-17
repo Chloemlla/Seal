@@ -13,7 +13,6 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -37,79 +36,63 @@ fun KnownIssuesPage(
 ) {
     val uriHandler = LocalUriHandler.current
     val issues =
-        remember {
-            listOf(
-                KnownIssue(
-                    title = "Why does this app suddenly stop working?",
-                    related = "Seal #1733",
-                    solution =
-                        "This is usually a site anti-bot change, outdated yt-dlp, or a blocked IP. " +
-                            "Update yt-dlp first from Troubleshooting, then retry. " +
-                            "For Instagram / Facebook / Twitter / YouTube, generate and enable cookies.",
-                    links =
-                        listOf(
-                            "Open related discussion" to
-                                "https://github.com/JunkFood02/Seal/issues"
-                        ),
-                ),
-                KnownIssue(
-                    title = "Instagram, Facebook, and Twitter downloads fail",
-                    related = "Seal #733",
-                    solution =
-                        "Generate and enable cookies for these sites in Settings → Network → Cookies, " +
-                            "then retry the download with cookies enabled.",
-                ),
-                KnownIssue(
-                    title =
-                        "[youtube] Sign in to confirm you’re not a bot / HTTP Error 403: Forbidden",
-                    related = "yt-dlp #10128",
-                    solution =
-                        "Your current IP was likely blocked by YouTube. Change network/IP (or VPN), " +
-                            "update yt-dlp, and try enabling cookies if needed.",
-                    links =
-                        listOf(
-                            "yt-dlp discussion" to
-                                "https://github.com/yt-dlp/yt-dlp/issues/10128"
-                        ),
-                ),
-                KnownIssue(
-                    title =
-                        "TikTok postprocessing: Error opening input files: Invalid data found when processing input",
-                    related = "Seal #1710",
-                    solution =
-                        "This is often IP / CDN related. Change your IP and retry, or wait for an " +
-                            "upstream yt-dlp / site-side fix.",
-                ),
-                KnownIssue(
-                    title = "Python error / Python version is not supported",
-                    related = "Seal #1729",
-                    solution =
-                        "Update Seal to the latest release (v1.13.1 or newer) and update yt-dlp.",
-                    links =
-                        listOf(
-                            "Latest Seal releases" to
-                                "https://github.com/Chloemlla/Seal/releases/latest"
-                        ),
-                ),
-                KnownIssue(
-                    title = "Cannot link executable: library \"libandroid-support.so\" not found",
-                    related = "Seal #1404",
-                    solution = "Reinstall the app, or clear app data and try again.",
-                ),
-                KnownIssue(
-                    title = "--ffmpeg-location error on OxygenOS 15 beta",
-                    related = "Seal #1837 / Termux #4219",
-                    solution =
-                        "On some OnePlus / OPPO Android 15 builds, background native processes " +
-                            "are killed by the system. Wait for a system update from the vendor.",
-                    links =
-                        listOf(
-                            "Termux notice" to
-                                "https://github.com/termux/termux-app/issues/4219"
-                        ),
-                ),
-            )
-        }
+        listOf(
+            KnownIssue(
+                title = stringResource(R.string.known_issue_app_stop_title),
+                related = "Seal #1733",
+                solution = stringResource(R.string.known_issue_app_stop_solution),
+                links =
+                    listOf(
+                        stringResource(R.string.known_issue_open_related_discussion) to
+                            "https://github.com/JunkFood02/Seal/issues"
+                    ),
+            ),
+            KnownIssue(
+                title = stringResource(R.string.known_issue_social_fail_title),
+                related = "Seal #733",
+                solution = stringResource(R.string.known_issue_social_fail_solution),
+            ),
+            KnownIssue(
+                title = stringResource(R.string.known_issue_youtube_bot_title),
+                related = "yt-dlp #10128",
+                solution = stringResource(R.string.known_issue_youtube_bot_solution),
+                links =
+                    listOf(
+                        stringResource(R.string.known_issue_ytdlp_discussion) to
+                            "https://github.com/yt-dlp/yt-dlp/issues/10128"
+                    ),
+            ),
+            KnownIssue(
+                title = stringResource(R.string.known_issue_tiktok_post_title),
+                related = "Seal #1710",
+                solution = stringResource(R.string.known_issue_tiktok_post_solution),
+            ),
+            KnownIssue(
+                title = stringResource(R.string.known_issue_python_title),
+                related = "Seal #1729",
+                solution = stringResource(R.string.known_issue_python_solution),
+                links =
+                    listOf(
+                        stringResource(R.string.known_issue_latest_seal_releases) to
+                            "https://github.com/Chloemlla/Seal/releases/latest"
+                    ),
+            ),
+            KnownIssue(
+                title = stringResource(R.string.known_issue_libandroid_title),
+                related = "Seal #1404",
+                solution = stringResource(R.string.known_issue_libandroid_solution),
+            ),
+            KnownIssue(
+                title = stringResource(R.string.known_issue_ffmpeg_oxygen_title),
+                related = "Seal #1837 / Termux #4219",
+                solution = stringResource(R.string.known_issue_ffmpeg_oxygen_solution),
+                links =
+                    listOf(
+                        stringResource(R.string.known_issue_termux_notice) to
+                            "https://github.com/termux/termux-app/issues/4219"
+                    ),
+            ),
+        )
 
     BasePreferencePage(
         modifier = modifier,
