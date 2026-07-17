@@ -15,10 +15,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.VolunteerActivism
-import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,12 +34,11 @@ import androidx.compose.ui.unit.dp
 import com.chloemlla.seal.R
 import com.chloemlla.seal.ui.component.CreditItem
 import com.chloemlla.seal.ui.page.settings.about.projectCredits
-import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.OSS_NOTICE_DIALOG
+import com.chloemlla.seal.util.PreferenceUtil
 
 private const val PROJECT_REPO_URL = "https://github.com/Chloemlla/Seal"
-private const val PROJECT_LICENSE_URL =
-    "https://github.com/Chloemlla/Seal/blob/main/LICENSE"
+private const val PROJECT_LICENSE_URL = "https://github.com/Chloemlla/Seal/blob/main/LICENSE"
 private const val PROJECT_LICENSE_NAME = "GNU General Public License v3.0"
 
 @Composable
@@ -96,7 +95,7 @@ fun OpenSourceNoticePage(
 
             item {
                 NoticeSectionCard(
-                    icon = { Icon(Icons.Outlined.WarningAmber, contentDescription = null) },
+                    icon = { Icon(Icons.Outlined.Security, contentDescription = null) },
                     title = stringResource(R.string.oss_notice_free_title),
                     body = stringResource(R.string.oss_notice_free_body),
                 )
@@ -104,7 +103,7 @@ fun OpenSourceNoticePage(
 
             item {
                 NoticeSectionCard(
-                    icon = { Icon(Icons.Outlined.Gavel, contentDescription = null) },
+                    icon = { Icon(Icons.Outlined.Description, contentDescription = null) },
                     title = stringResource(R.string.oss_notice_project_license_title),
                     body =
                         stringResource(
@@ -148,15 +147,16 @@ fun OpenSourceNoticePage(
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    val description =
+                        if (item.descriptionRes != 0) {
+                            stringResource(item.descriptionRes)
+                        } else {
+                            null
+                        }
                     CreditItem(
                         title = item.title,
                         author = item.author,
-                        description =
-                            if (item.descriptionRes != 0) {
-                                stringResource(item.descriptionRes)
-                            } else {
-                                null
-                            },
+                        description = description,
                         license = item.license,
                     ) {
                         if (item.url.isNotEmpty()) {
@@ -171,9 +171,7 @@ fun OpenSourceNoticePage(
 
         Button(
             onClick = { complete() },
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             Text(stringResource(R.string.oss_notice_continue))
         }
