@@ -32,7 +32,9 @@ object GlassTokens {
     const val DarkFillAlpha = 0.76f
     const val HighContrastFillAlpha = 1f
     const val OutlineAlpha = 0.35f
-    const val ScrimAlpha = 0.32f
+    /** Slightly below Material3 ModalBottomSheet default scrim (0.32) so glass reads more clearly. */
+    const val ScrimAlpha = 0.26f
+    const val HighContrastScrimAlpha = 0.5f
     const val GradientTopAlpha = 0.18f
     val OutlineWidth = 1.dp
     /** Documented target radius if a future decorative (non-solid) blur layer is added (API 31+). */
@@ -64,7 +66,10 @@ fun glassOutlineColor(): Color {
 @Composable
 @ReadOnlyComposable
 fun glassScrimColor(): Color {
-    return MaterialTheme.colorScheme.scrim.copy(alpha = GlassTokens.ScrimAlpha)
+    val highContrast = LocalDarkTheme.current.isHighContrastModeEnabled
+    val alpha =
+        if (highContrast) GlassTokens.HighContrastScrimAlpha else GlassTokens.ScrimAlpha
+    return MaterialTheme.colorScheme.scrim.copy(alpha = alpha)
 }
 
 /**
@@ -92,41 +97,25 @@ fun Modifier.glassBackground(
     shape: Shape = RectangleShape,
     enableBlur: Boolean = true,
 ): Modifier {
-    // True blur not applied to solid fills; evaluate gate so enableBlur stays a live parameter.
+    // Compose BlurEffect cannot frosted-backdrop a solid fill — never enable it here.
+    // Keep enableBlur live so call sites can opt in when a decorative non-solid layer lands.
     @Suppress("UNUSED_VARIABLE")
     val blurEligible = isGlassBlurEnabled(enableBlur)
 
-    val darkTheme = LocalDarkTheme.current
-    val highContrast = darkTheme.isHighContrastModeEnabled
-    val isDark = darkTheme.isDarkTheme()
-    val scheme = MaterialTheme.colorScheme
-
-    val fillAlpha =
-        when {
-            highContrast -> GlassTokens.HighContrastFillAlpha
-            isDark -> GlassTokens.DarkFillAlpha
-            else -> GlassTokens.LightFillAlpha
-        }
-    val fillColor =
-        remember(scheme.surfaceContainerHigh, fillAlpha) {
-            scheme.surfaceContainerHigh.copy(alpha = fillAlpha)
-        }
-    val outlineColor =
-        remember(scheme.outlineVariant, highContrast) {
-            scheme.outlineVariant.copy(
-                alpha = if (highContrast) 1f else GlassTokens.OutlineAlpha
-            )
-        }
+    val highContrast = LocalDarkTheme.current.isHighContrastModeEnabled
+    val fillColor = glassContainerColor()
+    val outlineColor = glassOutlineColor()
+    val surface = MaterialTheme.colorScheme.surface
 
     val gradientBrush =
-        remember(scheme.surface, highContrast) {
+        remember(surface, highContrast) {
             if (highContrast) {
                 null
             } else {
                 Brush.verticalGradient(
                     colors =
                         listOf(
-                            scheme.surface.copy(alpha = GlassTokens.GradientTopAlpha),
+                            surface.copy(alpha = GlassTokens.GradientTopAlpha),
                             Color.Transparent,
                         )
                 )
