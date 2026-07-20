@@ -109,6 +109,7 @@ import com.chloemlla.seal.ui.common.HapticFeedback.slightHapticFeedback
 import com.chloemlla.seal.ui.common.LocalDarkTheme
 import com.chloemlla.seal.ui.common.LocalFixedColorRoles
 import com.chloemlla.seal.ui.common.LocalWindowWidthState
+import com.chloemlla.seal.ui.component.glassBackground
 import com.chloemlla.seal.ui.component.SealModalBottomSheet
 import com.chloemlla.seal.ui.component.SelectionGroupDefaults
 import com.chloemlla.seal.ui.component.SelectionGroupItem
@@ -497,7 +498,10 @@ fun DownloadPageImplV2(
                     )
         ) {
             CompositionLocalProvider(LocalOverscrollFactory provides null) {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                // Sticky header chrome: local fake-glass strip (not applied to grid items).
+                Column(
+                    modifier = Modifier.fillMaxWidth().glassBackground(enableBlur = false)
+                ) {
                     Spacer(Modifier.height(with(LocalDensity.current) { headerOffset.toDp() }))
                     Header(onMenuOpen = onMenuOpen, modifier = Modifier.padding(horizontal = 16.dp))
                     SelectionGroupRow(

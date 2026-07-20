@@ -68,6 +68,7 @@ import com.chloemlla.seal.download.Task.DownloadState.Running
 import com.chloemlla.seal.ui.common.LocalFixedColorRoles
 import com.chloemlla.seal.ui.component.ActionSheetItem
 import com.chloemlla.seal.ui.component.ActionSheetPrimaryButton
+import com.chloemlla.seal.ui.component.glassBackground
 import com.chloemlla.seal.ui.component.SealModalBottomSheet
 import com.chloemlla.seal.ui.page.downloadv2.configure.PreferencesMock
 import com.chloemlla.seal.ui.theme.ErrorTonalPalettes
@@ -367,20 +368,28 @@ private fun ActionButtonsRow(
             actions to emptyList()
         }
 
-    LazyRow(
-        modifier = Modifier.padding(top = 12.dp, bottom = 24.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        verticalAlignment = Alignment.Top,
+    // Primary action strip sits on a local glass bar for premium contrast over sheet content.
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .glassBackground(enableBlur = false)
+                .padding(top = 12.dp, bottom = 24.dp)
     ) {
-        items(items = visibleActions, key = { it.key }) { action ->
-            ActionPrimaryButton(spec = action, modifier = Modifier.animateItem())
-        }
-        if (overflowActions.isNotEmpty()) {
-            item(key = "MoreActionsButton") {
-                MoreActionsButton(
-                    modifier = Modifier.animateItem(),
-                    overflowActions = overflowActions,
-                )
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            items(items = visibleActions, key = { it.key }) { action ->
+                ActionPrimaryButton(spec = action, modifier = Modifier.animateItem())
+            }
+            if (overflowActions.isNotEmpty()) {
+                item(key = "MoreActionsButton") {
+                    MoreActionsButton(
+                        modifier = Modifier.animateItem(),
+                        overflowActions = overflowActions,
+                    )
+                }
             }
         }
     }

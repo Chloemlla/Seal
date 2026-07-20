@@ -15,6 +15,7 @@ import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,11 +40,15 @@ fun SealModalBottomSheet(
     properties: ModalBottomSheetProperties = ModalBottomSheetDefaults.properties,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
+    val containerColor = glassContainerColor()
     ModalBottomSheet(
         modifier = modifier,
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         properties = properties,
+        containerColor = containerColor,
+        contentColor = contentColorFor(containerColor),
+        scrimColor = glassScrimColor(),
     ) {
         Column(modifier = Modifier.padding(paddingValues = contentPadding)) {
             content()
