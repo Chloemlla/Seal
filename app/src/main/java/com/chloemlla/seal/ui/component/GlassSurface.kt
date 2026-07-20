@@ -40,13 +40,13 @@ object GlassTokens {
 }
 
 @Composable
-@ReadOnlyComposable
 fun glassContainerColor(): Color {
     val darkTheme = LocalDarkTheme.current
     val scheme = MaterialTheme.colorScheme
     if (darkTheme.isHighContrastModeEnabled) {
         return scheme.surfaceContainerHigh
     }
+    // isDarkTheme() is @Composable (reads system theme) — keep this helper non-ReadOnly.
     val alpha =
         if (darkTheme.isDarkTheme()) GlassTokens.DarkFillAlpha else GlassTokens.LightFillAlpha
     return scheme.surfaceContainerHigh.copy(alpha = alpha)
