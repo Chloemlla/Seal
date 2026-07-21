@@ -130,11 +130,10 @@ object DownloadUtil {
         request: YoutubeDLRequest,
         taskKey: String? = null,
     ): Result<VideoInfo> =
-        request
-            .runCatching {
+        runCatching {
                 val response: YoutubeDLResponse =
                     YoutubeDL.getInstance().execute(request, taskKey, null)
-                jsonFormat.decodeFromString(response.out)
+                jsonFormat.decodeFromString<VideoInfo>(response.out)
             }
             .mapInfoFetchFailure()
 
