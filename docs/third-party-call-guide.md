@@ -1,7 +1,7 @@
 # Seal 第三方调用文档
 
 > 面向：要在自己 App 里把下载任务**委托给 Seal** 的开发者  
-> 协议版本：`protocol_version = 1`  
+> 协议版本：`protocol_version = 1`（兼容）/ `2`（Cookie 注入 + keep_sections）  
 > 模型：**只委托，不内嵌** — Seal 负责队列、yt-dlp、通知与文件落地  
 > 实现参考：`docs/third-party-delegate-integration.md`、`com.chloemlla.seal.integration.ExternalDownloadProtocol`  
 > 源码权威：`app/src/main/java/com/chloemlla/seal/integration/`
@@ -39,6 +39,7 @@
 |--------|------|------|
 | Allow external apps to delegate downloads | 开 | 总开关；关闭后一律 `disabled` |
 | Allow external auto-start | 关 | 为开时才允许 `auto_start=true` 静默入队 |
+| Accept cookies from external apps | **关** | 为开时才接受 v2 入站 Cookie（任务级，不写全局） |
 | Limit external callers | 关 | 开启后仅白名单 package 可调用 |
 | Allowed packages | 空 | 白名单文本；支持换行 / `,` / `;` 分隔，每项一个 package name |
 
@@ -105,7 +106,7 @@ com.chloemlla.seal.action.DOWNLOAD
 
 | Key（字符串原样） | 类型 | 必填 | 说明 |
 |-------------------|------|------|------|
-| `protocol_version` | Int | 建议填 | 当前仅支持 `1`；缺省按 1 处理；超出范围 → `unsupported_version` |
+| `protocol_version` | Int | 建议填 | `1` 或 `2`；缺省按 **1**；超出 `1..2` → `unsupported_version` |
 | `url` | String | 与 `urls` / EXTRA_TEXT / data 四选一 | 首选单链接 |
 | `urls` | String[] | 可选 | 多链接；与 `url` 等合并去重 |
 | `extract_audio` | Boolean | 否 | 仅音频；**不传**则用 Seal 用户偏好（不是默认 false） |
@@ -114,11 +115,31 @@ com.chloemlla.seal.action.DOWNLOAD
 | `open_ui` | Boolean | 否 | 默认 `true`；仅在「自动开始被拒」时影响是否可降级 UI |
 | `caller_request_id` | String | 否 | 调用方业务 id，原样回传 |
 | `caller_package` | String | 否 | **一般不要填**；仅当 `Activity.callingPackage` 为空时的兜底（Seal 优先用系统 callingPackage） |
+| `cookies_format` | String | Cookie 时 | v2：`json_map`（推荐）/ `netscape` / `name_value` |
+| `cookies` | String | Cookie 时 | v2：Cookie 载荷；**最大 256 KiB**；超限 `cookie_too_large` |
+| `cookies_uri` | String | 可选 | v2：`content://` Netscape 文件 URI（备选） |
+| `cookies_mid` | Long/String | 否 | v2：账号 mid（非 secret，仅诊断） |
+| `cookies_domain_hint` | String | 否 | v2：map 转换域名，默认 `.bilibili.com` |
+| `use_cookies` | Boolean | 否 | v2：有载荷时默认启用任务 Cookie |
+| `cookies_required` | Boolean | 否 | v2：默认 false；true 时 materialize 失败则整请求失败 |
+| `strip_segments` | Boolean | 否 | v2：调用方已计算剥离（报告在调用方） |
+| `keep_sections` | String (JSON) | 否 | v2：`[{"start":s,"end":e},…]`，**秒**；映射到 yt-dlp `--download-sections` |
+| `remove_segments` | String (JSON) | 否 | v2：移除段元数据（可选，Seal 不强制使用） |
 
 也接受：
 
 - `Intent.EXTRA_TEXT`：从文本中提取 URL
 - `intent.data`：`http(s)://...`
+
+#### Cookie 规则（v2）
+
+- **仅** `protocol_version >= 2` 时解析 Cookie 字段；v1 忽略 Cookie extras。
+- Seal 设置「允许外部应用提供 Cookies」默认 **关**：
+  - `cookies_required=true` → 拒绝 `cookie_denied` / `cookies_disabled`
+  - `cookies_required=false`（推荐）→ **剥离 Cookie 后继续** 匿名/Seal 侧登录下载
+- Cookie 写入 **任务级** `cache/external_cookies/<id>.txt`，**不覆盖** 全局 `cookies.txt`，不写入 CookieProfile。
+- 任务终态（completed/failed/canceled）或 UI 取消时删除临时文件。
+- **禁止** 反向导出 Seal Cookie；状态广播永不含 Cookie 明文。
 
 URL 规则（`ExternalDownloadRequestParser.looksLikeHttpUrl`）：
 
@@ -218,6 +239,8 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 | `canceled` | 用户或系统取消，`error_code` 多为 `canceled` |
 
 > 若 `callingPackage` 为空：即时 `setResult` 仍可能成功，但**终态广播与 URI grant 都不会发出**（无目标 package / 无法 watch 任务）。
+
+> **网络 / JSON 元数据类失败**：当 yt-dlp 在 info 阶段出现连接中断（如 B 站 `Unable to download JSON metadata` / `TransportError` / `Errno 103`），`error_message` 会使用本地化提示（重试；B 站请启用 Network → Cookies 并登录），而不是原始 errno 堆栈。非传输类错误仍透传 yt-dlp 原文。
 
 ### content_uri 与 FileProvider
 

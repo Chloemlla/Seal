@@ -3,6 +3,7 @@ package com.chloemlla.seal.integration
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -21,19 +22,28 @@ class ExternalDownloadGateTest {
             isExplicitDelegateAction = true,
         )
 
+    private fun policy(
+        delegateEnabled: Boolean = true,
+        autoStartEnabled: Boolean = false,
+        whitelistMode: Boolean = false,
+        whitelist: Set<String> = emptySet(),
+        acceptCookies: Boolean = false,
+    ) =
+        ExternalDownloadPolicy(
+            delegateEnabled = delegateEnabled,
+            autoStartEnabled = autoStartEnabled,
+            whitelistMode = whitelistMode,
+            whitelist = whitelist,
+            acceptCookies = acceptCookies,
+        )
+
     @Test
     fun disabledRejects() {
         val decision =
             ExternalDownloadGate.decide(
                 request = sampleRequest,
                 callerPackage = "com.example.app",
-                policy =
-                    ExternalDownloadPolicy(
-                        delegateEnabled = false,
-                        autoStartEnabled = false,
-                        whitelistMode = false,
-                        whitelist = emptySet(),
-                    ),
+                policy = policy(delegateEnabled = false),
             )
         assertTrue(decision is ExternalDownloadDecision.Reject)
         assertEquals(
@@ -49,8 +59,7 @@ class ExternalDownloadGateTest {
                 request = sampleRequest,
                 callerPackage = "com.other.app",
                 policy =
-                    ExternalDownloadPolicy(
-                        delegateEnabled = true,
+                    policy(
                         autoStartEnabled = true,
                         whitelistMode = true,
                         whitelist = setOf("com.example.app"),
@@ -69,13 +78,7 @@ class ExternalDownloadGateTest {
             ExternalDownloadGate.decide(
                 request = sampleRequest.copy(autoStart = true, openUi = true),
                 callerPackage = "com.example.app",
-                policy =
-                    ExternalDownloadPolicy(
-                        delegateEnabled = true,
-                        autoStartEnabled = false,
-                        whitelistMode = false,
-                        whitelist = emptySet(),
-                    ),
+                policy = policy(autoStartEnabled = false),
             )
         assertTrue(decision is ExternalDownloadDecision.NeedsUi)
         assertEquals(
@@ -90,13 +93,7 @@ class ExternalDownloadGateTest {
             ExternalDownloadGate.decide(
                 request = sampleRequest.copy(autoStart = true, openUi = false),
                 callerPackage = "com.example.app",
-                policy =
-                    ExternalDownloadPolicy(
-                        delegateEnabled = true,
-                        autoStartEnabled = false,
-                        whitelistMode = false,
-                        whitelist = emptySet(),
-                    ),
+                policy = policy(autoStartEnabled = false),
             )
         assertTrue(decision is ExternalDownloadDecision.Reject)
         assertEquals(
@@ -111,13 +108,7 @@ class ExternalDownloadGateTest {
             ExternalDownloadGate.decide(
                 request = sampleRequest.copy(autoStart = true),
                 callerPackage = "com.example.app",
-                policy =
-                    ExternalDownloadPolicy(
-                        delegateEnabled = true,
-                        autoStartEnabled = true,
-                        whitelistMode = false,
-                        whitelist = emptySet(),
-                    ),
+                policy = policy(autoStartEnabled = true),
             )
         assertTrue(decision is ExternalDownloadDecision.AutoStart)
     }
@@ -128,13 +119,7 @@ class ExternalDownloadGateTest {
             ExternalDownloadGate.decide(
                 request = sampleRequest,
                 callerPackage = "com.example.app",
-                policy =
-                    ExternalDownloadPolicy(
-                        delegateEnabled = true,
-                        autoStartEnabled = false,
-                        whitelistMode = false,
-                        whitelist = emptySet(),
-                    ),
+                policy = policy(),
                 rateLimitOk = false,
             )
         assertTrue(decision is ExternalDownloadDecision.Reject)
@@ -148,6 +133,81 @@ class ExternalDownloadGateTest {
     fun parseWhitelistSplitsPackages() {
         val parsed = ExternalDownloadGate.parseWhitelist("com.a.app\ncom.b.app, com.c.app;com.d.app")
         assertEquals(setOf("com.a.app", "com.b.app", "com.c.app", "com.d.app"), parsed)
+    }
+
+    @Test
+    fun cookiePayloadDeniedWhenAcceptOffAndRequired() {
+        val withCookies =
+            sampleRequest.copy(
+                protocolVersion = 2,
+                cookiesFormat = ExternalDownloadProtocol.COOKIES_FORMAT_JSON_MAP,
+                cookiesPayload = """{"DedeUserID":"1","bili_jct":"x"}""",
+                cookiesRequired = true,
+            )
+        val decision =
+            ExternalDownloadGate.decide(
+                request = withCookies,
+                callerPackage = "com.example.app",
+                policy = policy(acceptCookies = false),
+            )
+        assertTrue(decision is ExternalDownloadDecision.Reject)
+        assertEquals(
+            ExternalDownloadProtocol.ERROR_COOKIE_DENIED,
+            (decision as ExternalDownloadDecision.Reject).errorCode,
+        )
+    }
+
+    @Test
+    fun cookiePayloadStrippedWhenAcceptOffAndNotRequired() {
+        val withCookies =
+            sampleRequest.copy(
+                protocolVersion = 2,
+                cookiesFormat = ExternalDownloadProtocol.COOKIES_FORMAT_JSON_MAP,
+                cookiesPayload = """{"DedeUserID":"1","bili_jct":"x"}""",
+                cookiesRequired = false,
+                autoStart = true,
+            )
+        val decision =
+            ExternalDownloadGate.decide(
+                request = withCookies,
+                callerPackage = "com.example.app",
+                policy = policy(acceptCookies = false, autoStartEnabled = true),
+            )
+        assertTrue(decision is ExternalDownloadDecision.AutoStart)
+        val req = (decision as ExternalDownloadDecision.AutoStart).request
+        assertFalse(req.hasCookiePayload)
+    }
+
+    @Test
+    fun cookiePayloadAllowedWhenAcceptOn() {
+        val withCookies =
+            sampleRequest.copy(
+                protocolVersion = 2,
+                cookiesFormat = ExternalDownloadProtocol.COOKIES_FORMAT_JSON_MAP,
+                cookiesPayload = """{"DedeUserID":"1","bili_jct":"x"}""",
+                autoStart = true,
+            )
+        val decision =
+            ExternalDownloadGate.decide(
+                request = withCookies,
+                callerPackage = "com.example.app",
+                policy = policy(autoStartEnabled = true, acceptCookies = true),
+            )
+        assertTrue(decision is ExternalDownloadDecision.AutoStart)
+        val req = (decision as ExternalDownloadDecision.AutoStart).request
+        assertTrue(req.hasCookiePayload)
+    }
+
+    @Test
+    fun noCookieRequestUnaffectedWhenAcceptOff() {
+        val decision =
+            ExternalDownloadGate.decide(
+                request = sampleRequest,
+                callerPackage = "com.example.app",
+                policy = policy(acceptCookies = false, autoStartEnabled = true),
+            )
+        // openUi path
+        assertTrue(decision is ExternalDownloadDecision.NeedsUi)
     }
 }
 
@@ -163,14 +223,97 @@ class ExternalDownloadRequestParserTest {
 
     @Test
     fun protocolVersionBoundsMatchConstants() {
-        assertEquals(1, ExternalDownloadProtocol.PROTOCOL_VERSION)
+        assertEquals(2, ExternalDownloadProtocol.PROTOCOL_VERSION)
         assertEquals(1, ExternalDownloadProtocol.MIN_SUPPORTED_VERSION)
-        assertEquals(1, ExternalDownloadProtocol.MAX_SUPPORTED_VERSION)
+        assertEquals(2, ExternalDownloadProtocol.MAX_SUPPORTED_VERSION)
         assertEquals("com.chloemlla.seal.action.DOWNLOAD", ExternalDownloadProtocol.ACTION_DOWNLOAD)
         assertEquals(
             "com.chloemlla.seal.action.DOWNLOAD_STATUS",
             ExternalDownloadProtocol.ACTION_DOWNLOAD_STATUS,
         )
+    }
+
+    @Test
+    fun cookieExtrasKeysAreStable() {
+        assertEquals("cookies_format", ExternalDownloadProtocol.EXTRA_COOKIES_FORMAT)
+        assertEquals("cookies", ExternalDownloadProtocol.EXTRA_COOKIES)
+        assertEquals("cookies_uri", ExternalDownloadProtocol.EXTRA_COOKIES_URI)
+        assertEquals("cookies_mid", ExternalDownloadProtocol.EXTRA_COOKIES_MID)
+        assertEquals("use_cookies", ExternalDownloadProtocol.EXTRA_USE_COOKIES)
+        assertEquals("keep_sections", ExternalDownloadProtocol.EXTRA_KEEP_SECTIONS)
+        assertEquals("strip_segments", ExternalDownloadProtocol.EXTRA_STRIP_SEGMENTS)
+        assertEquals("cookie_denied", ExternalDownloadProtocol.ERROR_COOKIE_DENIED)
+        assertEquals("cookie_invalid", ExternalDownloadProtocol.ERROR_COOKIE_INVALID)
+        assertEquals("cookie_too_large", ExternalDownloadProtocol.ERROR_COOKIE_TOO_LARGE)
+        assertEquals(256 * 1024, ExternalDownloadProtocol.MAX_COOKIES_PAYLOAD_CHARS)
+    }
+}
+
+class ExternalCookieMaterializerTest {
+    @Test
+    fun jsonMapToNetscapeUsesBilibiliDomain() {
+        val body =
+            ExternalCookieMaterializer.jsonMapToNetscape(
+                """{"DedeUserID":"12345","bili_jct":"token","SESSDATA":"sess"}""",
+                ".bilibili.com",
+            )
+        assertTrue(body != null)
+        assertTrue(body!!.contains("DedeUserID"))
+        assertTrue(body.contains("12345"))
+        assertTrue(body.contains(".bilibili.com"))
+        assertTrue(body.contains("bili_jct"))
+        // Tab-separated Netscape
+        assertTrue(body.lines().any { it.split('\t').size >= 7 })
+    }
+
+    @Test
+    fun jsonMapRejectsTabInValue() {
+        val body =
+            ExternalCookieMaterializer.jsonMapToNetscape(
+                """{"bad":"a\tb"}""",
+                ".bilibili.com",
+            )
+        assertNull(body)
+    }
+
+    @Test
+    fun nameValueToNetscapeParsesHeader() {
+        val body =
+            ExternalCookieMaterializer.nameValueToNetscape(
+                "DedeUserID=1; bili_jct=x",
+                ".bilibili.com",
+            )
+        assertTrue(body.contains("DedeUserID"))
+        assertTrue(body.contains("bili_jct"))
+    }
+
+    @Test
+    fun keepSectionsJsonParsesSeconds() {
+        val clips =
+            parseKeepSectionsJson(
+                """[{"start":10.5,"end":20},{"start":30,"end":40}]""",
+            )
+        assertEquals(2, clips.size)
+        // start floors, end ceils
+        assertEquals(10, clips[0].start)
+        assertEquals(20, clips[0].end)
+        assertEquals(30, clips[1].start)
+        assertEquals(40, clips[1].end)
+    }
+
+    @Test
+    fun keepSectionsJsonCeilEndFloorStart() {
+        val clips =
+            parseKeepSectionsJson("""[{"start":1.2,"end":10.1}]""")
+        assertEquals(1, clips.size)
+        assertEquals(1, clips[0].start)
+        assertEquals(11, clips[0].end)
+    }
+
+    @Test
+    fun keepSectionsJsonSkipsInvalid() {
+        val clips = parseKeepSectionsJson("""[{"start":50,"end":10},{"foo":1}]""")
+        assertTrue(clips.isEmpty())
     }
 }
 
@@ -239,5 +382,18 @@ class ExternalDownloadSessionTest {
         val session = ExternalDownloadCoordinator.currentSession()
         assertEquals("com.b", session!!.callerPackage)
         assertEquals("2", session.callerRequestId)
+    }
+
+    @Test
+    fun beginSessionStoresTaskCookiesPath() {
+        ExternalDownloadCoordinator.beginExternalSession(
+            callerPackage = "com.example.caller",
+            callerRequestId = "req",
+            taskCookiesPath = "/cache/external_cookies/req.txt",
+            cookiesMid = 42L,
+        )
+        val session = ExternalDownloadCoordinator.currentSession()
+        assertEquals("/cache/external_cookies/req.txt", session!!.taskCookiesPath)
+        assertEquals(42L, session.cookiesMid)
     }
 }

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v2.1.0][2.1.0] - unreleased
 
+### Fixed
+
+- Harden video-info fetch against transient transport aborts (e.g. Bilibili JSON metadata `Errno 103` / `TransportError`): metadata requests now use 10 retries and a 30s socket timeout, with a localized error message that suggests retry and enabling Cookies.
+
 ### Notable changes from v1.13
 
 - Concurrent downloading

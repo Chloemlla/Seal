@@ -192,6 +192,8 @@ const val EXTERNAL_DELEGATE_ENABLED = "external_delegate_enabled"
 const val EXTERNAL_AUTO_START_ENABLED = "external_auto_start_enabled"
 const val EXTERNAL_WHITELIST_MODE = "external_whitelist_mode"
 const val EXTERNAL_CALLER_WHITELIST = "external_caller_whitelist"
+/** When true, external callers may attach task-scoped cookies (protocol v2). Default OFF. */
+const val EXTERNAL_ACCEPT_COOKIES = "external_accept_cookies"
 
 val paletteStyles =
     listOf(
@@ -230,6 +232,7 @@ private val BooleanPreferenceDefaults =
         EXTERNAL_DELEGATE_ENABLED to true,
         EXTERNAL_AUTO_START_ENABLED to false,
         EXTERNAL_WHITELIST_MODE to false,
+        EXTERNAL_ACCEPT_COOKIES to false,
     )
 
 private val IntPreferenceDefaults =
@@ -406,6 +409,7 @@ object PreferenceUtil {
             EXTERNAL_DELEGATE_ENABLED,
             EXTERNAL_AUTO_START_ENABLED,
             EXTERNAL_WHITELIST_MODE,
+            EXTERNAL_ACCEPT_COOKIES,
         )
 
     private val intPreferenceKeys =

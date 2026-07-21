@@ -89,6 +89,27 @@ object ExternalDownloadEntry {
                 return HandleResult.RejectedAndFinished
             }
             is ExternalDownloadDecision.NeedsUi -> {
+                val prepared =
+                    when (
+                        val prep =
+                            ExternalDownloadCoordinator.prepareRequestCookies(
+                                activity,
+                                decision.request,
+                            )
+                    ) {
+                        is ExternalDownloadCoordinator.PrepareCookiesResult.Error -> {
+                            reject(
+                                activity = activity,
+                                callerPackage = callerPackage,
+                                callerRequestId = request.callerRequestId,
+                                errorCode = prep.errorCode,
+                                message = prep.message,
+                                finish = finishOnReject,
+                            )
+                            return HandleResult.RejectedAndFinished
+                        }
+                        is ExternalDownloadCoordinator.PrepareCookiesResult.Ok -> prep.request
+                    }
                 // Soft notice for auto_start denied — still open configure UI.
                 if (decision.noteErrorCode != null && !callerPackage.isNullOrBlank()) {
                     ExternalDownloadStatusReporter.sendStatus(
@@ -97,12 +118,12 @@ object ExternalDownloadEntry {
                         status = ExternalDownloadProtocol.STATUS_NEEDS_UI,
                         errorCode = decision.noteErrorCode,
                         taskIds = emptyList(),
-                        callerRequestId = request.callerRequestId,
+                        callerRequestId = prepared.callerRequestId,
                     )
                 }
                 return HandleResult.ShowUi(
                     AcceptedUi(
-                        request = decision.request,
+                        request = prepared,
                         callerPackage = callerPackage,
                         noteErrorCode = decision.noteErrorCode,
                     )

@@ -17,6 +17,7 @@
     <string name="download_error_msg">Could not download file</string>
     <string name="download_start_msg">Download \"%1$s\"</string>
     <string name="fetch_info_error_msg">Could not fetch video info</string>
+    <string name="fetch_info_transport_error_msg">Failed to fetch video info: the network connection was interrupted. Please retry. For Bilibili videos, enable Cookies under Network → Cookies and sign in, then try again.</string>
     <string name="general_settings">General</string>
     <string name="language">Display language</string>
     <string name="language_settings">Set display language</string>
@@ -476,6 +477,8 @@
     <string name="external_whitelist_mode_desc">Only packages listed below may delegate downloads to Seal.</string>
     <string name="external_caller_whitelist">Allowed packages</string>
     <string name="external_caller_whitelist_desc">One package name per line (for example com.example.browser)</string>
+    <string name="external_accept_cookies">Accept cookies from external apps</string>
+    <string name="external_accept_cookies_desc">Allow authorized apps to provide task-scoped cookies for a download. Off by default. Cookies are not exported and not written into Seal login profiles.</string>
     <string name="ytdlp_issue_tracker">yt-dlp issue tracker</string>
     <string name="package_name">Package name</string>
     <string name="url_label">URL</string>

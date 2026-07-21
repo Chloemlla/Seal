@@ -1,5 +1,7 @@
 package com.chloemlla.seal.integration
 
+import android.util.Log
+import com.chloemlla.seal.util.EXTERNAL_ACCEPT_COOKIES
 import com.chloemlla.seal.util.EXTERNAL_AUTO_START_ENABLED
 import com.chloemlla.seal.util.EXTERNAL_CALLER_WHITELIST
 import com.chloemlla.seal.util.EXTERNAL_DELEGATE_ENABLED
@@ -23,15 +25,20 @@ data class ExternalDownloadPolicy(
     val autoStartEnabled: Boolean,
     val whitelistMode: Boolean,
     val whitelist: Set<String>,
+    /** When false, inbound cookie payload is rejected (or stripped if not required). */
+    val acceptCookies: Boolean = false,
 )
 
 object ExternalDownloadGate {
+    private const val TAG = "ExternalDownloadGate"
+
     fun currentPolicy(): ExternalDownloadPolicy =
         ExternalDownloadPolicy(
             delegateEnabled = EXTERNAL_DELEGATE_ENABLED.getBoolean(),
             autoStartEnabled = EXTERNAL_AUTO_START_ENABLED.getBoolean(),
             whitelistMode = EXTERNAL_WHITELIST_MODE.getBoolean(),
             whitelist = parseWhitelist(EXTERNAL_CALLER_WHITELIST.getString()),
+            acceptCookies = EXTERNAL_ACCEPT_COOKIES.getBoolean(),
         )
 
     fun decide(
@@ -71,12 +78,23 @@ object ExternalDownloadGate {
             )
         }
 
-        if (request.autoStart) {
+        // Cookie gate: payload present but accept off.
+        val cookieHandled = applyCookiePolicy(request, policy)
+        if (cookieHandled is CookiePolicyResult.Reject) {
+            return ExternalDownloadDecision.Reject(
+                cookieHandled.errorCode,
+                cookieHandled.message,
+            )
+        }
+        val effectiveRequest =
+            (cookieHandled as CookiePolicyResult.Continue).request
+
+        if (effectiveRequest.autoStart) {
             return if (policy.autoStartEnabled) {
-                ExternalDownloadDecision.AutoStart(request)
-            } else if (request.openUi) {
+                ExternalDownloadDecision.AutoStart(effectiveRequest)
+            } else if (effectiveRequest.openUi) {
                 ExternalDownloadDecision.NeedsUi(
-                    request = request,
+                    request = effectiveRequest,
                     noteErrorCode = ExternalDownloadProtocol.ERROR_AUTO_START_DENIED,
                 )
             } else {
@@ -88,7 +106,50 @@ object ExternalDownloadGate {
         }
 
         // open_ui=false without auto_start cannot run headless; fall back to UI when possible
-        return ExternalDownloadDecision.NeedsUi(request)
+        return ExternalDownloadDecision.NeedsUi(effectiveRequest)
+    }
+
+    private sealed interface CookiePolicyResult {
+        data class Continue(val request: ExternalDownloadRequest) : CookiePolicyResult
+
+        data class Reject(val errorCode: String, val message: String) : CookiePolicyResult
+    }
+
+    /**
+     * If request has cookie payload and acceptCookies is false:
+     * - cookiesRequired → hard reject cookie_denied
+     * - else strip cookies and continue (anonymous / Seal-native cookies)
+     *
+     * Implement brief mentioned hard reject; research/product soft path is preferred so
+     * PiliPlus default cookies_required=false still downloads when Seal accept is off.
+     */
+    private fun applyCookiePolicy(
+        request: ExternalDownloadRequest,
+        policy: ExternalDownloadPolicy,
+    ): CookiePolicyResult {
+        if (!request.hasCookiePayload) {
+            return CookiePolicyResult.Continue(request)
+        }
+        if (request.protocolVersion < 2) {
+            // Parser already strips for v1; defensive.
+            return CookiePolicyResult.Continue(request.clearedCookies())
+        }
+        if (!policy.acceptCookies) {
+            Log.i(
+                TAG,
+                "cookie payload present but EXTERNAL_ACCEPT_COOKIES=false " +
+                    "required=${request.cookiesRequired} mid=${request.cookiesMid}",
+            )
+            return if (request.cookiesRequired) {
+                CookiePolicyResult.Reject(
+                    ExternalDownloadProtocol.ERROR_COOKIE_DENIED,
+                    "External cookies are disabled in Seal settings",
+                )
+            } else {
+                CookiePolicyResult.Continue(request.clearedCookies())
+            }
+        }
+        return CookiePolicyResult.Continue(request)
     }
 
     fun parseWhitelist(raw: String): Set<String> =

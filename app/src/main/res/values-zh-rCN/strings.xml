@@ -15,6 +15,7 @@
     <string name="download_error_msg">下载视频时发生错误</string>
     <string name="download_start_msg">开始下载 %1$s</string>
     <string name="fetch_info_error_msg">获取视频信息时发生错误</string>
+    <string name="fetch_info_transport_error_msg">获取视频信息失败：网络连接中断。请重试；若为 B 站视频，请在「网络 → Cookies」启用并登录后重试。</string>
     <string name="download_success_msg">下载完成</string>
     <string name="general_settings">常规</string>
     <string name="language">界面语言</string>
@@ -458,6 +459,8 @@
     <string name="external_whitelist_mode_desc">仅下列包名可以委托 Seal 下载。</string>
     <string name="external_caller_whitelist">允许的包名</string>
     <string name="external_caller_whitelist_desc">每行一个包名（例如 com.example.browser）</string>
+    <string name="external_accept_cookies">允许外部应用提供 Cookies</string>
+    <string name="external_accept_cookies_desc">允许受信任的外部应用在委托下载时提供任务级 Cookies。默认关闭。不会导出 Seal Cookie，也不会写入 Seal 登录配置。</string>
     <string name="ytdlp_issue_tracker">yt-dlp 问题跟踪</string>
     <string name="package_name">包名</string>
     <string name="url_label">链接</string>

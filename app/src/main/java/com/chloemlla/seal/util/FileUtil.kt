@@ -557,6 +557,36 @@ object FileUtil {
 
     fun Context.getCookiesFile() = File(getConfigDirectory(), "cookies.txt")
 
+    /** Task-scoped Netscape cookie file for external delegate (protocol v2). */
+    fun Context.getExternalTaskCookiesFile(taskId: String): File {
+        val safe =
+            taskId
+                .replace(Regex("[^A-Za-z0-9._-]"), "_")
+                .take(120)
+                .ifBlank { "unknown" }
+        return File(File(cacheDir, "external_cookies"), "$safe.txt")
+    }
+
+    fun Context.deleteExternalTaskCookiesFile(taskId: String) {
+        runCatching {
+            val file = getExternalTaskCookiesFile(taskId)
+            if (file.exists()) file.delete()
+        }
+    }
+
+    fun Context.clearStaleExternalTaskCookies(maxAgeMs: Long = 24L * 60 * 60 * 1000) {
+        runCatching {
+            val dir = File(cacheDir, "external_cookies")
+            if (!dir.isDirectory) return
+            val now = System.currentTimeMillis()
+            dir.listFiles()?.forEach { f ->
+                if (f.isFile && now - f.lastModified() > maxAgeMs) {
+                    f.delete()
+                }
+            }
+        }
+    }
+
     fun getExternalTempDir() =
         run {
             val base =

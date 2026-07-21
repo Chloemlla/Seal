@@ -39,6 +39,10 @@ object ExternalDownloadCoordinator {
         val callerRequestId: String?,
         /** From external extract_audio extra; null means caller did not specify. */
         val extractAudio: Boolean? = null,
+        /** Task-scoped cookies file path after materialize; null if none. */
+        val taskCookiesPath: String? = null,
+        val cookiesMid: Long? = null,
+        val keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
         @Volatile var enqueuedDuringSession: Boolean = false,
     )
 
@@ -48,6 +52,7 @@ object ExternalDownloadCoordinator {
         val taskId: String,
         val callerPackage: String?,
         val callerRequestId: String?,
+        val taskCookiesPath: String? = null,
         val terminalSent: AtomicBoolean = AtomicBoolean(false),
         var job: Job? = null,
     )
@@ -56,6 +61,9 @@ object ExternalDownloadCoordinator {
         callerPackage: String?,
         callerRequestId: String?,
         extractAudio: Boolean? = null,
+        taskCookiesPath: String? = null,
+        cookiesMid: Long? = null,
+        keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
     ) {
         val pkg = callerPackage?.trim().orEmpty()
         externalSession =
@@ -66,18 +74,27 @@ object ExternalDownloadCoordinator {
                     callerPackage = pkg,
                     callerRequestId = callerRequestId,
                     extractAudio = extractAudio,
+                    taskCookiesPath = taskCookiesPath,
+                    cookiesMid = cookiesMid,
+                    keepSections = keepSections,
                 )
             }
         Log.i(
             TAG,
             "beginExternalSession pkg=${externalSession?.callerPackage} " +
-                "reqId=$callerRequestId extractAudio=$extractAudio",
+                "reqId=$callerRequestId extractAudio=$extractAudio " +
+                "cookies=${!taskCookiesPath.isNullOrBlank()} mid=$cookiesMid " +
+                "keepSections=${keepSections.size}",
         )
     }
 
     fun endExternalSession(notifyCanceledIfEmpty: Boolean = false, context: Context? = null) {
         val session = externalSession
         externalSession = null
+        // Delete task cookies when session ends without enqueue (user canceled UI).
+        if (session != null && !session.enqueuedDuringSession && context != null) {
+            deleteTaskCookiesForRequest(context, session.callerRequestId, session.taskCookiesPath)
+        }
         if (
             notifyCanceledIfEmpty &&
                 session != null &&
@@ -147,6 +164,7 @@ object ExternalDownloadCoordinator {
                 taskId = task.id,
                 callerPackage = session.callerPackage,
                 callerRequestId = session.callerRequestId,
+                taskCookiesPath = session.taskCookiesPath,
             )
         }
         if (alsoNotifyAccepted) {
@@ -205,12 +223,103 @@ object ExternalDownloadCoordinator {
         return true
     }
 
+    /**
+     * Materialize cookies if present; returns updated request or Failure code/message.
+     * Call before auto-start enqueue and before NeedsUi session begin.
+     */
+    fun prepareRequestCookies(
+        context: Context,
+        request: ExternalDownloadRequest,
+    ): PrepareCookiesResult {
+        if (!request.hasCookiePayload) {
+            return PrepareCookiesResult.Ok(request)
+        }
+        if (request.protocolVersion < 2) {
+            return PrepareCookiesResult.Ok(request.clearedCookies())
+        }
+        val materialize =
+            ExternalCookieMaterializer.materialize(
+                context = context.applicationContext,
+                request = request,
+            )
+        return when (materialize) {
+            is ExternalCookieMaterializer.Result.Failure -> {
+                if (request.cookiesRequired) {
+                    PrepareCookiesResult.Error(materialize.errorCode, materialize.message)
+                } else {
+                    // Soft: strip cookies and continue without them.
+                    Log.w(
+                        TAG,
+                        "cookie materialize failed code=${materialize.errorCode}; continuing without cookies",
+                    )
+                    PrepareCookiesResult.Ok(request.clearedCookies())
+                }
+            }
+            is ExternalCookieMaterializer.Result.Success -> {
+                PrepareCookiesResult.Ok(
+                    request.withTaskCookiesPath(materialize.filePath)
+                )
+            }
+        }
+    }
+
+    sealed interface PrepareCookiesResult {
+        data class Ok(val request: ExternalDownloadRequest) : PrepareCookiesResult
+
+        data class Error(val errorCode: String, val message: String) : PrepareCookiesResult
+    }
+
     fun buildPreferences(request: ExternalDownloadRequest): DownloadUtil.DownloadPreferences {
         val base = DownloadUtil.DownloadPreferences.createFromPreferences()
+        val taskCookies = request.taskCookiesPath?.takeIf { it.isNotBlank() }
+        val forceCookies = taskCookies != null || (request.useCookies == true && taskCookies != null)
+        val sections =
+            if (request.keepSections.isNotEmpty()) request.keepSections else base.videoClips
         return base.copy(
             extractAudio = request.extractAudio ?: base.extractAudio,
             downloadSubtitle = request.downloadSubtitle ?: base.downloadSubtitle,
+            cookies = if (taskCookies != null) true else base.cookies,
+            cookiesFilePath = taskCookies ?: base.cookiesFilePath,
+            videoClips = sections,
             // External path never injects custom command templates.
+        ).also {
+            if (forceCookies) {
+                Log.i(
+                    TAG,
+                    "buildPreferences cookies=true taskPath=${taskCookies != null} " +
+                        "mid=${request.cookiesMid} keepSections=${sections.size}",
+                )
+            }
+        }
+    }
+
+    /**
+     * Preferences for UI path: merge external request overrides into current base prefs.
+     * Prefer [buildPreferences] when full request is available.
+     */
+    fun buildPreferencesForSession(
+        request: ExternalDownloadRequest? = null,
+        session: ExternalSession? = currentSession(),
+    ): DownloadUtil.DownloadPreferences {
+        val base = DownloadUtil.DownloadPreferences.createFromPreferences()
+        val taskCookies =
+            request?.taskCookiesPath?.takeIf { it.isNotBlank() }
+                ?: session?.taskCookiesPath?.takeIf { it.isNotBlank() }
+        val sections =
+            when {
+                request != null && request.keepSections.isNotEmpty() -> request.keepSections
+                session != null && session.keepSections.isNotEmpty() -> session.keepSections
+                else -> base.videoClips
+            }
+        return base.copy(
+            extractAudio =
+                request?.extractAudio
+                    ?: session?.extractAudio
+                    ?: base.extractAudio,
+            downloadSubtitle = request?.downloadSubtitle ?: base.downloadSubtitle,
+            cookies = if (taskCookies != null) true else base.cookies,
+            cookiesFilePath = taskCookies ?: base.cookiesFilePath,
+            videoClips = sections,
         )
     }
 
@@ -221,9 +330,15 @@ object ExternalDownloadCoordinator {
         callerPackage: String?,
     ): EnqueueResult {
         return runCatching {
-                val preferences = buildPreferences(request)
+                val prepared =
+                    when (val p = prepareRequestCookies(context, request)) {
+                        is PrepareCookiesResult.Error ->
+                            return EnqueueResult.Failure(p.errorCode, p.message)
+                        is PrepareCookiesResult.Ok -> p.request
+                    }
+                val preferences = buildPreferences(prepared)
                 val taskIds = mutableListOf<String>()
-                request.urls.forEach { url ->
+                prepared.urls.forEach { url ->
                     val task = Task(url = url, preferences = preferences)
                     downloader.enqueue(task)
                     taskIds += task.id
@@ -232,7 +347,8 @@ object ExternalDownloadCoordinator {
                         downloader = downloader,
                         taskId = task.id,
                         callerPackage = callerPackage,
-                        callerRequestId = request.callerRequestId,
+                        callerRequestId = prepared.callerRequestId,
+                        taskCookiesPath = prepared.taskCookiesPath,
                     )
                 }
                 EnqueueResult.Success(taskIds = taskIds)
@@ -252,6 +368,7 @@ object ExternalDownloadCoordinator {
         taskId: String,
         callerPackage: String?,
         callerRequestId: String?,
+        taskCookiesPath: String? = null,
     ) {
         if (callerPackage.isNullOrBlank()) {
             Log.w(TAG, "watchTask skipped: blank callerPackage taskId=$taskId")
@@ -268,6 +385,7 @@ object ExternalDownloadCoordinator {
                 taskId = taskId,
                 callerPackage = callerPackage,
                 callerRequestId = callerRequestId,
+                taskCookiesPath = taskCookiesPath,
             )
         watchedTasks[taskId] = watched
         Log.i(TAG, "watchTask start taskId=$taskId pkg=$callerPackage reqId=$callerRequestId")
@@ -323,6 +441,11 @@ object ExternalDownloadCoordinator {
                                         displayName = displayName,
                                         mimeType = mimeType,
                                     )
+                                    deleteTaskCookiesForRequest(
+                                        context,
+                                        callerRequestId,
+                                        watched.taskCookiesPath,
+                                    )
                                 }
                             }
                             is DownloadState.Error -> {
@@ -341,6 +464,11 @@ object ExternalDownloadCoordinator {
                                         taskId = taskId,
                                         callerRequestId = callerRequestId,
                                     )
+                                    deleteTaskCookiesForRequest(
+                                        context,
+                                        callerRequestId,
+                                        watched.taskCookiesPath,
+                                    )
                                 }
                             }
                             is DownloadState.Canceled -> {
@@ -354,12 +482,34 @@ object ExternalDownloadCoordinator {
                                         taskId = taskId,
                                         callerRequestId = callerRequestId,
                                     )
+                                    deleteTaskCookiesForRequest(
+                                        context,
+                                        callerRequestId,
+                                        watched.taskCookiesPath,
+                                    )
                                 }
                             }
                             else -> Unit
                         }
                     }
             }
+    }
+
+    private fun deleteTaskCookiesForRequest(
+        context: Context,
+        callerRequestId: String?,
+        taskCookiesPath: String?,
+    ) {
+        runCatching {
+            if (!callerRequestId.isNullOrBlank()) {
+                ExternalCookieMaterializer.deleteTaskCookies(context, callerRequestId)
+            }
+            if (!taskCookiesPath.isNullOrBlank()) {
+                val f = File(taskCookiesPath)
+                if (f.exists()) f.delete()
+            }
+        }
+            .onFailure { Log.w(TAG, "delete task cookies failed (non-fatal)") }
     }
 
     private fun emitTerminalOnce(watched: WatchedTask, block: () -> Unit) {

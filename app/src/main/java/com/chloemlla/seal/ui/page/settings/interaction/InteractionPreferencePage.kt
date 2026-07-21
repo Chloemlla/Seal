@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.outlined.FlashOn
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
@@ -29,6 +30,7 @@ import com.chloemlla.seal.ui.component.PreferenceItem
 import com.chloemlla.seal.ui.component.PreferenceSubtitle
 import com.chloemlla.seal.ui.component.PreferenceSwitch
 import com.chloemlla.seal.util.DOWNLOAD_TYPE_INITIALIZATION
+import com.chloemlla.seal.util.EXTERNAL_ACCEPT_COOKIES
 import com.chloemlla.seal.util.EXTERNAL_AUTO_START_ENABLED
 import com.chloemlla.seal.util.EXTERNAL_CALLER_WHITELIST
 import com.chloemlla.seal.util.EXTERNAL_DELEGATE_ENABLED
@@ -59,6 +61,9 @@ fun InteractionPreferencePage(modifier: Modifier = Modifier, onBack: () -> Unit)
         mutableStateOf(EXTERNAL_AUTO_START_ENABLED.getBoolean())
     }
     var externalWhitelistMode by remember { mutableStateOf(EXTERNAL_WHITELIST_MODE.getBoolean()) }
+    var externalAcceptCookies by remember {
+        mutableStateOf(EXTERNAL_ACCEPT_COOKIES.getBoolean())
+    }
     var whitelistText by remember { mutableStateOf(EXTERNAL_CALLER_WHITELIST.getString()) }
 
     Scaffold(
@@ -120,6 +125,19 @@ fun InteractionPreferencePage(modifier: Modifier = Modifier, onBack: () -> Unit)
                 ) {
                     externalAutoStartEnabled = !externalAutoStartEnabled
                     EXTERNAL_AUTO_START_ENABLED.updateBoolean(externalAutoStartEnabled)
+                }
+            }
+
+            item {
+                PreferenceSwitch(
+                    title = stringResource(id = R.string.external_accept_cookies),
+                    description = stringResource(id = R.string.external_accept_cookies_desc),
+                    icon = Icons.Outlined.Key,
+                    enabled = externalDelegateEnabled,
+                    isChecked = externalAcceptCookies && externalDelegateEnabled,
+                ) {
+                    externalAcceptCookies = !externalAcceptCookies
+                    EXTERNAL_ACCEPT_COOKIES.updateBoolean(externalAcceptCookies)
                 }
             }
 

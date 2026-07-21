@@ -33,6 +33,7 @@ Path: **Settings → Interface & interaction → External downloads**
 |---------|---------|---------|
 | Allow external apps to delegate downloads | ON | Master switch |
 | Allow external auto-start | OFF | Permit `auto_start=true` without configure sheet |
+| Accept cookies from external apps | **OFF** | Permit protocol v2 inbound task-scoped cookies |
 | Limit external callers | OFF | When ON, only whitelisted packages may call |
 | Allowed packages | empty | One package name per line |
 
@@ -47,7 +48,7 @@ Compatible legacy surfaces (still supported):
 
 | Extra | Type | Notes |
 |-------|------|------|
-| `protocol_version` | Int | Current: `1` |
+| `protocol_version` | Int | `1` or `2` (latest = 2); missing → 1 |
 | `url` | String | Preferred single URL |
 | `urls` | String[] | Optional multi URL |
 | `extract_audio` | Boolean | Optional override |
@@ -55,8 +56,12 @@ Compatible legacy surfaces (still supported):
 | `auto_start` | Boolean | Requires user setting |
 | `open_ui` | Boolean | Default `true` |
 | `caller_request_id` | String | Echoed in responses |
+| `cookies_format` / `cookies` / `cookies_uri` / `cookies_mid` / `cookies_domain_hint` / `use_cookies` | … | **v2 only**; inbound task-scoped cookies (see call guide) |
+| `strip_segments` / `keep_sections` / `remove_segments` | … | **v2**; keep_sections JSON seconds → `--download-sections` |
 
 Also accepted: `Intent.EXTRA_TEXT`, `intent.data` URL.
+
+**Inbound cookies (v2):** require External downloads → Accept cookies from external apps. Materialized under `cache/external_cookies/`; never export Seal cookies outbound.
 
 ### Kotlin example (delegate with UI)
 

@@ -13,7 +13,42 @@ data class ExternalDownloadRequest(
     val callerRequestId: String?,
     val sourceAction: String?,
     val isExplicitDelegateAction: Boolean,
-)
+    // v2 cookies (null when absent / v1)
+    val cookiesFormat: String? = null,
+    val cookiesPayload: String? = null,
+    val cookiesUri: String? = null,
+    val cookiesMid: Long? = null,
+    val cookiesDomainHint: String? = null,
+    val useCookies: Boolean? = null,
+    val cookiesRequired: Boolean = false,
+    /** Absolute path after materialize; not from Intent. */
+    val taskCookiesPath: String? = null,
+    // v2 strip / sections
+    val stripSegments: Boolean = false,
+    /** Keep ranges in seconds as VideoClip-compatible pairs after parse. */
+    val keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
+    val removeSegmentsJson: String? = null,
+) {
+    val hasCookiePayload: Boolean
+        get() =
+            !cookiesPayload.isNullOrBlank() ||
+                !cookiesUri.isNullOrBlank()
+
+    fun clearedCookies(): ExternalDownloadRequest =
+        copy(
+            cookiesFormat = null,
+            cookiesPayload = null,
+            cookiesUri = null,
+            cookiesMid = null,
+            cookiesDomainHint = null,
+            useCookies = null,
+            cookiesRequired = false,
+            taskCookiesPath = null,
+        )
+
+    fun withTaskCookiesPath(path: String?): ExternalDownloadRequest =
+        copy(taskCookiesPath = path)
+}
 
 sealed interface ExternalDownloadParseResult {
     data class Success(val request: ExternalDownloadRequest) : ExternalDownloadParseResult
@@ -42,7 +77,8 @@ object ExternalDownloadRequestParser {
                     ExternalDownloadProtocol.PROTOCOL_VERSION,
                 )
             } else {
-                ExternalDownloadProtocol.PROTOCOL_VERSION
+                // Missing version: treat as 1 for backward compatibility.
+                1
             }
 
         if (
@@ -81,6 +117,27 @@ object ExternalDownloadRequestParser {
         val callerRequestId =
             intent.getStringExtra(ExternalDownloadProtocol.EXTRA_CALLER_REQUEST_ID)
 
+        // Cookie extras: only apply when protocol_version >= 2.
+        // v1 requests ignore cookie fields (defensive, keeps old docs honest).
+        val cookieFields =
+            if (version >= 2) {
+                parseCookieFields(intent)
+            } else {
+                CookieFields()
+            }
+
+        if (cookieFields.sizeFailure != null) {
+            return cookieFields.sizeFailure
+        }
+
+        val stripSegments =
+            intent.getBooleanExtra(ExternalDownloadProtocol.EXTRA_STRIP_SEGMENTS, false)
+        val keepSectionsRaw =
+            intent.getStringExtra(ExternalDownloadProtocol.EXTRA_KEEP_SECTIONS)
+        val keepSections = parseKeepSectionsJson(keepSectionsRaw)
+        val removeSegmentsJson =
+            intent.getStringExtra(ExternalDownloadProtocol.EXTRA_REMOVE_SEGMENTS)
+
         return ExternalDownloadParseResult.Success(
             ExternalDownloadRequest(
                 protocolVersion = version,
@@ -92,7 +149,92 @@ object ExternalDownloadRequestParser {
                 callerRequestId = callerRequestId,
                 sourceAction = action,
                 isExplicitDelegateAction = isExplicit,
+                cookiesFormat = cookieFields.format,
+                cookiesPayload = cookieFields.payload,
+                cookiesUri = cookieFields.uri,
+                cookiesMid = cookieFields.mid,
+                cookiesDomainHint = cookieFields.domainHint,
+                useCookies = cookieFields.useCookies,
+                cookiesRequired = cookieFields.required,
+                stripSegments = stripSegments,
+                keepSections = keepSections,
+                removeSegmentsJson = removeSegmentsJson,
             )
+        )
+    }
+
+    private data class CookieFields(
+        val format: String? = null,
+        val payload: String? = null,
+        val uri: String? = null,
+        val mid: Long? = null,
+        val domainHint: String? = null,
+        val useCookies: Boolean? = null,
+        val required: Boolean = false,
+        val sizeFailure: ExternalDownloadParseResult.Failure? = null,
+    )
+
+    private fun parseCookieFields(intent: Intent): CookieFields {
+        val format = intent.getStringExtra(ExternalDownloadProtocol.EXTRA_COOKIES_FORMAT)
+        val payload = intent.getStringExtra(ExternalDownloadProtocol.EXTRA_COOKIES)
+        val uri = intent.getStringExtra(ExternalDownloadProtocol.EXTRA_COOKIES_URI)
+        val domainHint =
+            intent.getStringExtra(ExternalDownloadProtocol.EXTRA_COOKIES_DOMAIN_HINT)
+        val useCookies =
+            if (intent.hasExtra(ExternalDownloadProtocol.EXTRA_USE_COOKIES)) {
+                intent.getBooleanExtra(ExternalDownloadProtocol.EXTRA_USE_COOKIES, true)
+            } else null
+        val required =
+            intent.getBooleanExtra(ExternalDownloadProtocol.EXTRA_COOKIES_REQUIRED, false)
+
+        val mid: Long? =
+            when {
+                intent.hasExtra(ExternalDownloadProtocol.EXTRA_COOKIES_MID) -> {
+                    // Accept Long or String
+                    val asLong =
+                        runCatching {
+                                intent.getLongExtra(
+                                    ExternalDownloadProtocol.EXTRA_COOKIES_MID,
+                                    Long.MIN_VALUE,
+                                )
+                            }
+                            .getOrDefault(Long.MIN_VALUE)
+                    if (asLong != Long.MIN_VALUE && asLong != 0L) {
+                        asLong
+                    } else {
+                        intent
+                            .getStringExtra(ExternalDownloadProtocol.EXTRA_COOKIES_MID)
+                            ?.toLongOrNull()
+                    }
+                }
+                else -> null
+            }
+
+        if (!payload.isNullOrEmpty() &&
+            payload.length > ExternalDownloadProtocol.MAX_COOKIES_PAYLOAD_CHARS
+        ) {
+            return CookieFields(
+                sizeFailure =
+                    ExternalDownloadParseResult.Failure(
+                        ExternalDownloadProtocol.ERROR_COOKIE_TOO_LARGE,
+                        "cookies payload exceeds size limit",
+                    )
+            )
+        }
+
+        val hasPayload = !payload.isNullOrBlank() || !uri.isNullOrBlank()
+        if (!hasPayload) {
+            return CookieFields()
+        }
+
+        return CookieFields(
+            format = format,
+            payload = payload,
+            uri = uri,
+            mid = mid,
+            domainHint = domainHint,
+            useCookies = useCookies,
+            required = required,
         )
     }
 
@@ -137,4 +279,3 @@ object ExternalDownloadRequestParser {
         return host.isNotBlank() && host.contains('.')
     }
 }
-

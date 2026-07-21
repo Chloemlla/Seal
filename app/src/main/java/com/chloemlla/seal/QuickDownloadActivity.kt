@@ -61,6 +61,8 @@ class QuickDownloadActivity : ComponentActivity() {
         val extractAudio: Boolean?,
         val downloadSubtitle: Boolean?,
         val generation: Long,
+        val taskCookiesPath: String? = null,
+        val keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
     )
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMaterial3Api::class)
@@ -108,10 +110,17 @@ class QuickDownloadActivity : ComponentActivity() {
                     var preferences by remember(request.generation) {
                         mutableStateOf(
                             DownloadUtil.DownloadPreferences.createFromPreferences().let { base ->
+                                val taskCookies =
+                                    request.taskCookiesPath?.takeIf { it.isNotBlank() }
                                 base.copy(
                                     extractAudio = request.extractAudio ?: base.extractAudio,
                                     downloadSubtitle =
                                         request.downloadSubtitle ?: base.downloadSubtitle,
+                                    cookies = if (taskCookies != null) true else base.cookies,
+                                    cookiesFilePath = taskCookies ?: base.cookiesFilePath,
+                                    videoClips =
+                                        if (request.keepSections.isNotEmpty()) request.keepSections
+                                        else base.videoClips,
                                 )
                             }
                         )
@@ -228,6 +237,9 @@ class QuickDownloadActivity : ComponentActivity() {
                     callerPackage = callerPackage,
                     callerRequestId = callerRequestId,
                     extractAudio = req.extractAudio,
+                    taskCookiesPath = req.taskCookiesPath,
+                    cookiesMid = req.cookiesMid,
+                    keepSections = req.keepSections,
                 )
                 val urls = req.urls
                 if (urls.isEmpty()) {
@@ -243,10 +255,13 @@ class QuickDownloadActivity : ComponentActivity() {
                         extractAudio = req.extractAudio,
                         downloadSubtitle = req.downloadSubtitle,
                         generation = System.currentTimeMillis(),
+                        taskCookiesPath = req.taskCookiesPath,
+                        keepSections = req.keepSections,
                     )
                 Log.i(
                     TAG,
-                    "ShowUi extractAudio=${req.extractAudio} urls=${urls.size} reqId=$callerRequestId",
+                    "ShowUi extractAudio=${req.extractAudio} urls=${urls.size} reqId=$callerRequestId " +
+                        "cookies=${!req.taskCookiesPath.isNullOrBlank()}",
                 )
                 return true
             }

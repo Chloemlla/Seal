@@ -105,6 +105,9 @@ class MainActivity : AppCompatActivity() {
                     callerPackage = result.accepted.callerPackage,
                     callerRequestId = result.accepted.request.callerRequestId,
                     extractAudio = result.accepted.request.extractAudio,
+                    taskCookiesPath = result.accepted.request.taskCookiesPath,
+                    cookiesMid = result.accepted.request.cookiesMid,
+                    keepSections = result.accepted.request.keepSections,
                 )
                 dialogViewModel.postAction(
                     DownloadDialogViewModel.Action.ShowSheet(result.accepted.request.urls)

@@ -52,6 +52,12 @@ object DownloadUtil {
 
     private const val TAG = "DownloadUtil"
 
+    /** Retries for metadata/info extraction (getPlaylistOrVideoInfo / fetchVideoInfoFromUrl). */
+    private const val INFO_RETRIES = "10"
+
+    /** Socket timeout in seconds for metadata/info extraction. */
+    private const val INFO_SOCKET_TIMEOUT_SEC = "30"
+
     const val BASENAME = "%(title).200B"
 
     const val EXTENSION = ".%(ext)s"
@@ -82,52 +88,55 @@ object DownloadUtil {
         downloadPreferences: DownloadPreferences = DownloadPreferences.createFromPreferences(),
     ): Result<YoutubeDLInfo> =
         YoutubeDL.runCatching {
-            ToastUtil.makeToastSuspend(context.getString(R.string.fetching_playlist_info))
-            val request = YoutubeDLRequest(playlistURL)
-            with(request) {
-                //            addOption("--compat-options", "no-youtube-unavailable-videos")
-                addOption("--flat-playlist")
-                addOption("--dump-single-json")
-                addOption("-o", BASENAME)
-                addOption("-R", "1")
-                addOption("--socket-timeout", "5")
-                downloadPreferences.run {
-                    if (extractAudio) {
-                        addOption("-x")
-                    }
-                    applyFormatSorter(this, toFormatSorter())
-                    if (proxy) {
-                        enableProxy(proxyUrl)
-                    }
-                    if (forceIpv4) {
-                        addOption("-4")
-                    }
-                    if (cookies) {
-                        enableCookies(userAgentString)
-                    }
-                    if (restrictFilenames) {
-                        addOption("--restrict-filenames")
+                ToastUtil.makeToastSuspend(context.getString(R.string.fetching_playlist_info))
+                val request = YoutubeDLRequest(playlistURL)
+                with(request) {
+                    //            addOption("--compat-options", "no-youtube-unavailable-videos")
+                    addOption("--flat-playlist")
+                    addOption("--dump-single-json")
+                    addOption("-o", BASENAME)
+                    addOption("-R", INFO_RETRIES)
+                    addOption("--socket-timeout", INFO_SOCKET_TIMEOUT_SEC)
+                    downloadPreferences.run {
+                        if (extractAudio) {
+                            addOption("-x")
+                        }
+                        applyFormatSorter(this, toFormatSorter())
+                        if (proxy) {
+                            enableProxy(proxyUrl)
+                        }
+                        if (forceIpv4) {
+                            addOption("-4")
+                        }
+                        if (cookies) {
+                            enableCookies(userAgentString, cookiesFilePath)
+                        }
+                        if (restrictFilenames) {
+                            addOption("--restrict-filenames")
+                        }
                     }
                 }
+                execute(request, playlistURL).out.run {
+                    val playlistInfo = jsonFormat.decodeFromString<PlaylistResult>(this)
+                    if (playlistInfo.type != "playlist") {
+                        jsonFormat.decodeFromString<VideoInfo>(this)
+                    } else playlistInfo
+                }
             }
-            execute(request, playlistURL).out.run {
-                val playlistInfo = jsonFormat.decodeFromString<PlaylistResult>(this)
-                if (playlistInfo.type != "playlist") {
-                    jsonFormat.decodeFromString<VideoInfo>(this)
-                } else playlistInfo
-            }
-        }
+            .mapInfoFetchFailure()
 
     @CheckResult
     private fun getVideoInfo(
         request: YoutubeDLRequest,
         taskKey: String? = null,
     ): Result<VideoInfo> =
-        request.runCatching {
-            val response: YoutubeDLResponse =
-                YoutubeDL.getInstance().execute(request, taskKey, null)
-            jsonFormat.decodeFromString(response.out)
-        }
+        request
+            .runCatching {
+                val response: YoutubeDLResponse =
+                    YoutubeDL.getInstance().execute(request, taskKey, null)
+                jsonFormat.decodeFromString(response.out)
+            }
+            .mapInfoFetchFailure()
 
     @CheckResult
     fun fetchVideoInfoFromUrl(
@@ -148,7 +157,7 @@ object DownloadUtil {
                     }
                     applyFormatSorter(this@with, toFormatSorter())
                     if (cookies) {
-                        enableCookies(userAgentString)
+                        enableCookies(userAgentString, cookiesFilePath)
                     }
                     if (proxy) {
                         enableProxy(proxyUrl)
@@ -171,12 +180,31 @@ object DownloadUtil {
                     } else {
                         addOption("--dump-single-json")
                     }
-                    addOption("-R", "1")
+                    addOption("-R", INFO_RETRIES)
                     addOption("--no-playlist")
-                    addOption("--socket-timeout", "5")
+                    addOption("--socket-timeout", INFO_SOCKET_TIMEOUT_SEC)
                 }
             return getVideoInfo(request, taskKey)
         }
+    }
+
+    /**
+     * Maps transport/metadata abort failures to a localized, actionable message for UI and L3
+     * error_message. Preserves [YoutubeDL.CanceledException] type for cancel handling.
+     */
+    private fun <T> Result<T>.mapInfoFetchFailure(): Result<T> =
+        fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { Result.failure(humanizeInfoFetchThrowable(it)) },
+        )
+
+    private fun humanizeInfoFetchThrowable(throwable: Throwable): Throwable {
+        if (throwable is YoutubeDL.CanceledException) return throwable
+        if (!InfoFetchErrorMapper.isJsonMetadataTransportError(throwable)) {
+            return throwable
+        }
+        val humanMessage = context.getString(R.string.fetch_info_transport_error_msg)
+        return Throwable(humanMessage, throwable)
     }
 
     @Serializable
@@ -198,6 +226,11 @@ object DownloadUtil {
         val sponsorBlock: Boolean,
         val sponsorBlockCategory: String,
         val cookies: Boolean,
+        /**
+         * When non-null, [enableCookies] uses this path instead of the global cookies.txt.
+         * Used for external delegate task-scoped cookies (protocol v2).
+         */
+        val cookiesFilePath: String? = null,
         val aria2c: Boolean,
         val useCustomAudioPreset: Boolean,
         val audioFormat: Int,
@@ -253,6 +286,7 @@ object DownloadUtil {
                     sponsorBlock = false,
                     sponsorBlockCategory = "",
                     cookies = false,
+                    cookiesFilePath = null,
                     aria2c = false,
                     audioFormat = 0,
                     audioQuality = 0,
@@ -315,6 +349,7 @@ object DownloadUtil {
                     sponsorBlock = SPONSORBLOCK.getBoolean(),
                     sponsorBlockCategory = PreferenceUtil.getSponsorBlockCategories(),
                     cookies = COOKIES.getBoolean(),
+                    cookiesFilePath = null,
                     aria2c = ARIA2C.getBoolean(),
                     useCustomAudioPreset = USE_CUSTOM_AUDIO_PRESET.getBoolean(),
                     audioFormat = AUDIO_FORMAT.getInt(),
@@ -356,12 +391,18 @@ object DownloadUtil {
         }
     }
 
-    private fun YoutubeDLRequest.enableCookies(userAgentString: String): YoutubeDLRequest =
-        this.addOption("--cookies", context.getCookiesFile().absolutePath).apply {
+    private fun YoutubeDLRequest.enableCookies(
+        userAgentString: String,
+        cookiesFilePath: String? = null,
+    ): YoutubeDLRequest {
+        val path = cookiesFilePath?.takeIf { it.isNotBlank() }
+            ?: context.getCookiesFile().absolutePath
+        return this.addOption("--cookies", path).apply {
             if (userAgentString.isNotEmpty()) {
                 addOption("--add-header", "User-Agent:$userAgentString")
             }
         }
+    }
 
     private fun YoutubeDLRequest.enableProxy(proxyUrl: String): YoutubeDLRequest =
         this.addOption("--proxy", proxyUrl)
@@ -685,7 +726,7 @@ object DownloadUtil {
                     addOption("--no-mtime")
                     //                addOption("-v")
                     if (cookies) {
-                        enableCookies(userAgentString)
+                        enableCookies(userAgentString, cookiesFilePath)
                     }
                     if (restrictFilenames) {
                         addOption("--restrict-filenames")
@@ -911,7 +952,7 @@ object DownloadUtil {
                             .absolutePath,
                     )
                     if (cookies) {
-                        enableCookies(userAgentString)
+                        enableCookies(userAgentString, cookiesFilePath)
                     }
                 }
             }

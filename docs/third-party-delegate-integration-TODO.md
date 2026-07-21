@@ -17,7 +17,8 @@
 
 ### 1.2 非目标（明确不做）
 - [x] 任意 yt-dlp 命令字符串对外注入 — **保持禁止**
-- [x] Cookie / 账号凭据导出或跨 App 读取 — **保持禁止**
+- [x] Cookie / 账号凭据 **导出** 或跨 App **读取 Seal 凭据** — **保持禁止**
+- [x] ~~禁止一切入站 Cookie~~ → **已修订**：协议 v2 允许**调用方自有** Cookie 入站（任务级 + 用户开关默认关）；仍禁止写全局 cookies.txt / CookieProfile / 出站导出
 - [x] 任意输出目录写入 / 路径穿越 — **保持禁止**
 - [x] 修改 Seal 全局设置（污染用户默认偏好） — **保持禁止**
 - [x] 无用户感知的无限后台批量静默下载 — **自动开始默认关 + 限流**
@@ -65,8 +66,8 @@
 
 - Action: `com.chloemlla.seal.action.DOWNLOAD`
 - Status broadcast: `com.chloemlla.seal.action.DOWNLOAD_STATUS`（`setPackage(caller)`）
-- `protocol_version = 1`
-- Defaults: delegate ON, auto-start OFF, whitelist OFF
+- `protocol_version = 1..2`（latest 2）
+- Defaults: delegate ON, auto-start OFF, accept external cookies OFF, whitelist OFF
 
 ---
 
