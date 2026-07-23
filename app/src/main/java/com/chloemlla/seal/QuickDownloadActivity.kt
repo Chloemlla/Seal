@@ -69,7 +69,22 @@ class QuickDownloadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Crash report UI is owned by MainActivity; block quick-download entry until cleared.
+        // Must deliver Activity Result so callers (e.g. PiliPlus) do not treat blank cancel as opaque reject.
         if (runCatching { LumenCrash.loadPendingReport() }.getOrNull() != null) {
+            val caller =
+                ExternalDownloadEntry.resolveCallerPackage(this, intent)
+            val requestId =
+                intent?.getStringExtra(ExternalDownloadProtocol.EXTRA_CALLER_REQUEST_ID)
+            ExternalDownloadStatusReporter.finishWithResult(
+                activity = this,
+                resultCode = Activity.RESULT_CANCELED,
+                status = ExternalDownloadProtocol.STATUS_REJECTED,
+                errorCode = ExternalDownloadProtocol.ERROR_APP_BUSY,
+                errorMessage =
+                    "Seal has a pending crash report; open Seal to clear it, then retry download",
+                callerRequestId = requestId,
+                callerPackage = caller,
+            )
             startActivity(
                 Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -244,6 +259,15 @@ class QuickDownloadActivity : ComponentActivity() {
                 val urls = req.urls
                 if (urls.isEmpty()) {
                     ExternalDownloadCoordinator.endExternalSession()
+                    ExternalDownloadStatusReporter.finishWithResult(
+                        activity = this,
+                        resultCode = Activity.RESULT_CANCELED,
+                        status = ExternalDownloadProtocol.STATUS_REJECTED,
+                        errorCode = ExternalDownloadProtocol.ERROR_INVALID_URL,
+                        errorMessage = "No valid URL to download",
+                        callerRequestId = callerRequestId,
+                        callerPackage = callerPackage,
+                    )
                     finish()
                     return false
                 }

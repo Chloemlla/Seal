@@ -263,9 +263,10 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 | `disabled` | 用户关闭了外部委托总开关 |
 | `auto_start_denied` | 未允许自动开始（且可能 `open_ui=false` 导致硬拒绝） |
 | `invalid_url` | 没有可用的 http(s) URL |
-| `unsupported_version` | `protocol_version` 不在 `1..1` |
+| `unsupported_version` | `protocol_version` 不在 `1..2` |
 | `caller_denied` | 白名单模式拒绝（含 caller 为空） |
 | `queue_rejected` | 限流（约 60s / 20 次） |
+| `app_busy` | Seal 正忙（如待处理崩溃报告），需先打开 Seal 处理后再试 |
 | `internal_error` | Seal 侧接受任务失败（如下载器不可用） |
 | `download_failed` | 终态任务失败 |
 | `canceled` | 终态取消 |
@@ -467,8 +468,8 @@ fun sealProtocolVersion(context: Context, packageName: String = "com.chloemlla.s
 
 Application meta-data：
 
-- `com.chloemlla.seal.external_download_protocol_version` = `1`
-- `com.chloemlla.seal.external_download_max_protocol_version` = `1`
+- `com.chloemlla.seal.external_download_protocol_version` = `2`
+- `com.chloemlla.seal.external_download_max_protocol_version` = `2`
 
 ### 8.10 adb 快速自测
 

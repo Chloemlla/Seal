@@ -137,9 +137,10 @@ class SealDownloadStatusReceiver : BroadcastReceiver() {
 | `disabled` | user disabled external delegation |
 | `auto_start_denied` | auto-start not allowed |
 | `invalid_url` | no usable http(s) URL |
-| `unsupported_version` | protocol_version outside 1..1 |
+| `unsupported_version` | protocol_version outside 1..2 |
 | `caller_denied` | whitelist rejection |
 | `queue_rejected` | rate limit |
+| `app_busy` | pending crash report / app busy blocking Quick Download |
 | `internal_error` | Seal-side failure accepting task |
 | `download_failed` | terminal task failure |
 | `canceled` | terminal cancel |
@@ -157,8 +158,8 @@ class SealDownloadStatusReceiver : BroadcastReceiver() {
 
 Application meta-data:
 
-- `com.chloemlla.seal.external_download_protocol_version` = `1`
-- `com.chloemlla.seal.external_download_max_protocol_version` = `1`
+- `com.chloemlla.seal.external_download_protocol_version` = `2`
+- `com.chloemlla.seal.external_download_max_protocol_version` = `2`
 
 ## Implementation map
 

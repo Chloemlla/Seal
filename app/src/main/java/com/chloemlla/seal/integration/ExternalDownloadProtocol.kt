@@ -67,6 +67,7 @@ object ExternalDownloadProtocol {
     const val ERROR_UNSUPPORTED_VERSION = "unsupported_version"
     const val ERROR_CALLER_DENIED = "caller_denied"
     const val ERROR_QUEUE_REJECTED = "queue_rejected"
+    const val ERROR_APP_BUSY = "app_busy"
     const val ERROR_INTERNAL = "internal_error"
     const val ERROR_DOWNLOAD_FAILED = "download_failed"
     const val ERROR_CANCELED = "canceled"

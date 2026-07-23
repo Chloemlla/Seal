@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Accept external download protocol v2 discovery meta-data (max_protocol_version=2) so callers can negotiate Cookie/sections extras.
+- Deliver explicit rejected Activity Result (with app_busy / invalid_url) instead of blank cancel when Quick Download is blocked by a pending crash report or empty URL list.
 - Harden video-info fetch against transient transport aborts (e.g. Bilibili JSON metadata `Errno 103` / `TransportError`): metadata requests now use 10 retries and a 30s socket timeout, with a localized error message that suggests retry and enabling Cookies.
 
 ### Notable changes from v1.13

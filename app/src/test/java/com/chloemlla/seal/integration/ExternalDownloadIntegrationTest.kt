@@ -226,6 +226,7 @@ class ExternalDownloadRequestParserTest {
         assertEquals(2, ExternalDownloadProtocol.PROTOCOL_VERSION)
         assertEquals(1, ExternalDownloadProtocol.MIN_SUPPORTED_VERSION)
         assertEquals(2, ExternalDownloadProtocol.MAX_SUPPORTED_VERSION)
+        assertEquals("app_busy", ExternalDownloadProtocol.ERROR_APP_BUSY)
         assertEquals("com.chloemlla.seal.action.DOWNLOAD", ExternalDownloadProtocol.ACTION_DOWNLOAD)
         assertEquals(
             "com.chloemlla.seal.action.DOWNLOAD_STATUS",
