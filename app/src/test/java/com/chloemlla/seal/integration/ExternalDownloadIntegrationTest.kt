@@ -427,5 +427,47 @@ class ExternalDownloadSessionTest {
         )
         ExternalDownloadCoordinator.endExternalSession()
         assertTrue(ExternalDownloadCoordinator.currentSession() == null)
+        // Intermediate end without cancel keeps sticky for format/quality path.
+        assertTrue(ExternalDownloadCoordinator.resolveDelegateSession() != null)
+        assertEquals(
+            1,
+            ExternalDownloadCoordinator.resolveDelegateSession()!!.keepSections.size,
+        )
+    }
+
+    @Test
+    fun stickyKeepSectionsSurviveIntermediateSheetHide() {
+        val clips =
+            listOf(
+                com.chloemlla.seal.util.VideoClip(start = 0, end = 15),
+                com.chloemlla.seal.util.VideoClip(start = 40, end = 90),
+            )
+        ExternalDownloadCoordinator.beginExternalSession(
+            callerPackage = "com.chloemlla.piliplus",
+            callerRequestId = "req-quality",
+            keepSections = clips,
+        )
+        // Mimic hideDialog after FetchFormats: intermediate clear, not true cancel.
+        ExternalDownloadCoordinator.endExternalSession(notifyCanceledIfEmpty = false)
+        assertTrue(ExternalDownloadCoordinator.currentSession() == null)
+
+        val prefs = ExternalDownloadCoordinator.buildPreferencesForSession()
+        assertEquals(2, prefs.videoClips.size)
+        assertEquals(0, prefs.videoClips[0].start)
+        assertEquals(15, prefs.videoClips[0].end)
+        assertEquals(40, prefs.videoClips[1].start)
+        assertEquals(90, prefs.videoClips[1].end)
+    }
+
+    @Test
+    fun trueCancelClearsStickyKeepSections() {
+        ExternalDownloadCoordinator.beginExternalSession(
+            callerPackage = "com.chloemlla.piliplus",
+            callerRequestId = "req-cancel",
+            keepSections = listOf(com.chloemlla.seal.util.VideoClip(start = 1, end = 2)),
+        )
+        ExternalDownloadCoordinator.endExternalSession(notifyCanceledIfEmpty = true)
+        assertTrue(ExternalDownloadCoordinator.currentSession() == null)
+        assertTrue(ExternalDownloadCoordinator.resolveDelegateSession() == null)
     }
 }

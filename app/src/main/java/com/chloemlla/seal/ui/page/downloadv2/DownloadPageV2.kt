@@ -312,7 +312,7 @@ fun DownloadPageV2(
     // External UI-path: honor extract_audio / keep_sections / task cookies from session.
     LaunchedEffect(sheetValue) {
         if (sheetValue == DownloadDialogViewModel.SheetValue.Expanded) {
-            val session = ExternalDownloadCoordinator.currentSession()
+            val session = ExternalDownloadCoordinator.resolveDelegateSession()
             val merged = ExternalDownloadCoordinator.buildPreferencesForSession(session = session)
             val extract = session?.extractAudio
             preferences = merged

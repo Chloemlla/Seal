@@ -48,6 +48,14 @@ object ExternalDownloadCoordinator {
 
     @Volatile private var externalSession: ExternalSession? = null
 
+    /**
+     * Sticky overrides for the last external UI delegate. Survives intermediate
+     * [endExternalSession]/[currentSession] clears that happen when the configure
+     * sheet hides before FormatPage enqueues (quality / detailed format path).
+     * Cleared only after a successful external enqueue or a true cancel.
+     */
+    @Volatile private var stickyDelegate: ExternalSession? = null
+
     private data class WatchedTask(
         val taskId: String,
         val callerPackage: String?,
@@ -66,7 +74,7 @@ object ExternalDownloadCoordinator {
         keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
     ) {
         val pkg = callerPackage?.trim().orEmpty()
-        externalSession =
+        val next =
             if (pkg.isEmpty()) {
                 null
             } else {
@@ -79,6 +87,8 @@ object ExternalDownloadCoordinator {
                     keepSections = keepSections,
                 )
             }
+        externalSession = next
+        stickyDelegate = next
         Log.i(
             TAG,
             "beginExternalSession pkg=${externalSession?.callerPackage} " +
@@ -90,25 +100,48 @@ object ExternalDownloadCoordinator {
 
     fun endExternalSession(notifyCanceledIfEmpty: Boolean = false, context: Context? = null) {
         val session = externalSession
+        val sticky = stickyDelegate
         externalSession = null
-        // Delete task cookies when session ends without enqueue (user canceled UI).
-        if (session != null && !session.enqueuedDuringSession && context != null) {
-            deleteTaskCookiesForRequest(context, session.callerRequestId, session.taskCookiesPath)
+        // Prefer live session; fall back to sticky for cancel after intermediate sheet hide.
+        val cancelTarget =
+            when {
+                session != null && !session.enqueuedDuringSession -> session
+                sticky != null && !sticky.enqueuedDuringSession -> sticky
+                else -> null
+            }
+        // True cancel: no enqueue yet. Intermediate sheet hide keeps sticky so
+        // FormatPage quality selection can still merge keep_sections.
+        if (notifyCanceledIfEmpty && cancelTarget != null) {
+            stickyDelegate = null
+            if (context != null) {
+                deleteTaskCookiesForRequest(
+                    context,
+                    cancelTarget.callerRequestId,
+                    cancelTarget.taskCookiesPath,
+                )
+                ExternalDownloadStatusReporter.sendStatus(
+                    context = context.applicationContext,
+                    targetPackage = cancelTarget.callerPackage,
+                    status = ExternalDownloadProtocol.STATUS_CANCELED,
+                    errorCode = ExternalDownloadProtocol.ERROR_CANCELED,
+                    callerRequestId = cancelTarget.callerRequestId,
+                )
+                Log.i(
+                    TAG,
+                    "endExternalSession canceled (no enqueue) pkg=${cancelTarget.callerPackage}",
+                )
+            } else {
+                Log.i(TAG, "endExternalSession canceled (no enqueue, no context)")
+            }
+            return
         }
-        if (
-            notifyCanceledIfEmpty &&
-                session != null &&
-                !session.enqueuedDuringSession &&
-                context != null
-        ) {
-            ExternalDownloadStatusReporter.sendStatus(
-                context = context.applicationContext,
-                targetPackage = session.callerPackage,
-                status = ExternalDownloadProtocol.STATUS_CANCELED,
-                errorCode = ExternalDownloadProtocol.ERROR_CANCELED,
-                callerRequestId = session.callerRequestId,
+        // Intermediate clear (format sheet hide / activity pause): keep sticky overrides.
+        if (cancelTarget != null && sticky != null) {
+            Log.d(
+                TAG,
+                "endExternalSession keep sticky keepSections=${sticky.keepSections.size} " +
+                    "pkg=${sticky.callerPackage}",
             )
-            Log.i(TAG, "endExternalSession canceled (no enqueue) pkg=${session.callerPackage}")
         } else {
             Log.d(
                 TAG,
@@ -118,6 +151,9 @@ object ExternalDownloadCoordinator {
     }
 
     fun currentSession(): ExternalSession? = externalSession
+
+    /** Active session, or sticky delegate left after intermediate sheet hide. */
+    fun resolveDelegateSession(): ExternalSession? = externalSession ?: stickyDelegate
 
     /**
      * UI / ViewModel should call this after [DownloaderV2.enqueue].
@@ -143,7 +179,7 @@ object ExternalDownloadCoordinator {
         tasks: List<Task>,
         alsoNotifyAccepted: Boolean = true,
     ) {
-        val session = externalSession
+        val session = resolveDelegateSession()
         if (session == null) {
             Log.w(
                 TAG,
@@ -170,9 +206,12 @@ object ExternalDownloadCoordinator {
         if (alsoNotifyAccepted) {
             notifyAccepted(context = appContext, taskIds = taskIds, session = session)
         }
-        // Session only binds the confirm action; keep watches, stop tagging later in-app enqueues.
+        // Enqueue complete: drop live + sticky so later in-app downloads are not tagged.
         if (externalSession === session) {
             externalSession = null
+        }
+        if (stickyDelegate === session || stickyDelegate?.callerRequestId == session.callerRequestId) {
+            stickyDelegate = null
         }
         Log.i(
             TAG,
@@ -182,7 +221,7 @@ object ExternalDownloadCoordinator {
     }
 
     fun notifyAcceptedForSession(context: Context, taskIds: List<String>) {
-        val session = externalSession ?: return
+        val session = resolveDelegateSession() ?: return
         if (taskIds.isEmpty()) return
         session.enqueuedDuringSession = true
         notifyAccepted(context = context.applicationContext, taskIds = taskIds, session = session)
@@ -299,22 +338,23 @@ object ExternalDownloadCoordinator {
      */
     fun buildPreferencesForSession(
         request: ExternalDownloadRequest? = null,
-        session: ExternalSession? = currentSession(),
+        session: ExternalSession? = resolveDelegateSession(),
     ): DownloadUtil.DownloadPreferences {
         val base = DownloadUtil.DownloadPreferences.createFromPreferences()
+        val delegate = session ?: resolveDelegateSession()
         val taskCookies =
             request?.taskCookiesPath?.takeIf { it.isNotBlank() }
-                ?: session?.taskCookiesPath?.takeIf { it.isNotBlank() }
+                ?: delegate?.taskCookiesPath?.takeIf { it.isNotBlank() }
         val sections =
             when {
                 request != null && request.keepSections.isNotEmpty() -> request.keepSections
-                session != null && session.keepSections.isNotEmpty() -> session.keepSections
+                delegate != null && delegate.keepSections.isNotEmpty() -> delegate.keepSections
                 else -> base.videoClips
             }
         return base.copy(
             extractAudio =
                 request?.extractAudio
-                    ?: session?.extractAudio
+                    ?: delegate?.extractAudio
                     ?: base.extractAudio,
             downloadSubtitle = request?.downloadSubtitle ?: base.downloadSubtitle,
             cookies = if (taskCookies != null) true else base.cookies,

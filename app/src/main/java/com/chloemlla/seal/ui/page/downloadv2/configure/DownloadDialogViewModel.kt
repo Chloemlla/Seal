@@ -226,7 +226,7 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
         }
         // External UI dismissed without format/playlist selection and without enqueue.
         if (mSelectionStateFlow.value is SelectionState.Idle &&
-            ExternalDownloadCoordinator.currentSession() != null) {
+            ExternalDownloadCoordinator.resolveDelegateSession() != null) {
             ExternalDownloadCoordinator.endExternalSession(
                 notifyCanceledIfEmpty = true,
                 context = App.context,
@@ -259,7 +259,7 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
 
     private fun resetSelectionState() {
         mSelectionStateFlow.update { SelectionState.Idle }
-        if (ExternalDownloadCoordinator.currentSession() != null) {
+        if (ExternalDownloadCoordinator.resolveDelegateSession() != null) {
             ExternalDownloadCoordinator.endExternalSession(
                 notifyCanceledIfEmpty = true,
                 context = App.context,

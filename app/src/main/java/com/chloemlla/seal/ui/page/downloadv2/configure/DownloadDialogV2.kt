@@ -167,7 +167,7 @@ val PreferencesMock = DownloadUtil.DownloadPreferences.EMPTY
  */
 private fun reloadPreferencesPreservingExternal(): DownloadUtil.DownloadPreferences {
     val base = DownloadUtil.DownloadPreferences.createFromPreferences()
-    val session = ExternalDownloadCoordinator.currentSession() ?: return base
+    val session = ExternalDownloadCoordinator.resolveDelegateSession() ?: return base
     val taskCookies = session.taskCookiesPath?.takeIf { it.isNotBlank() }
     val sections = session.keepSections
     return base.copy(
