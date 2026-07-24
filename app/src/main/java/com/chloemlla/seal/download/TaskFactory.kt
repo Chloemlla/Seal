@@ -4,6 +4,7 @@ import androidx.annotation.CheckResult
 import com.chloemlla.seal.database.objects.CommandTemplate
 import com.chloemlla.seal.download.Task.DownloadState.Idle
 import com.chloemlla.seal.download.Task.DownloadState.ReadyWithInfo
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.util.DownloadUtil.DownloadPreferences
 import com.chloemlla.seal.util.Format
 import com.chloemlla.seal.util.PlaylistResult
@@ -14,7 +15,10 @@ import kotlin.math.roundToInt
 object TaskFactory {
     /**
      * @return A [TaskWithState] with extra configurations made by user in the custom format
-     *   selection page
+     *   selection page.
+     *
+     * When an external delegate session is active, task-scoped cookies and keep_sections
+     * (as [VideoClip]s) are preserved unless the user supplies an explicit clip plan.
      */
     @CheckResult
     fun createWithConfigurations(
@@ -45,12 +49,21 @@ object TaskFactory {
         val subtitleLanguage =
             (selectedSubtitles + selectedAutoCaptions).joinToString(separator = ",")
 
+        // Start from external-aware prefs so keep_sections / task cookies survive format pick.
+        val sessionBase = ExternalDownloadCoordinator.buildPreferencesForSession()
+        val effectiveClips =
+            when {
+                videoClips.isNotEmpty() -> videoClips
+                sessionBase.videoClips.isNotEmpty() -> sessionBase.videoClips
+                else -> emptyList()
+            }
+
         val preferences =
-            DownloadPreferences.createFromPreferences()
+            sessionBase
                 .run {
                     copy(
                         formatIdString = formatId,
-                        videoClips = videoClips,
+                        videoClips = effectiveClips,
                         splitByChapter = splitByChapter,
                         newTitle = newTitle,
                         mergeAudioStream = mergeAudioStream,

@@ -397,4 +397,35 @@ class ExternalDownloadSessionTest {
         assertEquals("/cache/external_cookies/req.txt", session!!.taskCookiesPath)
         assertEquals(42L, session.cookiesMid)
     }
+
+    @Test
+    fun beginSessionStoresKeepSections() {
+        val clips =
+            listOf(
+                com.chloemlla.seal.util.VideoClip(start = 0, end = 10),
+                com.chloemlla.seal.util.VideoClip(start = 20, end = 40),
+            )
+        ExternalDownloadCoordinator.beginExternalSession(
+            callerPackage = "com.example.caller",
+            callerRequestId = "req-strip",
+            keepSections = clips,
+        )
+        val session = ExternalDownloadCoordinator.currentSession()
+        assertEquals(2, session!!.keepSections.size)
+        assertEquals(0, session.keepSections[0].start)
+        assertEquals(10, session.keepSections[0].end)
+        assertEquals(20, session.keepSections[1].start)
+        assertEquals(40, session.keepSections[1].end)
+    }
+
+    @Test
+    fun endSessionClearsKeepSections() {
+        ExternalDownloadCoordinator.beginExternalSession(
+            callerPackage = "com.example.caller",
+            callerRequestId = "req-strip",
+            keepSections = listOf(com.chloemlla.seal.util.VideoClip(start = 1, end = 2)),
+        )
+        ExternalDownloadCoordinator.endExternalSession()
+        assertTrue(ExternalDownloadCoordinator.currentSession() == null)
+    }
 }

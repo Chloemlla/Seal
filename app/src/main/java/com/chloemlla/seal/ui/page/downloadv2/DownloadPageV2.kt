@@ -309,16 +309,13 @@ fun DownloadPageV2(
     var showDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // External UI-path: honor extract_audio from the active external session.
+    // External UI-path: honor extract_audio / keep_sections / task cookies from session.
     LaunchedEffect(sheetValue) {
         if (sheetValue == DownloadDialogViewModel.SheetValue.Expanded) {
             val session = ExternalDownloadCoordinator.currentSession()
-            val base = DownloadUtil.DownloadPreferences.createFromPreferences()
+            val merged = ExternalDownloadCoordinator.buildPreferencesForSession(session = session)
             val extract = session?.extractAudio
-            preferences =
-                base.copy(
-                    extractAudio = extract ?: base.extractAudio,
-                )
+            preferences = merged
             dialogConfig =
                 Config(
                     downloadType =
@@ -327,9 +324,16 @@ fun DownloadPageV2(
                             false -> DownloadType.Video
                             null ->
                                 PreferenceUtil.getDownloadType()
-                                    ?: if (base.extractAudio) DownloadType.Audio
+                                    ?: if (merged.extractAudio) DownloadType.Audio
                                     else DownloadType.Video
-                        }
+                        },
+                    // Upstream #2585: never expose Custom Command on delegated external UI.
+                    typeEntries =
+                        if (session != null) {
+                            DownloadType.entries - DownloadType.Command
+                        } else {
+                            Config().typeEntries
+                        },
                 )
             showDialog = true
         } else {

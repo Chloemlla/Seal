@@ -114,6 +114,7 @@ import com.chloemlla.seal.ui.page.settings.command.CommandTemplateDialog
 import com.chloemlla.seal.ui.page.settings.format.AudioQuickSettingsDialog
 import com.chloemlla.seal.ui.page.settings.format.VideoQuickSettingsDialog
 import com.chloemlla.seal.ui.page.settings.network.CookiesQuickSettingsDialog
+import com.chloemlla.seal.integration.ExternalDownloadCoordinator
 import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.util.AUDIO_CONVERSION_FORMAT
 import com.chloemlla.seal.util.AUDIO_CONVERT
@@ -159,6 +160,23 @@ private fun DownloadType.label(): String =
     )
 
 val PreferencesMock = DownloadUtil.DownloadPreferences.EMPTY
+
+/**
+ * Reload global preferences after a preset save, while preserving external-session
+ * keep_sections / task cookies when present.
+ */
+private fun reloadPreferencesPreservingExternal(): DownloadUtil.DownloadPreferences {
+    val base = DownloadUtil.DownloadPreferences.createFromPreferences()
+    val session = ExternalDownloadCoordinator.currentSession() ?: return base
+    val taskCookies = session.taskCookiesPath?.takeIf { it.isNotBlank() }
+    val sections = session.keepSections
+    return base.copy(
+        extractAudio = session.extractAudio ?: base.extractAudio,
+        cookies = if (taskCookies != null) true else base.cookies,
+        cookiesFilePath = taskCookies ?: base.cookiesFilePath,
+        videoClips = if (sections.isNotEmpty()) sections else base.videoClips,
+    )
+}
 
 data class Config(
     val downloadType: DownloadType? = PreferenceUtil.getDownloadType(),
@@ -238,7 +256,7 @@ fun DownloadDialog(
             onSave = {
                 VIDEO_FORMAT.updateInt(format)
                 VIDEO_QUALITY.updateInt(res)
-                onPreferencesUpdate(DownloadUtil.DownloadPreferences.createFromPreferences())
+                onPreferencesUpdate(reloadPreferencesPreservingExternal())
             },
         )
     }
@@ -272,7 +290,7 @@ fun DownloadDialog(
                 AUDIO_CONVERSION_FORMAT.updateInt(conversionFmt)
                 AUDIO_CONVERT.updateBoolean(convertAudio)
                 AUDIO_FORMAT.updateInt(preferredFormat)
-                onPreferencesUpdate(DownloadUtil.DownloadPreferences.createFromPreferences())
+                onPreferencesUpdate(reloadPreferencesPreservingExternal())
             },
         )
     }
@@ -370,9 +388,7 @@ private fun DownloadDialogContent(
                                 preference = preferences,
                                 selectedType = config.downloadType,
                                 onPreferenceUpdate = {
-                                    onPreferencesUpdate(
-                                        DownloadUtil.DownloadPreferences.createFromPreferences()
-                                    )
+                                    onPreferencesUpdate(reloadPreferencesPreservingExternal())
                                 },
                             )
                         },
@@ -726,7 +742,7 @@ fun ConfigurePagePlaylistVariant(
                 preference = preferences,
                 selectedType = Audio,
                 onPreferenceUpdate = {
-                    onPreferencesUpdate(DownloadUtil.DownloadPreferences.createFromPreferences())
+                    onPreferencesUpdate(reloadPreferencesPreservingExternal())
                 },
             )
         }

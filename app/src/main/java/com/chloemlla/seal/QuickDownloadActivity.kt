@@ -184,7 +184,12 @@ class QuickDownloadActivity : ComponentActivity() {
                         DownloadDialog(
                             state = state,
                             sheetState = sheetState,
-                            config = Config(downloadType = initialType),
+                            config =
+                                Config(
+                                    downloadType = initialType,
+                                    // External path must not expose Custom Command (upstream #2585).
+                                    typeEntries = DownloadType.entries - DownloadType.Command,
+                                ),
                             preferences = preferences,
                             onPreferencesUpdate = { preferences = it },
                             onActionPost = { viewModel.postAction(it) },

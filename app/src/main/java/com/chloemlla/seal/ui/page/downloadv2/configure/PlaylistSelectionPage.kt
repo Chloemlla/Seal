@@ -91,7 +91,7 @@ fun PlaylistSelectionPage(
     onDismissRequest: () -> Unit = {},
 ) {
     var preferences by remember {
-        mutableStateOf(DownloadUtil.DownloadPreferences.createFromPreferences())
+        mutableStateOf(ExternalDownloadCoordinator.buildPreferencesForSession())
     }
     var showVideoPresetDialog by remember { mutableStateOf(false) }
     var showAudioPresetDialog by remember { mutableStateOf(false) }
@@ -152,7 +152,23 @@ fun PlaylistSelectionPage(
                 },
                 onDismissRequest = onDismissConfigurationSheet,
                 onDownload = {
-                    val preferences = preferences.copy(extractAudio = it == Audio)
+                    // Re-merge external keep_sections / cookies in case preset save rebuilt prefs.
+                    val sessionPrefs = ExternalDownloadCoordinator.buildPreferencesForSession()
+                    val preferences =
+                        preferences
+                            .copy(extractAudio = it == Audio)
+                            .let { chosen ->
+                                chosen.copy(
+                                    videoClips =
+                                        if (chosen.videoClips.isNotEmpty()) chosen.videoClips
+                                        else sessionPrefs.videoClips,
+                                    cookies =
+                                        if (!sessionPrefs.cookiesFilePath.isNullOrBlank()) true
+                                        else chosen.cookies,
+                                    cookiesFilePath =
+                                        sessionPrefs.cookiesFilePath ?: chosen.cookiesFilePath,
+                                )
+                            }
                     val tasks =
                         taskList.map { entry ->
                             val updated = entry.copy(task = entry.task.copy(preferences = preferences))
@@ -185,7 +201,7 @@ fun PlaylistSelectionPage(
             onSave = {
                 VIDEO_FORMAT.updateInt(format)
                 VIDEO_QUALITY.updateInt(res)
-                preferences = DownloadUtil.DownloadPreferences.createFromPreferences()
+                preferences = ExternalDownloadCoordinator.buildPreferencesForSession()
             },
         )
     }
@@ -219,7 +235,7 @@ fun PlaylistSelectionPage(
                 AUDIO_CONVERSION_FORMAT.updateInt(conversionFmt)
                 AUDIO_CONVERT.updateBoolean(convertAudio)
                 AUDIO_FORMAT.updateInt(preferredFormat)
-                preferences = DownloadUtil.DownloadPreferences.createFromPreferences()
+                preferences = ExternalDownloadCoordinator.buildPreferencesForSession()
             },
         )
     }
@@ -285,7 +301,8 @@ fun PlaylistSelectionPageImpl(
                                         result.originalUrl ?: result.webpageUrl.toString(),
                                     indexList = selectedItems,
                                     playlistResult = result,
-                                    preferences = DownloadUtil.DownloadPreferences.EMPTY,
+                                    preferences =
+                                        ExternalDownloadCoordinator.buildPreferencesForSession(),
                                 )
                             )
                         },

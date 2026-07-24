@@ -811,6 +811,10 @@ object DownloadUtil {
                             "*%d-%d".format(locale = Locale.US, it.start, it.end),
                         )
                     }
+                    // Accurate multi-clip cuts (sponsor/ad strip keep plans often have 2+ ranges).
+                    if (videoClips.isNotEmpty()) {
+                        addOption("--force-keyframes-at-cuts")
+                    }
                     if (newTitle.isNotEmpty()) {
                         addCommands(listOf("--replace-in-metadata", "title", ".+", newTitle))
                     }
