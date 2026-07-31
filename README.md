@@ -248,6 +248,13 @@ Join the community [Telegram Channel](https://t.me/seal_app) or [Matrix Space](h
 
 For this fork, prefer GitHub issues/PRs on [Chloemlla/Seal](https://github.com/Chloemlla/Seal).
 
+## 💖 Sponsors
+
+<p><!-- sponsors --><a href="https://github.com/Opposum102"><img src="https:&#x2F;&#x2F;github.com&#x2F;Opposum102.png" width="60px" alt="User avatar: " /></a><a href="https://github.com/hvarfredriksen"><img src="https:&#x2F;&#x2F;github.com&#x2F;hvarfredriksen.png" width="60px" alt="User avatar: Håvar Fredriksen" /></a><!-- sponsors --></p>
+
+
+Seal will be always free and open source for everyone. If you like it, please consider [sponsoring me](https://github.com/sponsors/JunkFood02)!
+
 ## 🤝 Contributing
 
 Contributions are welcome!
