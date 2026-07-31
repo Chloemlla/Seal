@@ -100,7 +100,12 @@ data class Task(
             override val action: RestartableAction,
         ) : DownloadState, Restartable
 
-        @Serializable data class Completed(val filePath: String?) : DownloadState
+        @Serializable
+        data class Completed(
+            val filePath: String?,
+            val stripResult: StripResult = StripResult.NotRequested,
+            val stripMessage: String? = null,
+        ) : DownloadState
 
         override fun compareTo(other: DownloadState): Int {
             return ordinal - other.ordinal

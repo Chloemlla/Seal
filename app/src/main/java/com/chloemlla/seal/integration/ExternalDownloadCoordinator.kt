@@ -8,6 +8,7 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.chloemlla.seal.download.DownloaderV2
+import com.chloemlla.seal.download.StripResult
 import com.chloemlla.seal.download.Task
 import com.chloemlla.seal.download.Task.DownloadState
 import com.chloemlla.seal.util.DownloadUtil
@@ -42,6 +43,7 @@ object ExternalDownloadCoordinator {
         /** Task-scoped cookies file path after materialize; null if none. */
         val taskCookiesPath: String? = null,
         val cookiesMid: Long? = null,
+        val stripSegments: Boolean = false,
         val keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
         @Volatile var enqueuedDuringSession: Boolean = false,
     )
@@ -61,6 +63,7 @@ object ExternalDownloadCoordinator {
         val callerPackage: String?,
         val callerRequestId: String?,
         val taskCookiesPath: String? = null,
+        val stripRequested: Boolean = false,
         val terminalSent: AtomicBoolean = AtomicBoolean(false),
         var job: Job? = null,
     )
@@ -71,6 +74,7 @@ object ExternalDownloadCoordinator {
         extractAudio: Boolean? = null,
         taskCookiesPath: String? = null,
         cookiesMid: Long? = null,
+        stripSegments: Boolean = false,
         keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
     ) {
         val pkg = callerPackage?.trim().orEmpty()
@@ -84,6 +88,7 @@ object ExternalDownloadCoordinator {
                     extractAudio = extractAudio,
                     taskCookiesPath = taskCookiesPath,
                     cookiesMid = cookiesMid,
+                    stripSegments = stripSegments,
                     keepSections = keepSections,
                 )
             }
@@ -94,7 +99,7 @@ object ExternalDownloadCoordinator {
             "beginExternalSession pkg=${externalSession?.callerPackage} " +
                 "reqId=$callerRequestId extractAudio=$extractAudio " +
                 "cookies=${!taskCookiesPath.isNullOrBlank()} mid=$cookiesMid " +
-                "keepSections=${keepSections.size}",
+                "strip=$stripSegments keepSections=${keepSections.size}",
         )
     }
 
@@ -201,6 +206,7 @@ object ExternalDownloadCoordinator {
                 callerPackage = session.callerPackage,
                 callerRequestId = session.callerRequestId,
                 taskCookiesPath = session.taskCookiesPath,
+                stripRequested = task.preferences.stripKeepSections.isNotEmpty(),
             )
         }
         if (alsoNotifyAccepted) {
@@ -312,21 +318,32 @@ object ExternalDownloadCoordinator {
         val base = DownloadUtil.DownloadPreferences.createFromPreferences()
         val taskCookies = request.taskCookiesPath?.takeIf { it.isNotBlank() }
         val forceCookies = taskCookies != null || (request.useCookies == true && taskCookies != null)
-        val sections =
-            if (request.keepSections.isNotEmpty()) request.keepSections else base.videoClips
+        val stripSections =
+            if (request.stripSegments) request.keepSections else emptyList()
+        val ordinarySections =
+            if (!request.stripSegments && request.keepSections.isNotEmpty()) {
+                request.keepSections
+            } else if (request.stripSegments) {
+                emptyList()
+            } else {
+                base.videoClips
+            }
         return base.copy(
             extractAudio = request.extractAudio ?: base.extractAudio,
             downloadSubtitle = request.downloadSubtitle ?: base.downloadSubtitle,
             cookies = if (taskCookies != null) true else base.cookies,
             cookiesFilePath = taskCookies ?: base.cookiesFilePath,
-            videoClips = sections,
+            sponsorBlock = if (request.stripSegments) false else base.sponsorBlock,
+            videoClips = ordinarySections,
+            stripKeepSections = stripSections,
             // External path never injects custom command templates.
         ).also {
             if (forceCookies) {
                 Log.i(
                     TAG,
                     "buildPreferences cookies=true taskPath=${taskCookies != null} " +
-                        "mid=${request.cookiesMid} keepSections=${sections.size}",
+                        "mid=${request.cookiesMid} strip=${request.stripSegments} " +
+                        "keepSections=${request.keepSections.size}",
                 )
             }
         }
@@ -345,6 +362,7 @@ object ExternalDownloadCoordinator {
         val taskCookies =
             request?.taskCookiesPath?.takeIf { it.isNotBlank() }
                 ?: delegate?.taskCookiesPath?.takeIf { it.isNotBlank() }
+        val stripSegments = request?.stripSegments ?: delegate?.stripSegments ?: false
         val sections =
             when {
                 request != null && request.keepSections.isNotEmpty() -> request.keepSections
@@ -359,7 +377,9 @@ object ExternalDownloadCoordinator {
             downloadSubtitle = request?.downloadSubtitle ?: base.downloadSubtitle,
             cookies = if (taskCookies != null) true else base.cookies,
             cookiesFilePath = taskCookies ?: base.cookiesFilePath,
-            videoClips = sections,
+            sponsorBlock = if (stripSegments) false else base.sponsorBlock,
+            videoClips = if (stripSegments) emptyList() else sections,
+            stripKeepSections = if (stripSegments) sections else emptyList(),
         )
     }
 
@@ -389,6 +409,7 @@ object ExternalDownloadCoordinator {
                         callerPackage = callerPackage,
                         callerRequestId = prepared.callerRequestId,
                         taskCookiesPath = prepared.taskCookiesPath,
+                        stripRequested = prepared.stripSegments,
                     )
                 }
                 EnqueueResult.Success(taskIds = taskIds)
@@ -409,6 +430,7 @@ object ExternalDownloadCoordinator {
         callerPackage: String?,
         callerRequestId: String?,
         taskCookiesPath: String? = null,
+        stripRequested: Boolean = false,
     ) {
         if (callerPackage.isNullOrBlank()) {
             Log.w(TAG, "watchTask skipped: blank callerPackage taskId=$taskId")
@@ -426,6 +448,7 @@ object ExternalDownloadCoordinator {
                 callerPackage = callerPackage,
                 callerRequestId = callerRequestId,
                 taskCookiesPath = taskCookiesPath,
+                stripRequested = stripRequested,
             )
         watchedTasks[taskId] = watched
         Log.i(TAG, "watchTask start taskId=$taskId pkg=$callerPackage reqId=$callerRequestId")
@@ -454,7 +477,18 @@ object ExternalDownloadCoordinator {
                         when (val downloadState = state.downloadState) {
                             is DownloadState.Completed -> {
                                 emitTerminalOnce(watched) {
-                                    val filePath = downloadState.filePath
+                                    val reportedStripResult =
+                                        stripResultForTerminal(
+                                            stripRequested = watched.stripRequested,
+                                            completed = true,
+                                            actualResult = downloadState.stripResult,
+                                        )
+                                    val stripConfirmed =
+                                        !watched.stripRequested ||
+                                            reportedStripResult ==
+                                                ExternalDownloadProtocol.STRIP_RESULT_APPLIED
+                                    val filePath =
+                                        if (stripConfirmed) downloadState.filePath else null
                                     val contentUri =
                                         filePath?.let {
                                             createContentUri(context, it, callerPackage)
@@ -467,19 +501,45 @@ object ExternalDownloadCoordinator {
                                     val mimeType = resolveMimeType(filePath)
                                     Log.i(
                                         TAG,
-                                        "terminal COMPLETED taskId=$taskId " +
+                                        "terminal ${if (stripConfirmed) "COMPLETED" else "FAILED"} " +
+                                            "taskId=$taskId " +
                                             "uri=${contentUri != null} name=$displayName mime=$mimeType",
                                     )
                                     ExternalDownloadStatusReporter.sendStatus(
                                         context = context,
                                         targetPackage = callerPackage,
-                                        status = ExternalDownloadProtocol.STATUS_COMPLETED,
-                                        errorCode = ExternalDownloadProtocol.ERROR_OK,
+                                        status =
+                                            if (stripConfirmed) {
+                                                ExternalDownloadProtocol.STATUS_COMPLETED
+                                            } else {
+                                                ExternalDownloadProtocol.STATUS_FAILED
+                                            },
+                                        errorCode =
+                                            if (stripConfirmed) {
+                                                ExternalDownloadProtocol.ERROR_OK
+                                            } else {
+                                                ExternalDownloadProtocol.ERROR_DOWNLOAD_FAILED
+                                            },
+                                        errorMessage =
+                                            if (stripConfirmed) {
+                                                null
+                                            } else {
+                                                "Strip task completed without a confirmed applied outcome"
+                                            },
                                         taskId = taskId,
                                         callerRequestId = callerRequestId,
                                         contentUri = contentUri,
                                         displayName = displayName,
                                         mimeType = mimeType,
+                                        stripResult = reportedStripResult,
+                                        stripMessage =
+                                            when {
+                                                !watched.stripRequested -> null
+                                                stripConfirmed -> downloadState.stripMessage
+                                                else ->
+                                                    downloadState.stripMessage
+                                                        ?: "Strip result was not applied; retry the strip task"
+                                            },
                                     )
                                     deleteTaskCookiesForRequest(
                                         context,
@@ -503,6 +563,18 @@ object ExternalDownloadCoordinator {
                                         errorMessage = downloadState.throwable.message,
                                         taskId = taskId,
                                         callerRequestId = callerRequestId,
+                                        stripResult =
+                                            stripResultForTerminal(
+                                                stripRequested = watched.stripRequested,
+                                                completed = false,
+                                                actualResult = null,
+                                            ),
+                                        stripMessage =
+                                            if (watched.stripRequested) {
+                                                downloadState.throwable.message
+                                            } else {
+                                                null
+                                            },
                                     )
                                     deleteTaskCookiesForRequest(
                                         context,
@@ -578,7 +650,10 @@ object ExternalDownloadCoordinator {
         val b = other.downloadState
         return when {
             a is DownloadState.Completed && b is DownloadState.Completed ->
-                a.filePath == b.filePath && viewState.title == other.viewState.title
+                a.filePath == b.filePath &&
+                    a.stripResult == b.stripResult &&
+                    a.stripMessage == b.stripMessage &&
+                    viewState.title == other.viewState.title
             a is DownloadState.Error && b is DownloadState.Error ->
                 a.throwable.message == b.throwable.message && a.action == b.action
             a is DownloadState.Canceled && b is DownloadState.Canceled -> a.action == b.action
@@ -637,6 +712,18 @@ object ExternalDownloadCoordinator {
 
         data class Failure(val errorCode: String, val message: String) : EnqueueResult
     }
+
+    internal fun stripResultForTerminal(
+        stripRequested: Boolean,
+        completed: Boolean,
+        actualResult: StripResult?,
+    ): String? {
+        if (completed && actualResult == StripResult.Applied) {
+            return ExternalDownloadProtocol.STRIP_RESULT_APPLIED
+        }
+        return if (stripRequested) ExternalDownloadProtocol.STRIP_RESULT_FAILED else null
+    }
+
 }
 
 object ExternalDownloadStatusReporter {
@@ -652,6 +739,8 @@ object ExternalDownloadStatusReporter {
         contentUri: Uri? = null,
         displayName: String? = null,
         mimeType: String? = null,
+        stripResult: String? = null,
+        stripMessage: String? = null,
     ) {
         if (targetPackage.isNullOrBlank()) {
             Log.w("ExternalDownloadStatus", "sendStatus skipped: blank target status=$status")
@@ -682,6 +771,8 @@ object ExternalDownloadStatusReporter {
                 }
                 displayName?.let { putExtra(ExternalDownloadProtocol.EXTRA_DISPLAY_NAME, it) }
                 mimeType?.let { putExtra(ExternalDownloadProtocol.EXTRA_MIME_TYPE, it) }
+                stripResult?.let { putExtra(ExternalDownloadProtocol.EXTRA_STRIP_RESULT, it) }
+                stripMessage?.let { putExtra(ExternalDownloadProtocol.EXTRA_STRIP_MESSAGE, it) }
                 putExtra(ExternalDownloadProtocol.EXTRA_CALLER_PACKAGE, targetPackage)
             }
         runCatching {

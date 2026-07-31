@@ -48,7 +48,7 @@ Compatible legacy surfaces (still supported):
 
 | Extra | Type | Notes |
 |-------|------|------|
-| `protocol_version` | Int | `1` or `2` (latest = 2); missing → 1 |
+| `protocol_version` | Int | `1`..`3` (latest = 3); missing → 1 |
 | `url` | String | Preferred single URL |
 | `urls` | String[] | Optional multi URL |
 | `extract_audio` | Boolean | Optional override |
@@ -57,11 +57,24 @@ Compatible legacy surfaces (still supported):
 | `open_ui` | Boolean | Default `true` |
 | `caller_request_id` | String | Echoed in responses |
 | `cookies_format` / `cookies` / `cookies_uri` / `cookies_mid` / `cookies_domain_hint` / `use_cookies` | … | **v2 only**; inbound task-scoped cookies (see call guide) |
-| `strip_segments` / `keep_sections` / `remove_segments` | … | **v2**; keep_sections JSON seconds → `--download-sections` |
+| `strip_segments` / `keep_sections` / `remove_segments` | … | **v3**; keep_sections seconds → task-scoped section download + one FFmpeg-concatenated output |
 
 Also accepted: `Intent.EXTRA_TEXT`, `intent.data` URL.
 
 **Inbound cookies (v2):** require External downloads → Accept cookies from external apps. Materialized under `cache/external_cookies/`; never export Seal cookies outbound.
+
+**Strip concat (v3):** ordinary `videoClips` still export separate files. A strip request uses
+dedicated keep ranges and reports `strip_result=applied` only after producing one continuous file.
+Protocol v1 ignores strip/section extras; protocol v2 keeps ordinary multi-clip `keep_sections`
+compatibility. Dedicated strip concat is enabled only for protocol v3.
+If section download or concat fails, task-scoped partials are removed and Seal downloads the full
+source into the same private workspace. FFmpeg then applies every keep range with `inpoint` /
+`outpoint`; this D path also reports `applied` only after one stripped output is finalized. If the
+full-source post-process fails, Seal removes the workspace and broadcasts `status=failed` with
+`strip_result=failed`; an unstripped source is never exposed as a successful task.
+The status bridge reads the task's actual `StripResult.Applied`; it never infers success from the
+request flag plus a generic completed state. Cancellation stops yt-dlp/FFmpeg, skips D, and rolls
+back partially-created SAF output before cache and SD staging cleanup.
 
 ### Kotlin example (delegate with UI)
 
@@ -137,7 +150,8 @@ class SealDownloadStatusReceiver : BroadcastReceiver() {
 | `disabled` | user disabled external delegation |
 | `auto_start_denied` | auto-start not allowed |
 | `invalid_url` | no usable http(s) URL |
-| `unsupported_version` | protocol_version outside 1..2 |
+| `unsupported_version` | protocol_version outside 1..3 |
+| `invalid_sections` | strip request has no valid keep range |
 | `caller_denied` | whitelist rejection |
 | `queue_rejected` | rate limit |
 | `app_busy` | pending crash report / app busy blocking Quick Download |
@@ -158,8 +172,8 @@ class SealDownloadStatusReceiver : BroadcastReceiver() {
 
 Application meta-data:
 
-- `com.chloemlla.seal.external_download_protocol_version` = `2`
-- `com.chloemlla.seal.external_download_max_protocol_version` = `2`
+- `com.chloemlla.seal.external_download_protocol_version` = `3`
+- `com.chloemlla.seal.external_download_max_protocol_version` = `3`
 
 ## Implementation map
 

@@ -158,10 +158,23 @@ fun PlaylistSelectionPage(
                         preferences
                             .copy(extractAudio = it == Audio)
                             .let { chosen ->
+                                val stripSections = sessionPrefs.stripKeepSections
                                 chosen.copy(
                                     videoClips =
-                                        if (chosen.videoClips.isNotEmpty()) chosen.videoClips
-                                        else sessionPrefs.videoClips,
+                                        when {
+                                            stripSections.isNotEmpty() -> emptyList()
+                                            chosen.videoClips.isNotEmpty() -> chosen.videoClips
+                                            else -> sessionPrefs.videoClips
+                                        },
+                                    stripKeepSections =
+                                        if (stripSections.isNotEmpty()) {
+                                            stripSections
+                                        } else {
+                                            chosen.stripKeepSections
+                                        },
+                                    sponsorBlock =
+                                        if (stripSections.isNotEmpty()) false
+                                        else chosen.sponsorBlock,
                                     cookies =
                                         if (!sessionPrefs.cookiesFilePath.isNullOrBlank()) true
                                         else chosen.cookies,

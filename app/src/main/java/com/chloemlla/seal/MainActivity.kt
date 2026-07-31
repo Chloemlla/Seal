@@ -107,6 +107,7 @@ class MainActivity : AppCompatActivity() {
                     extractAudio = result.accepted.request.extractAudio,
                     taskCookiesPath = result.accepted.request.taskCookiesPath,
                     cookiesMid = result.accepted.request.cookiesMid,
+                    stripSegments = result.accepted.request.stripSegments,
                     keepSections = result.accepted.request.keepSections,
                 )
                 dialogViewModel.postAction(

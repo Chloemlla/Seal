@@ -37,7 +37,6 @@ import com.chloemlla.seal.ui.page.downloadv2.configure.FormatPage
 import com.chloemlla.seal.ui.page.downloadv2.configure.PlaylistSelectionPage
 import com.chloemlla.seal.ui.theme.SealTheme
 import com.chloemlla.seal.util.DownloadType
-import com.chloemlla.seal.util.DownloadUtil
 import com.chloemlla.seal.util.PreferenceUtil
 import com.chloemlla.seal.util.setLanguage
 import kotlinx.coroutines.launch
@@ -61,8 +60,6 @@ class QuickDownloadActivity : ComponentActivity() {
         val extractAudio: Boolean?,
         val downloadSubtitle: Boolean?,
         val generation: Long,
-        val taskCookiesPath: String? = null,
-        val keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
     )
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalMaterial3Api::class)
@@ -124,18 +121,11 @@ class QuickDownloadActivity : ComponentActivity() {
                     // Rebuild preferences / type when a new external request arrives.
                     var preferences by remember(request.generation) {
                         mutableStateOf(
-                            DownloadUtil.DownloadPreferences.createFromPreferences().let { base ->
-                                val taskCookies =
-                                    request.taskCookiesPath?.takeIf { it.isNotBlank() }
+                            ExternalDownloadCoordinator.buildPreferencesForSession().let { base ->
                                 base.copy(
                                     extractAudio = request.extractAudio ?: base.extractAudio,
                                     downloadSubtitle =
                                         request.downloadSubtitle ?: base.downloadSubtitle,
-                                    cookies = if (taskCookies != null) true else base.cookies,
-                                    cookiesFilePath = taskCookies ?: base.cookiesFilePath,
-                                    videoClips =
-                                        if (request.keepSections.isNotEmpty()) request.keepSections
-                                        else base.videoClips,
                                 )
                             }
                         )
@@ -259,6 +249,7 @@ class QuickDownloadActivity : ComponentActivity() {
                     extractAudio = req.extractAudio,
                     taskCookiesPath = req.taskCookiesPath,
                     cookiesMid = req.cookiesMid,
+                    stripSegments = req.stripSegments,
                     keepSections = req.keepSections,
                 )
                 val urls = req.urls
@@ -284,8 +275,6 @@ class QuickDownloadActivity : ComponentActivity() {
                         extractAudio = req.extractAudio,
                         downloadSubtitle = req.downloadSubtitle,
                         generation = System.currentTimeMillis(),
-                        taskCookiesPath = req.taskCookiesPath,
-                        keepSections = req.keepSections,
                     )
                 Log.i(
                     TAG,

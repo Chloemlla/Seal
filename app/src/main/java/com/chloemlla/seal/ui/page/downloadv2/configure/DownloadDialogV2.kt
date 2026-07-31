@@ -166,16 +166,7 @@ val PreferencesMock = DownloadUtil.DownloadPreferences.EMPTY
  * keep_sections / task cookies when present.
  */
 private fun reloadPreferencesPreservingExternal(): DownloadUtil.DownloadPreferences {
-    val base = DownloadUtil.DownloadPreferences.createFromPreferences()
-    val session = ExternalDownloadCoordinator.resolveDelegateSession() ?: return base
-    val taskCookies = session.taskCookiesPath?.takeIf { it.isNotBlank() }
-    val sections = session.keepSections
-    return base.copy(
-        extractAudio = session.extractAudio ?: base.extractAudio,
-        cookies = if (taskCookies != null) true else base.cookies,
-        cookiesFilePath = taskCookies ?: base.cookiesFilePath,
-        videoClips = if (sections.isNotEmpty()) sections else base.videoClips,
-    )
+    return ExternalDownloadCoordinator.buildPreferencesForSession()
 }
 
 data class Config(

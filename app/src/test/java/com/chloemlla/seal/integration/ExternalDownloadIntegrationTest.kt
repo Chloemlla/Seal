@@ -223,9 +223,9 @@ class ExternalDownloadRequestParserTest {
 
     @Test
     fun protocolVersionBoundsMatchConstants() {
-        assertEquals(2, ExternalDownloadProtocol.PROTOCOL_VERSION)
+        assertEquals(3, ExternalDownloadProtocol.PROTOCOL_VERSION)
         assertEquals(1, ExternalDownloadProtocol.MIN_SUPPORTED_VERSION)
-        assertEquals(2, ExternalDownloadProtocol.MAX_SUPPORTED_VERSION)
+        assertEquals(3, ExternalDownloadProtocol.MAX_SUPPORTED_VERSION)
         assertEquals("app_busy", ExternalDownloadProtocol.ERROR_APP_BUSY)
         assertEquals("com.chloemlla.seal.action.DOWNLOAD", ExternalDownloadProtocol.ACTION_DOWNLOAD)
         assertEquals(
@@ -243,9 +243,17 @@ class ExternalDownloadRequestParserTest {
         assertEquals("use_cookies", ExternalDownloadProtocol.EXTRA_USE_COOKIES)
         assertEquals("keep_sections", ExternalDownloadProtocol.EXTRA_KEEP_SECTIONS)
         assertEquals("strip_segments", ExternalDownloadProtocol.EXTRA_STRIP_SEGMENTS)
+        assertEquals("strip_result", ExternalDownloadProtocol.EXTRA_STRIP_RESULT)
+        assertEquals("strip_message", ExternalDownloadProtocol.EXTRA_STRIP_MESSAGE)
+        assertEquals("applied", ExternalDownloadProtocol.STRIP_RESULT_APPLIED)
+        assertEquals("failed", ExternalDownloadProtocol.STRIP_RESULT_FAILED)
+        assertEquals("invalid_sections", ExternalDownloadProtocol.ERROR_INVALID_SECTIONS)
         assertEquals("cookie_denied", ExternalDownloadProtocol.ERROR_COOKIE_DENIED)
         assertEquals("cookie_invalid", ExternalDownloadProtocol.ERROR_COOKIE_INVALID)
         assertEquals("cookie_too_large", ExternalDownloadProtocol.ERROR_COOKIE_TOO_LARGE)
+        assertFalse(ExternalDownloadRequestParser.supportsStripConcat(1))
+        assertFalse(ExternalDownloadRequestParser.supportsStripConcat(2))
+        assertTrue(ExternalDownloadRequestParser.supportsStripConcat(3))
         assertEquals(256 * 1024, ExternalDownloadProtocol.MAX_COOKIES_PAYLOAD_CHARS)
     }
 }
@@ -408,10 +416,12 @@ class ExternalDownloadSessionTest {
         ExternalDownloadCoordinator.beginExternalSession(
             callerPackage = "com.example.caller",
             callerRequestId = "req-strip",
+            stripSegments = true,
             keepSections = clips,
         )
-        val session = ExternalDownloadCoordinator.currentSession()
-        assertEquals(2, session!!.keepSections.size)
+        val session = ExternalDownloadCoordinator.currentSession()!!
+        assertTrue(session.stripSegments)
+        assertEquals(2, session.keepSections.size)
         assertEquals(0, session.keepSections[0].start)
         assertEquals(10, session.keepSections[0].end)
         assertEquals(20, session.keepSections[1].start)
@@ -445,6 +455,7 @@ class ExternalDownloadSessionTest {
         ExternalDownloadCoordinator.beginExternalSession(
             callerPackage = "com.chloemlla.piliplus",
             callerRequestId = "req-quality",
+            stripSegments = true,
             keepSections = clips,
         )
         // Mimic hideDialog after FetchFormats: intermediate clear, not true cancel.
@@ -452,11 +463,75 @@ class ExternalDownloadSessionTest {
         assertTrue(ExternalDownloadCoordinator.currentSession() == null)
 
         val prefs = ExternalDownloadCoordinator.buildPreferencesForSession()
-        assertEquals(2, prefs.videoClips.size)
-        assertEquals(0, prefs.videoClips[0].start)
-        assertEquals(15, prefs.videoClips[0].end)
-        assertEquals(40, prefs.videoClips[1].start)
-        assertEquals(90, prefs.videoClips[1].end)
+        assertTrue(prefs.videoClips.isEmpty())
+        assertEquals(2, prefs.stripKeepSections.size)
+        assertEquals(0, prefs.stripKeepSections[0].start)
+        assertEquals(15, prefs.stripKeepSections[0].end)
+        assertEquals(40, prefs.stripKeepSections[1].start)
+        assertEquals(90, prefs.stripKeepSections[1].end)
+        assertFalse(prefs.sponsorBlock)
+    }
+
+    @Test
+    fun ordinaryKeepSectionsRemainMultiClipExport() {
+        val clips =
+            listOf(
+                com.chloemlla.seal.util.VideoClip(start = 5, end = 10),
+                com.chloemlla.seal.util.VideoClip(start = 20, end = 30),
+            )
+        ExternalDownloadCoordinator.beginExternalSession(
+            callerPackage = "com.example.editor",
+            callerRequestId = "req-clips",
+            stripSegments = false,
+            keepSections = clips,
+        )
+
+        val prefs = ExternalDownloadCoordinator.buildPreferencesForSession()
+        assertEquals(clips, prefs.videoClips)
+        assertTrue(prefs.stripKeepSections.isEmpty())
+    }
+
+    @Test
+    fun stripTerminalResultsDistinguishAppliedAndFailed() {
+        assertEquals(
+            ExternalDownloadProtocol.STRIP_RESULT_APPLIED,
+            ExternalDownloadCoordinator.stripResultForTerminal(
+                stripRequested = true,
+                completed = true,
+                actualResult = com.chloemlla.seal.download.StripResult.Applied,
+            ),
+        )
+        assertEquals(
+            ExternalDownloadProtocol.STRIP_RESULT_FAILED,
+            ExternalDownloadCoordinator.stripResultForTerminal(
+                stripRequested = true,
+                completed = true,
+                actualResult = com.chloemlla.seal.download.StripResult.NotRequested,
+            ),
+        )
+        assertEquals(
+            ExternalDownloadProtocol.STRIP_RESULT_FAILED,
+            ExternalDownloadCoordinator.stripResultForTerminal(
+                stripRequested = true,
+                completed = false,
+                actualResult = null,
+            ),
+        )
+        assertNull(
+            ExternalDownloadCoordinator.stripResultForTerminal(
+                stripRequested = false,
+                completed = false,
+                actualResult = null,
+            )
+        )
+        assertEquals(
+            ExternalDownloadProtocol.STRIP_RESULT_APPLIED,
+            ExternalDownloadCoordinator.stripResultForTerminal(
+                stripRequested = false,
+                completed = true,
+                actualResult = com.chloemlla.seal.download.StripResult.Applied,
+            ),
+        )
     }
 
     @Test
@@ -464,6 +539,7 @@ class ExternalDownloadSessionTest {
         ExternalDownloadCoordinator.beginExternalSession(
             callerPackage = "com.chloemlla.piliplus",
             callerRequestId = "req-cancel",
+            stripSegments = true,
             keepSections = listOf(com.chloemlla.seal.util.VideoClip(start = 1, end = 2)),
         )
         ExternalDownloadCoordinator.endExternalSession(notifyCanceledIfEmpty = true)

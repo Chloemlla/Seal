@@ -330,8 +330,15 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
                             }
                         },
                     )
-                    .onSuccess { pathList ->
-                        downloadState = Completed(pathList.firstOrNull())
+                    .onSuccess { outcome ->
+                        if (downloadState is DownloadState.Canceled) return@onSuccess
+                        val pathList = outcome.filePaths
+                        downloadState =
+                            Completed(
+                                filePath = pathList.firstOrNull(),
+                                stripResult = outcome.stripResult,
+                                stripMessage = outcome.stripMessage,
+                            )
 
                         val text =
                             appContext.getString(
@@ -350,7 +357,10 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
                         )
                     }
                     .onFailure { throwable ->
-                        if (throwable is YoutubeDL.CanceledException) {
+                        if (
+                            throwable is YoutubeDL.CanceledException ||
+                                downloadState is DownloadState.Canceled
+                        ) {
                             return@onFailure
                         }
                         downloadState = Error(throwable = throwable, action = Download)
@@ -368,7 +378,17 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
     private fun Task.cancelImpl(): Boolean {
         when (val preState = downloadState) {
             is DownloadState.Cancelable -> {
-                val res = YoutubeDL.destroyProcessById(preState.taskId)
+                val stripCancellation =
+                    if (
+                        preState is Running &&
+                            preferences.stripKeepSections.isNotEmpty()
+                    ) {
+                        StripDownloadWorkflow.cancel(preState.taskId)
+                    } else {
+                        false
+                    }
+                val res =
+                    YoutubeDL.destroyProcessById(preState.taskId) or stripCancellation
                 if (res) {
                     preState.job.cancel()
                     val progress = if (preState is Running) preState.progress else null

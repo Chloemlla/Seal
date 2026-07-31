@@ -60,10 +60,10 @@
         tools:targetApi="37">
         <meta-data
             android:name="com.chloemlla.seal.external_download_protocol_version"
-            android:value="2" />
+            android:value="3" />
         <meta-data
             android:name="com.chloemlla.seal.external_download_max_protocol_version"
-            android:value="2" />
+            android:value="3" />
         <activity
             android:name=".QuickDownloadActivity"
             android:excludeFromRecents="true"

@@ -6,15 +6,16 @@ package com.chloemlla.seal.integration
  * Third parties submit URLs to Seal; Seal owns the queue, yt-dlp process, and files.
  * Raw yt-dlp commands, cookie **export**, and remote control are intentionally unsupported.
  *
- * Protocol v2 (additive): optional inbound cookies (task-scoped) and keep_sections / strip_segments.
+ * Protocol v2 (additive): optional inbound cookies (task-scoped) and ordinary keep_sections clips.
+ * Protocol v3: strip requests produce one stripped file and report applied/failed outcomes.
  */
 object ExternalDownloadProtocol {
     const val ACTION_DOWNLOAD = "com.chloemlla.seal.action.DOWNLOAD"
     const val ACTION_DOWNLOAD_STATUS = "com.chloemlla.seal.action.DOWNLOAD_STATUS"
 
-    const val PROTOCOL_VERSION = 2
+    const val PROTOCOL_VERSION = 3
     const val MIN_SUPPORTED_VERSION = 1
-    const val MAX_SUPPORTED_VERSION = 2
+    const val MAX_SUPPORTED_VERSION = 3
 
     // Request extras
     const val EXTRA_PROTOCOL_VERSION = "protocol_version"
@@ -50,6 +51,8 @@ object ExternalDownloadProtocol {
     const val EXTRA_DISPLAY_NAME = "display_name"
     const val EXTRA_MIME_TYPE = "mime_type"
     const val EXTRA_CALLER_PACKAGE = "caller_package"
+    const val EXTRA_STRIP_RESULT = "strip_result"
+    const val EXTRA_STRIP_MESSAGE = "strip_message"
 
     // Status values
     const val STATUS_ACCEPTED = "accepted"
@@ -71,6 +74,7 @@ object ExternalDownloadProtocol {
     const val ERROR_INTERNAL = "internal_error"
     const val ERROR_DOWNLOAD_FAILED = "download_failed"
     const val ERROR_CANCELED = "canceled"
+    const val ERROR_INVALID_SECTIONS = "invalid_sections"
 
     // v2 cookie error codes (task implement + research aliases)
     const val ERROR_COOKIE_DENIED = "cookie_denied"
@@ -92,4 +96,7 @@ object ExternalDownloadProtocol {
 
     /** Soft default domain when converting json_map / name_value. */
     const val DEFAULT_COOKIES_DOMAIN = ".bilibili.com"
+
+    const val STRIP_RESULT_APPLIED = "applied"
+    const val STRIP_RESULT_FAILED = "failed"
 }

@@ -66,7 +66,7 @@
 
 - Action: `com.chloemlla.seal.action.DOWNLOAD`
 - Status broadcast: `com.chloemlla.seal.action.DOWNLOAD_STATUS`（`setPackage(caller)`）
-- `protocol_version = 1..2`（latest 2）
+- `protocol_version = 1..3`（latest 3；v3 为 C 分段合成 + D 完整源后处理，终态 `applied` / `failed`）
 - Defaults: delegate ON, auto-start OFF, accept external cookies OFF, whitelist OFF
 
 ---

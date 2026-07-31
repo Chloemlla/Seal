@@ -14,6 +14,8 @@ import com.chloemlla.seal.App.Companion.videoDownloadDir
 import com.chloemlla.seal.R
 import com.chloemlla.seal.database.objects.CommandTemplate
 import com.chloemlla.seal.database.objects.DownloadedVideoInfo
+import com.chloemlla.seal.download.DownloadOutcome
+import com.chloemlla.seal.download.StripDownloadWorkflow
 import com.chloemlla.seal.ui.page.settings.network.Cookie
 import com.chloemlla.seal.util.FileUtil.getArchiveFile
 import com.chloemlla.seal.util.FileUtil.getConfigFile
@@ -264,6 +266,8 @@ object DownloadUtil {
         val forceIpv4: Boolean,
         val mergeAudioStream: Boolean,
         val mergeToMkv: Boolean,
+        /** External keep ranges that must become one continuous final media file. */
+        val stripKeepSections: List<VideoClip> = emptyList(),
     ) {
         companion object {
             val EMPTY =
@@ -664,7 +668,7 @@ object DownloadUtil {
             }
         }
 
-    private fun insertInfoIntoDownloadHistory(
+    internal fun insertInfoIntoDownloadHistory(
         videoInfo: VideoInfo,
         filePaths: List<String>,
     ): List<String> =
@@ -703,9 +707,50 @@ object DownloadUtil {
         taskId: String,
         downloadPreferences: DownloadPreferences,
         progressCallback: ((Float, Long, String) -> Unit)?,
+    ): Result<DownloadOutcome> {
+        if (videoInfo == null) {
+            return Result.failure(Throwable(context.getString(R.string.fetch_info_error_msg)))
+        }
+        if (downloadPreferences.stripKeepSections.isNotEmpty()) {
+            return StripDownloadWorkflow(
+                    context = context,
+                    videoInfo = videoInfo,
+                    playlistUrl = playlistUrl,
+                    playlistItem = playlistItem,
+                    taskId = taskId,
+                    preferences = downloadPreferences,
+                    progressCallback = progressCallback,
+                )
+                .executeOutcome()
+        }
+        return downloadVideoFiles(
+                videoInfo = videoInfo,
+                playlistUrl = playlistUrl,
+                playlistItem = playlistItem,
+                taskId = taskId,
+                downloadPreferences = downloadPreferences,
+                progressCallback = progressCallback,
+            )
+            .map { DownloadOutcome(filePaths = it) }
+    }
+
+    @CheckResult
+    internal fun downloadVideoFiles(
+        videoInfo: VideoInfo? = null,
+        playlistUrl: String = "",
+        playlistItem: Int = 0,
+        taskId: String,
+        downloadPreferences: DownloadPreferences,
+        progressCallback: ((Float, Long, String) -> Unit)?,
+        outputDirectoryOverride: File? = null,
+        outputTemplateOverride: String? = null,
+        finalizeDownload: Boolean = true,
     ): Result<List<String>> {
         if (videoInfo == null)
             return Result.failure(Throwable(context.getString(R.string.fetch_info_error_msg)))
+        if (!finalizeDownload && outputDirectoryOverride == null) {
+            return Result.failure(IllegalStateException("Missing temporary output directory"))
+        }
 
         with(downloadPreferences) {
             val url =
@@ -799,7 +844,13 @@ object DownloadUtil {
                         pathBuilder.append("/${videoInfo.extractorKey}")
                     }
 
-                    if (sdcard) {
+                    if (outputDirectoryOverride != null) {
+                        check(
+                            outputDirectoryOverride.mkdirs() ||
+                                outputDirectoryOverride.isDirectory
+                        )
+                        addOption("-P", outputDirectoryOverride.absolutePath)
+                    } else if (sdcard) {
                         addOption("-P", context.getSdcardTempDir(videoInfo.id).absolutePath)
                     } else {
                         addOption("-P", pathBuilder.toString())
@@ -811,15 +862,18 @@ object DownloadUtil {
                             "*%d-%d".format(locale = Locale.US, it.start, it.end),
                         )
                     }
-                    // Accurate multi-clip cuts (sponsor/ad strip keep plans often have 2+ ranges).
+                    // Accurate ordinary multi-clip cuts.
                     if (videoClips.isNotEmpty()) {
                         addOption("--force-keyframes-at-cuts")
                     }
                     if (newTitle.isNotEmpty()) {
                         addCommands(listOf("--replace-in-metadata", "title", ".+", newTitle))
                     }
-                    if (Build.VERSION.SDK_INT > 23 && !sdcard)
-                        addOption("-P", "temp:" + getExternalTempDir())
+                    if (Build.VERSION.SDK_INT > 23 && !sdcard) {
+                        val tempDirectory =
+                            outputDirectoryOverride?.resolve("tmp") ?: getExternalTempDir()
+                        addOption("-P", "temp:$tempDirectory")
+                    }
 
                     if (splitByChapter) {
                         addOption("-o", OUTPUT_TEMPLATE_CHAPTERS)
@@ -827,7 +881,9 @@ object DownloadUtil {
                     }
 
                     val output =
-                        if (splitByChapter) {
+                        if (outputTemplateOverride != null) {
+                            outputTemplateOverride
+                        } else if (splitByChapter) {
                             OUTPUT_TEMPLATE_SPLIT
                         } else if (videoClips.isEmpty()) {
                             outputTemplate
@@ -860,6 +916,9 @@ object DownloadUtil {
                         )
                     } else Result.failure(th)
                 }
+            if (!finalizeDownload) {
+                return Result.success(emptyList())
+            }
             return onFinishDownloading(
                 preferences = this,
                 videoInfo = videoInfo,

@@ -18,7 +18,7 @@ object TaskFactory {
      *   selection page.
      *
      * When an external delegate session is active, task-scoped cookies and keep_sections
-     * (as [VideoClip]s) are preserved unless the user supplies an explicit clip plan.
+     * are preserved. Dedicated strip ranges stay separate from ordinary multi-clip export.
      */
     @CheckResult
     fun createWithConfigurations(
@@ -53,6 +53,7 @@ object TaskFactory {
         val sessionBase = ExternalDownloadCoordinator.buildPreferencesForSession()
         val effectiveClips =
             when {
+                sessionBase.stripKeepSections.isNotEmpty() -> emptyList()
                 videoClips.isNotEmpty() -> videoClips
                 sessionBase.videoClips.isNotEmpty() -> sessionBase.videoClips
                 else -> emptyList()

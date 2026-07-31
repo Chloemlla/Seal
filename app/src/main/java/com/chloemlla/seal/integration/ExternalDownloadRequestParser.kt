@@ -23,7 +23,7 @@ data class ExternalDownloadRequest(
     val cookiesRequired: Boolean = false,
     /** Absolute path after materialize; not from Intent. */
     val taskCookiesPath: String? = null,
-    // v2 strip / sections
+    // v2 ordinary sections; v3 dedicated strip concat
     val stripSegments: Boolean = false,
     /** Keep ranges in seconds as VideoClip-compatible pairs after parse. */
     val keepSections: List<com.chloemlla.seal.util.VideoClip> = emptyList(),
@@ -131,12 +131,28 @@ object ExternalDownloadRequestParser {
         }
 
         val stripSegments =
-            intent.getBooleanExtra(ExternalDownloadProtocol.EXTRA_STRIP_SEGMENTS, false)
+            supportsStripConcat(version) &&
+                intent.getBooleanExtra(ExternalDownloadProtocol.EXTRA_STRIP_SEGMENTS, false)
         val keepSectionsRaw =
-            intent.getStringExtra(ExternalDownloadProtocol.EXTRA_KEEP_SECTIONS)
+            if (version >= 2) {
+                intent.getStringExtra(ExternalDownloadProtocol.EXTRA_KEEP_SECTIONS)
+            } else {
+                null
+            }
         val keepSections = parseKeepSectionsJson(keepSectionsRaw)
         val removeSegmentsJson =
-            intent.getStringExtra(ExternalDownloadProtocol.EXTRA_REMOVE_SEGMENTS)
+            if (version >= 2) {
+                intent.getStringExtra(ExternalDownloadProtocol.EXTRA_REMOVE_SEGMENTS)
+            } else {
+                null
+            }
+
+        if (stripSegments && keepSections.isEmpty()) {
+            return ExternalDownloadParseResult.Failure(
+                ExternalDownloadProtocol.ERROR_INVALID_SECTIONS,
+                "strip_segments requires at least one valid keep_sections range",
+            )
+        }
 
         return ExternalDownloadParseResult.Success(
             ExternalDownloadRequest(
@@ -278,4 +294,6 @@ object ExternalDownloadRequestParser {
         val host = withoutScheme.substringBefore('/').substringBefore('?').substringBefore('#')
         return host.isNotBlank() && host.contains('.')
     }
+
+    internal fun supportsStripConcat(protocolVersion: Int): Boolean = protocolVersion >= 3
 }

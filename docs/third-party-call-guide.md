@@ -1,7 +1,7 @@
 # Seal 第三方调用文档
 
 > 面向：要在自己 App 里把下载任务**委托给 Seal** 的开发者  
-> 协议版本：`protocol_version = 1`（兼容）/ `2`（Cookie 注入 + keep_sections）  
+> 协议版本：`protocol_version = 1`（兼容）/ `2`（Cookie）/ `3`（剥离并合成单一成品）
 > 模型：**只委托，不内嵌** — Seal 负责队列、yt-dlp、通知与文件落地  
 > 实现参考：`docs/third-party-delegate-integration.md`、`com.chloemlla.seal.integration.ExternalDownloadProtocol`  
 > 源码权威：`app/src/main/java/com/chloemlla/seal/integration/`
@@ -106,7 +106,7 @@ com.chloemlla.seal.action.DOWNLOAD
 
 | Key（字符串原样） | 类型 | 必填 | 说明 |
 |-------------------|------|------|------|
-| `protocol_version` | Int | 建议填 | `1` 或 `2`；缺省按 **1**；超出 `1..2` → `unsupported_version` |
+| `protocol_version` | Int | 建议填 | `1`、`2` 或 `3`；缺省按 **1**；超出 `1..3` → `unsupported_version` |
 | `url` | String | 与 `urls` / EXTRA_TEXT / data 四选一 | 首选单链接 |
 | `urls` | String[] | 可选 | 多链接；与 `url` 等合并去重 |
 | `extract_audio` | Boolean | 否 | 仅音频；**不传**则用 Seal 用户偏好（不是默认 false） |
@@ -122,8 +122,8 @@ com.chloemlla.seal.action.DOWNLOAD
 | `cookies_domain_hint` | String | 否 | v2：map 转换域名，默认 `.bilibili.com` |
 | `use_cookies` | Boolean | 否 | v2：有载荷时默认启用任务 Cookie |
 | `cookies_required` | Boolean | 否 | v2：默认 false；true 时 materialize 失败则整请求失败 |
-| `strip_segments` | Boolean | 否 | v2：调用方已计算剥离（报告在调用方） |
-| `keep_sections` | String (JSON) | 否 | v2：`[{"start":s,"end":e},…]`，**秒**；映射到 yt-dlp `--download-sections` |
+| `strip_segments` | Boolean | 否 | v3：调用方已计算剥离；Seal 必须输出一个连续成品 |
+| `keep_sections` | String (JSON) | 否 | v3：`[{"start":s,"end":e},…]`，**秒**；按序下载、FFmpeg 合并 |
 | `remove_segments` | String (JSON) | 否 | v2：移除段元数据（可选，Seal 不强制使用） |
 
 也接受：
@@ -140,6 +140,24 @@ com.chloemlla.seal.action.DOWNLOAD
 - Cookie 写入 **任务级** `cache/external_cookies/<id>.txt`，**不覆盖** 全局 `cookies.txt`，不写入 CookieProfile。
 - 任务终态（completed/failed/canceled）或 UI 取消时删除临时文件。
 - **禁止** 反向导出 Seal Cookie；状态广播永不含 Cookie 明文。
+
+#### 剥离与合成规则（v3）
+
+- 只有 `protocol_version=3` 才启用专用剥离合成；v1 忽略这些字段，v2 的
+  `keep_sections` 保持普通多片段导出兼容语义，不会被升级成 strip 成品。
+- `strip_segments=true` 必须同时带至少一个有效 `keep_sections`；否则拒绝 `invalid_sections`。
+- keep ranges 使用专用任务字段，不能复用普通 `videoClips` 的“每段一个文件”输出语义。
+- Seal 将保留段下载到任务级临时目录，再按时间顺序用内置 FFmpeg 合成为一个成品。
+- 若分段下载或合成不可用/失败，Seal 删除临时片段，在同一任务级目录下载完整源，再用
+  ffconcat 的重复 `file` + `inpoint` / `outpoint` 应用全部 keep ranges。
+- C（分段合成）与 D（完整源后处理）都只有在单一去除成品落盘后才广播
+  `status=completed` + `strip_result=applied`。D 也失败时清理任务临时目录并广播
+  `status=failed` + `strip_result=failed`；不得把未去除的完整源作为成功结果。
+- `applied` 必须来自下载任务实际的 `StripResult.Applied`，不得仅凭“请求过 strip 且
+  Task Completed”推导。异常 completed 无 applied 时按失败广播，不附带可打开文件。
+- 取消会同时终止 yt-dlp / FFmpeg 且不会进入 D；SAF/SD 卡复制按单文件事务处理，
+  失败或取消会删除已创建的部分文档并清理 cache / staging。
+- 普通 `videoClips`、多链接下载、Cookie 注入与终态清理行为不变。
 
 URL 规则（`ExternalDownloadRequestParser.looksLikeHttpUrl`）：
 
@@ -180,7 +198,7 @@ URL 规则（`ExternalDownloadRequestParser.looksLikeHttpUrl`）：
 
 | Key | 说明 |
 |-----|------|
-| `protocol_version` | `1` |
+| `protocol_version` | 当前为 `3` |
 | `status` | `accepted` / `rejected` / `needs_ui` |
 | `error_code` | 见第 7 节；成功路径多为 `ok` |
 | `error_message` | 可选人类可读信息（拒绝时常有） |
@@ -218,7 +236,7 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 
 | Key | 说明 |
 |-----|------|
-| `protocol_version` | `1` |
+| `protocol_version` | 当前为 `3` |
 | `status` | `accepted` / `rejected` / `needs_ui` / `completed` / `failed` / `canceled` |
 | `error_code` | 见第 7 节 |
 | `error_message` | 可选 |
@@ -229,6 +247,8 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 | `content_uri` | **仅 `completed` 时可能有**，形如 `content://com.chloemlla.seal.provider/...` |
 | `display_name` | 完成时可选，展示名 |
 | `mime_type` | 完成时可选，MIME |
+| `strip_result` | v3 strip 终态：成功 `applied`；任务失败 `failed` |
+| `strip_message` | v3 可选失败说明；不得包含 Cookie 等敏感数据 |
 
 ### 终态语义
 
@@ -263,7 +283,8 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 | `disabled` | 用户关闭了外部委托总开关 |
 | `auto_start_denied` | 未允许自动开始（且可能 `open_ui=false` 导致硬拒绝） |
 | `invalid_url` | 没有可用的 http(s) URL |
-| `unsupported_version` | `protocol_version` 不在 `1..2` |
+| `unsupported_version` | `protocol_version` 不在 `1..3` |
+| `invalid_sections` | `strip_segments=true` 但没有有效 keep range |
 | `caller_denied` | 白名单模式拒绝（含 caller 为空） |
 | `queue_rejected` | 限流（约 60s / 20 次） |
 | `app_busy` | Seal 正忙（如待处理崩溃报告），需先打开 Seal 处理后再试 |
@@ -468,8 +489,8 @@ fun sealProtocolVersion(context: Context, packageName: String = "com.chloemlla.s
 
 Application meta-data：
 
-- `com.chloemlla.seal.external_download_protocol_version` = `2`
-- `com.chloemlla.seal.external_download_max_protocol_version` = `2`
+- `com.chloemlla.seal.external_download_protocol_version` = `3`
+- `com.chloemlla.seal.external_download_max_protocol_version` = `3`
 
 ### 8.10 adb 快速自测
 
@@ -547,17 +568,19 @@ A: 确认是 `completed` 广播里的 URI、仍持有临时读权限、文件未
 ACTION_DOWNLOAD         = com.chloemlla.seal.action.DOWNLOAD
 ACTION_DOWNLOAD_STATUS  = com.chloemlla.seal.action.DOWNLOAD_STATUS
 
-protocol_version        = 1  (MIN=1, MAX=1)
+protocol_version        = 3  (MIN=1, MAX=3)
 
 # request
 url / urls / extract_audio / download_subtitle
 auto_start / open_ui / caller_request_id
+strip_segments / keep_sections  # v3；输出单一连续成品
 caller_package          # 兜底，优先系统 callingPackage
 
 # response / status
 status / error_code / error_message
 task_id / task_ids
 content_uri / display_name / mime_type
+strip_result / strip_message
 caller_request_id / caller_package
 
 # status values
@@ -566,7 +589,7 @@ accepted / rejected / needs_ui / completed / failed / canceled
 # error_code values
 ok / disabled / auto_start_denied / invalid_url
 unsupported_version / caller_denied / queue_rejected
-internal_error / download_failed / canceled
+internal_error / download_failed / canceled / invalid_sections
 ```
 
 源码权威定义：
