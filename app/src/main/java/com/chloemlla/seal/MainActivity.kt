@@ -52,9 +52,10 @@ class MainActivity : AppCompatActivity() {
         setContent {
             var pendingReport by remember { mutableStateOf(pending) }
             if (pendingReport != null) {
+                val report = pendingReport!!
                 SealTheme(darkTheme = true, isHighContrastModeEnabled = false) {
                     LumenCrashReportScreen(
-                        report = pending,
+                        report = report,
                         onContinue = {
                             runCatching { LumenCrash.clearPendingReport() }
                             pendingReport = null

@@ -1,5 +1,6 @@
 package com.chloemlla.seal.util
 
+import android.util.Log
 import androidx.room.Room
 import com.chloemlla.seal.App.Companion.applicationScope
 import com.chloemlla.seal.App.Companion.context

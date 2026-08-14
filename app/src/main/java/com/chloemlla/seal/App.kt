@@ -62,7 +62,6 @@ import org.koin.core.context.GlobalContext
 import org.koin.dsl.module
 
 class App : Application() {
-    private val TAG = "App"
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -212,6 +211,8 @@ class App : Application() {
     }
 
     companion object {
+        private const val TAG = "App"
+
         lateinit var clipboard: ClipboardManager
         lateinit var videoDownloadDir: String
         lateinit var audioDownloadDir: String
