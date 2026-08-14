@@ -495,7 +495,7 @@ class ExternalDownloadSessionTest {
     fun stripTerminalResultsDistinguishAppliedAndFailed() {
         assertEquals(
             ExternalDownloadProtocol.STRIP_RESULT_APPLIED,
-            ExternalDownloadCoordinator.stripResultForTerminal(
+            ExternalDownloadTaskSnapshotFactory.stripResultForTerminal(
                 stripRequested = true,
                 completed = true,
                 actualResult = com.chloemlla.seal.download.StripResult.Applied,
@@ -503,7 +503,7 @@ class ExternalDownloadSessionTest {
         )
         assertEquals(
             ExternalDownloadProtocol.STRIP_RESULT_FAILED,
-            ExternalDownloadCoordinator.stripResultForTerminal(
+            ExternalDownloadTaskSnapshotFactory.stripResultForTerminal(
                 stripRequested = true,
                 completed = true,
                 actualResult = com.chloemlla.seal.download.StripResult.NotRequested,
@@ -511,14 +511,14 @@ class ExternalDownloadSessionTest {
         )
         assertEquals(
             ExternalDownloadProtocol.STRIP_RESULT_FAILED,
-            ExternalDownloadCoordinator.stripResultForTerminal(
+            ExternalDownloadTaskSnapshotFactory.stripResultForTerminal(
                 stripRequested = true,
                 completed = false,
                 actualResult = null,
             ),
         )
         assertNull(
-            ExternalDownloadCoordinator.stripResultForTerminal(
+            ExternalDownloadTaskSnapshotFactory.stripResultForTerminal(
                 stripRequested = false,
                 completed = false,
                 actualResult = null,
@@ -526,7 +526,7 @@ class ExternalDownloadSessionTest {
         )
         assertEquals(
             ExternalDownloadProtocol.STRIP_RESULT_APPLIED,
-            ExternalDownloadCoordinator.stripResultForTerminal(
+            ExternalDownloadTaskSnapshotFactory.stripResultForTerminal(
                 stripRequested = false,
                 completed = true,
                 actualResult = com.chloemlla.seal.download.StripResult.Applied,

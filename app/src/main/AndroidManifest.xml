@@ -101,6 +101,12 @@
                 <data android:scheme="https" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ExternalDownloadControlActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.Seal.Dialog" />
 
         <service
             android:name=".DownloadService"

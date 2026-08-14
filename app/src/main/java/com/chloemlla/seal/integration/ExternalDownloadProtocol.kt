@@ -12,6 +12,7 @@ package com.chloemlla.seal.integration
 object ExternalDownloadProtocol {
     const val ACTION_DOWNLOAD = "com.chloemlla.seal.action.DOWNLOAD"
     const val ACTION_DOWNLOAD_STATUS = "com.chloemlla.seal.action.DOWNLOAD_STATUS"
+    const val ACTION_CONTROL_DOWNLOAD = "com.chloemlla.seal.action.CONTROL_DOWNLOAD"
 
     const val PROTOCOL_VERSION = 3
     const val MIN_SUPPORTED_VERSION = 1
@@ -26,6 +27,7 @@ object ExternalDownloadProtocol {
     const val EXTRA_AUTO_START = "auto_start"
     const val EXTRA_OPEN_UI = "open_ui"
     const val EXTRA_CALLER_REQUEST_ID = "caller_request_id"
+    const val EXTRA_CONTROL_ACTION = "control_action"
 
     // v2 cookie extras (inbound only; never exported)
     const val EXTRA_COOKIES_FORMAT = "cookies_format"
@@ -53,11 +55,20 @@ object ExternalDownloadProtocol {
     const val EXTRA_CALLER_PACKAGE = "caller_package"
     const val EXTRA_STRIP_RESULT = "strip_result"
     const val EXTRA_STRIP_MESSAGE = "strip_message"
+    const val EXTRA_PROGRESS = "progress"
+    const val EXTRA_DOWNLOADED_BYTES = "downloaded_bytes"
+    const val EXTRA_TOTAL_BYTES = "total_bytes"
+    const val EXTRA_TITLE = "title"
+    const val EXTRA_QUALITY = "quality"
+    const val EXTRA_SOURCE_URL = "source_url"
 
     // Status values
     const val STATUS_ACCEPTED = "accepted"
     const val STATUS_REJECTED = "rejected"
     const val STATUS_NEEDS_UI = "needs_ui"
+    const val STATUS_WAITING = "waiting"
+    const val STATUS_DOWNLOADING = "downloading"
+    const val STATUS_PAUSED = "paused"
     const val STATUS_COMPLETED = "completed"
     const val STATUS_FAILED = "failed"
     const val STATUS_CANCELED = "canceled"
@@ -75,6 +86,8 @@ object ExternalDownloadProtocol {
     const val ERROR_DOWNLOAD_FAILED = "download_failed"
     const val ERROR_CANCELED = "canceled"
     const val ERROR_INVALID_SECTIONS = "invalid_sections"
+    const val ERROR_TASK_NOT_FOUND = "task_not_found"
+    const val ERROR_UNSUPPORTED_ACTION = "unsupported_action"
 
     // v2 cookie error codes (task implement + research aliases)
     const val ERROR_COOKIE_DENIED = "cookie_denied"
