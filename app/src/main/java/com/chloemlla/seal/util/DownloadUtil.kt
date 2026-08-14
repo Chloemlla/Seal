@@ -181,9 +181,9 @@ object DownloadUtil {
                         addOption("--dump-json")
                     } else {
                         addOption("--dump-single-json")
+                        addOption("--no-playlist")
                     }
                     addOption("-R", INFO_RETRIES)
-                    addOption("--no-playlist")
                     addOption("--socket-timeout", INFO_SOCKET_TIMEOUT_SEC)
                 }
             return getVideoInfo(request, taskKey)
@@ -425,7 +425,7 @@ object DownloadUtil {
                 null,
                 OPEN_READONLY,
             )
-            .run {
+            .use { db ->
                 val projection =
                     arrayOf(
                         CookieScheme.HOST,
@@ -436,14 +436,14 @@ object DownloadUtil {
                         CookieScheme.SECURE,
                     )
                 val cookieList = mutableListOf<Cookie>()
-                query("cookies", projection, null, null, null, null, null).run {
-                    while (moveToNext()) {
-                        val expiry = getLong(getColumnIndexOrThrow(CookieScheme.EXPIRY))
-                        val name = getString(getColumnIndexOrThrow(CookieScheme.NAME))
-                        val value = getString(getColumnIndexOrThrow(CookieScheme.VALUE))
-                        val path = getString(getColumnIndexOrThrow(CookieScheme.PATH))
-                        val secure = getLong(getColumnIndexOrThrow(CookieScheme.SECURE)) == 1L
-                        val hostKey = getString(getColumnIndexOrThrow(CookieScheme.HOST))
+                db.query("cookies", projection, null, null, null, null, null).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val expiry = cursor.getLong(cursor.getColumnIndexOrThrow(CookieScheme.EXPIRY))
+                        val name = cursor.getString(cursor.getColumnIndexOrThrow(CookieScheme.NAME))
+                        val value = cursor.getString(cursor.getColumnIndexOrThrow(CookieScheme.VALUE))
+                        val path = cursor.getString(cursor.getColumnIndexOrThrow(CookieScheme.PATH))
+                        val secure = cursor.getLong(cursor.getColumnIndexOrThrow(CookieScheme.SECURE)) == 1L
+                        val hostKey = cursor.getString(cursor.getColumnIndexOrThrow(CookieScheme.HOST))
                         if (hostKey.isNullOrEmpty()) continue
 
                         val host = if (hostKey[0] != '.') ".$hostKey" else hostKey
@@ -458,9 +458,7 @@ object DownloadUtil {
                             )
                         )
                     }
-                    close()
                 }
-                close()
                 cookieList
             }
     }
@@ -803,7 +801,7 @@ object DownloadUtil {
                         addOption("-r", "${maxDownloadRate}K")
                     }
 
-                    if (playlistItem != 0 && downloadPlaylist) {
+                    if (playlistItem != 0) {
                         addOption("--playlist-items", playlistItem)
                         if (subdirectoryPlaylistTitle && !videoInfo.playlist.isNullOrEmpty()) {
                             outputBuilder.append(PLAYLIST_TITLE_SUBDIRECTORY_PREFIX)
@@ -906,7 +904,7 @@ object DownloadUtil {
                             th.message?.contains("Unable to communicate with SponsorBlock API") ==
                                 true
                     ) {
-                        th.printStackTrace()
+                        Log.w(TAG, "SponsorBlock API unavailable", th)
                         // Do not treat partial/uncertain SponsorBlock failures as silent success.
                         Result.failure(
                             Throwable(

@@ -95,7 +95,7 @@ internal object StripConcatProcessor {
             val firstMatch = stripPartPattern.matchEntire(parts.first().name)
                 ?: error("Unexpected keep-range filename")
             val baseName = firstMatch.groupValues[1].ifBlank { "video" }
-            val tag = if (restrictFilenames) " [stripped]" else " [去广告]"
+            val tag = if (restrictFilenames) " [stripped]" else " [no-ads]"
             val destination = nextAvailableFile(destinationDirectory, "$baseName$tag", extensions.first())
 
             if (parts.size == 1) {
@@ -132,7 +132,7 @@ internal object StripConcatProcessor {
             check(destinationDirectory.mkdirs() || destinationDirectory.isDirectory)
 
             val baseName = match.groupValues[1].ifBlank { "video" }
-            val tag = if (restrictFilenames) " [stripped]" else " [去广告]"
+            val tag = if (restrictFilenames) " [stripped]" else " [no-ads]"
             val destination = nextAvailableFile(destinationDirectory, "$baseName$tag", extension)
             val concatFile = File(session.directory, "full-source.ffconcat")
             concatFile.writeText(buildRangeConcatSpec(source, keepSections), Charsets.UTF_8)

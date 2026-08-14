@@ -12,6 +12,7 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.content.getSystemService
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -21,6 +22,7 @@ import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.chloemlla.seal.download.DownloaderV2
 import com.chloemlla.seal.download.DownloaderV2Impl
+import com.chloemlla.seal.integration.ExternalDownloadTaskMonitor
 import com.chloemlla.seal.ui.page.downloadv2.configure.DownloadDialogViewModel
 import com.chloemlla.seal.ui.page.settings.directory.Directory
 import com.chloemlla.seal.ui.page.settings.network.CookiesViewModel
@@ -60,6 +62,8 @@ import org.koin.core.context.GlobalContext
 import org.koin.dsl.module
 
 class App : Application() {
+    private val TAG = "App"
+
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
         // Never let crash-sdk install failures take down process startup.
@@ -67,7 +71,7 @@ class App : Application() {
             installLumenCrashSdk()
             LumenCrash.recordBreadcrumb("Application.attachBaseContext")
         }
-            .onFailure { it.printStackTrace() }
+            .onFailure { Log.w(TAG, "attachBaseContext: LumenCrash install failed", it) }
     }
 
     override fun onCreate() {
@@ -76,7 +80,7 @@ class App : Application() {
             installLumenCrashSdk()
             LumenCrash.recordBreadcrumb("Application.onCreate")
         }
-            .onFailure { it.printStackTrace() }
+            .onFailure { Log.w(TAG, "onCreate: LumenCrash install failed", it) }
         MMKV.initialize(this)
 
         startKoin {
@@ -91,14 +95,18 @@ class App : Application() {
                 }
             )
         }
+        ExternalDownloadTaskMonitor.restoreOwnedTasks(
+            applicationContext,
+            GlobalContext.get().get<DownloaderV2>(),
+        )
 
         context = applicationContext
         packageInfo = com.chloemlla.seal.util.PackageManagerCompat.getPackageInfo(this)
         applicationScope = CoroutineScope(SupervisorJob())
         DynamicColors.applyToActivitiesIfAvailable(this)
 
-        clipboard = getSystemService()!!
-        connectivityManager = getSystemService()!!
+        clipboard = getSystemService<ClipboardManager>()!!
+        connectivityManager = getSystemService<ConnectivityManager>()!!
 
         applicationScope.launch((Dispatchers.IO)) {
             try {
@@ -112,7 +120,7 @@ class App : Application() {
                 UpdateUtil.deleteOutdatedApk()
                 runCatching { LumenCrash.recordBreadcrumb("Download engines initialized") }
             } catch (th: Throwable) {
-                runCatching { LumenCrash.record(th) }.onFailure { th.printStackTrace() }
+                runCatching { LumenCrash.record(th) }.onFailure { Log.w(TAG, "onCreate: engine init failed", it) }
             }
         }
 
@@ -236,7 +244,7 @@ class App : Application() {
                 isServiceRunning = false
                 context.applicationContext.run { unbindService(connection) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.w(TAG, "stopService: unbind failed", e)
             }
         }
 

@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private val TAG = "AppUpdater"
 
 @Composable
 fun AppUpdater() {
@@ -73,7 +76,7 @@ fun AppUpdater() {
                         showUpdateDialog = true
                     }
                 }
-                .onFailure { it.printStackTrace() }
+                .onFailure { Log.w(TAG, "checkForUpdate failed", it) }
         }
     }
 
@@ -99,7 +102,7 @@ fun AppUpdater() {
                                 }
                             }
                             .onFailure {
-                                it.printStackTrace()
+                                Log.w(TAG, "downloadApk failed", it)
                                 currentDownloadStatus = UpdateUtil.DownloadStatus.NotYet
                                 ToastUtil.makeToastSuspend(
                                     appUpdateFailedText

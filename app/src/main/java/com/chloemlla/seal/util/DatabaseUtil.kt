@@ -148,7 +148,7 @@ object DatabaseUtil {
                     types = setOf(BackupType.CommandTemplate, BackupType.CommandShortcut),
                 )
             }
-            .onFailure { it.printStackTrace() }
+            .onFailure { Log.w(TAG, "importTemplatesFromJson failed", it) }
         return 0
     }
 

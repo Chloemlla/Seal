@@ -824,7 +824,7 @@ object PreferenceUtil {
     fun encodeTaskListBackup(map: Map<Task, Task.State>) =
         runCatching { json.encodeToString<Map<Task, Task.State>>(map) }
             .onSuccess { runtime.encode(TASK_LIST, it) }
-            .onFailure { it.printStackTrace() }
+            .onFailure { Log.w(TAG, "encodeTaskListBackup failed", it) }
 
     fun decodeTaskListBackup(): Map<Task, Task.State> =
         runCatching {
@@ -832,7 +832,7 @@ object PreferenceUtil {
                     json.decodeFromString<Map<Task, Task.State>>(it)
                 }
             }
-            .onFailure { it.printStackTrace() }
+            .onFailure { Log.w(TAG, "decodeTaskListBackup failed", it) }
             .getOrNull() ?: emptyMap()
 
     fun getSavedLinks(): Set<String> =

@@ -51,6 +51,7 @@ object ExternalCookieMaterializer {
                 "cookies payload exceeds ${ExternalDownloadProtocol.MAX_COOKIES_PAYLOAD_CHARS} chars",
             )
         }
+        val safePayload = payload ?: ""
 
         val netscapeBody =
             when {
@@ -62,12 +63,12 @@ object ExternalCookieMaterializer {
                         )
                 }
                 format == ExternalDownloadProtocol.COOKIES_FORMAT_NETSCAPE ||
-                    (format.isEmpty() && looksLikeNetscape(payload!!)) -> {
-                    normalizeNetscape(payload!!)
+                    (format.isEmpty() && looksLikeNetscape(safePayload)) -> {
+                    normalizeNetscape(safePayload)
                 }
                 format == ExternalDownloadProtocol.COOKIES_FORMAT_NAME_VALUE -> {
                     nameValueToNetscape(
-                        payload!!,
+                        safePayload,
                         request.cookiesDomainHint
                             ?: ExternalDownloadProtocol.DEFAULT_COOKIES_DOMAIN,
                     )
@@ -76,7 +77,7 @@ object ExternalCookieMaterializer {
                     format.isEmpty() ||
                     format == "json" -> {
                     jsonMapToNetscape(
-                        payload!!,
+                        safePayload,
                         request.cookiesDomainHint
                             ?: ExternalDownloadProtocol.DEFAULT_COOKIES_DOMAIN,
                     )

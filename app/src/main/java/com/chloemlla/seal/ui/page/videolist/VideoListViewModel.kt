@@ -194,7 +194,7 @@ class VideoListViewModel : ViewModel() {
                 )
             )
         }
-            .onFailure { it.printStackTrace() }
+            .onFailure { Log.w(TAG, "deleteFilesAndRecordCrash failed", it) }
     }
 
     data class VideoListViewState(

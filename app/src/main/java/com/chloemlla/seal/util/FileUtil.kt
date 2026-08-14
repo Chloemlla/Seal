@@ -528,9 +528,9 @@ object FileUtil {
                         ) ?: return@forEach
 
                     val inputStream = it.inputStream()
-                    val outputStream =
-                        context.contentResolver.openOutputStream(destUri) ?: return@forEach
                     inputStream.use { input ->
+                        val outputStream =
+                            context.contentResolver.openOutputStream(destUri) ?: return@forEach
                         outputStream.use { output -> input.copyTo(output) }
                     }
                     uriList.add(destUri.toString())
@@ -663,7 +663,7 @@ object FileUtil {
                 mkdirs()
                 resolve(fileName).apply { this@apply.createNewFile() }
             }
-            .onFailure { it.printStackTrace() }
+            .onFailure { Log.w(TAG, "createEmptyFile failed", it) }
 
     fun writeContentToFile(content: String, file: File): File = file.apply { writeText(content) }
 

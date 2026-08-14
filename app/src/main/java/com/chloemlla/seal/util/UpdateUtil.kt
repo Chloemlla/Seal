@@ -141,7 +141,7 @@ object UpdateUtil {
                     startActivity(intent)
                 }
                 .onFailure { throwable: Throwable ->
-                    throwable.printStackTrace()
+                    Log.w(TAG, "restartApk failed", throwable)
                     ToastUtil.makeToast(R.string.app_update_failed)
                 }
         }
@@ -199,7 +199,7 @@ object UpdateUtil {
                 val responseBody = response.body
                 return@withContext responseBody.downloadFileWithProgress(context.getLatestApk())
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.w(TAG, "downloadApk failed", e)
             }
             emptyFlow()
         }

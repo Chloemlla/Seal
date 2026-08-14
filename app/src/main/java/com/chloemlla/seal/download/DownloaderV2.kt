@@ -210,14 +210,18 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
             taskStateMap[this]
                 ?: error("Task state missing for ${id}; task was removed or never enqueued")
         set(value) {
-            taskStateMap[this] = value
+            synchronized(taskStateMap) {
+                taskStateMap[this] = value
+            }
         }
 
     private var Task.downloadState: DownloadState
         get() = state.downloadState
         set(value) {
             val prevState = state
-            taskStateMap[this] = prevState.copy(downloadState = value)
+            synchronized(taskStateMap) {
+                taskStateMap[this] = prevState.copy(downloadState = value)
+            }
         }
 
     private var Task.info: VideoInfo?
@@ -306,10 +310,14 @@ class DownloaderV2Impl(private val appContext: Context) : DownloaderV2, KoinComp
             return
         }
         check(downloadState == ReadyWithInfo && info != null)
+        val playlistIndex = (type as? TypeInfo.Playlist)?.index ?: 0
+        val playlistUrl = if (playlistIndex > 0) url else ""
         scope
             .launch(Dispatchers.Default) {
                 DownloadUtil.downloadVideo(
                         videoInfo = info,
+                        playlistUrl = playlistUrl,
+                        playlistItem = playlistIndex,
                         taskId = id,
                         downloadPreferences = preferences,
                         progressCallback = { progressPercentage, _, text ->

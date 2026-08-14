@@ -268,7 +268,7 @@ private fun LanguagePagePreview() {
             suggestedLocales = map,
             otherLocales = map + Locale.forLanguageTag("ja-JP"),
             isSystemLocaleSettingsAvailable = true,
-            onNavigateToSystemLocaleSettings = { /*TODO*/ },
+            onNavigateToSystemLocaleSettings = { /* Preview stub; no navigation in preview */ },
             selectedLocale = language,
         ) {
             language = it ?: Locale.JAPANESE

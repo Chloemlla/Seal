@@ -1,5 +1,6 @@
 package com.chloemlla.seal.ui.page
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.chloemlla.seal.download.DownloaderV2
@@ -19,6 +20,8 @@ import com.chloemlla.seal.util.YT_DLP_VERSION
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+
+private const val TAG = "YtdlpUpdater"
 
 @Composable
 fun YtdlpUpdater(downloader: DownloaderV2 = koinInject()) {
@@ -53,7 +56,7 @@ fun YtdlpUpdater(downloader: DownloaderV2 = koinInject()) {
         if (!YtDlpUpdateGate.tryBegin()) return@LaunchedEffect
         try {
             runCatching { withContext(Dispatchers.IO) { UpdateUtil.updateYtDlp() } }
-                .onFailure { it.printStackTrace() }
+                .onFailure { Log.w(TAG, "updateYtDlp failed", it) }
         } finally {
             YtDlpUpdateGate.end()
         }

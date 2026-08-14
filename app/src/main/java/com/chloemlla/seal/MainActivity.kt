@@ -3,6 +3,7 @@ package com.chloemlla.seal
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -46,14 +47,14 @@ class MainActivity : AppCompatActivity() {
         context = this.baseContext
         // loadPendingReport can throw if integrity fails; treat as no pending report.
         val pending =
-            runCatching { LumenCrash.loadPendingReport() }.onFailure { it.printStackTrace() }.getOrNull()
+            runCatching { LumenCrash.loadPendingReport() }.onFailure { Log.w("MainActivity", "loadPendingReport failed", it) }.getOrNull()
         val hasPendingCrashReport = pending != null
         setContent {
             var pendingReport by remember { mutableStateOf(pending) }
             if (pendingReport != null) {
                 SealTheme(darkTheme = true, isHighContrastModeEnabled = false) {
                     LumenCrashReportScreen(
-                        report = pendingReport!!,
+                        report = pending,
                         onContinue = {
                             runCatching { LumenCrash.clearPendingReport() }
                             pendingReport = null
