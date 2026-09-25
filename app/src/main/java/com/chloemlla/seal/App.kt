@@ -109,6 +109,7 @@ class App : Application() {
 
         applicationScope.launch((Dispatchers.IO)) {
             try {
+                reseedBundledYtDlpIfStale()
                 YoutubeDL.init(this@App)
                 FFmpeg.init(this@App)
                 Aria2c.init(this@App)
@@ -210,8 +211,30 @@ class App : Application() {
         )
     }
 
+    // youtubedl-android's init_ytdlp only copies R.raw.ytdlp into
+    // noBackupFilesDir/youtubedl-android/yt-dlp when the binary is absent, and that directory
+    // survives an APK upgrade. So an upgrade would keep running whatever yt-dlp was last
+    // installed and never pick up the one bundled in the new APK, until the weekly auto-update
+    // happens to run. When the bundled build tag changes, delete the old binary first so the
+    // following init() re-extracts it.
+    private fun reseedBundledYtDlpIfStale() {
+        val bundled = BuildConfig.YT_DLP_BUNDLED_VERSION
+        if (bundled.isBlank() || bundled == "pending") return
+        val prefs = getSharedPreferences(YTDLP_BUNDLE_PREFS, MODE_PRIVATE)
+        if (prefs.getString(YTDLP_BUNDLE_VERSION_KEY, null) == bundled) return
+        val binary =
+            File(noBackupFilesDir, "youtubedl-android").resolve("yt-dlp").resolve("yt-dlp")
+        if (binary.exists() && !binary.delete()) {
+            Log.w("App", "Could not replace stale yt-dlp binary at ${binary.path}")
+            return
+        }
+        prefs.edit().putString(YTDLP_BUNDLE_VERSION_KEY, bundled).apply()
+    }
+
     companion object {
         private const val TAG = "App"
+        private const val YTDLP_BUNDLE_PREFS = "ytdlp_bundle"
+        private const val YTDLP_BUNDLE_VERSION_KEY = "deployed_version"
 
         lateinit var clipboard: ClipboardManager
         lateinit var videoDownloadDir: String
