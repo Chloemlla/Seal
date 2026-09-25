@@ -77,7 +77,10 @@ jobs:
           cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        # v3's default `packages` includes 'tools', which Google has removed from the SDK
+        # repository: `sdkmanager tools` then exits 1 with "Failed to find package 'tools'".
+        # v4's default is 'platform-tools' (v4.0.2 release note: "Fix for removed tools package.").
+        uses: android-actions/setup-android@v4
 
       - name: Install Android API 37 platform
         run: sdkmanager "platforms;android-37" || true
@@ -368,7 +371,10 @@ jobs:
           cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        # v3's default `packages` includes 'tools', which Google has removed from the SDK
+        # repository: `sdkmanager tools` then exits 1 with "Failed to find package 'tools'".
+        # v4's default is 'platform-tools' (v4.0.2 release note: "Fix for removed tools package.").
+        uses: android-actions/setup-android@v4
 
       - name: Install Android API 37 platform
         run: sdkmanager "platforms;android-37" || true
