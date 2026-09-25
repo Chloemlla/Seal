@@ -56,8 +56,13 @@ object UpdateUtil {
         withContext(Dispatchers.IO) {
             val channel =
                 when (YT_DLP_UPDATE_CHANNEL.getInt()) {
+                    YT_DLP_STABLE -> YoutubeDL.UpdateChannel.STABLE
                     YT_DLP_NIGHTLY -> YoutubeDL.UpdateChannel.NIGHTLY
-                    else -> YoutubeDL.UpdateChannel.STABLE
+                    // Default: the rolling master builds from yt-dlp-master-builds, i.e. the
+                    // same source the APK is packaged with. Falling back to STABLE here would
+                    // let the first auto-update replace the bundled master build with an older
+                    // official release.
+                    else -> YoutubeDL.UpdateChannel.MASTER
                 }
 
             YoutubeDL.getInstance()

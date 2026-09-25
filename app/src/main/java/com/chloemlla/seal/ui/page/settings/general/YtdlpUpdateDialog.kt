@@ -48,6 +48,7 @@ import com.chloemlla.seal.util.PreferenceUtil.updateInt
 import com.chloemlla.seal.util.PreferenceUtil.updateLong
 import com.chloemlla.seal.util.UpdateIntervalList
 import com.chloemlla.seal.util.YT_DLP_AUTO_UPDATE
+import com.chloemlla.seal.util.YT_DLP_MASTER
 import com.chloemlla.seal.util.YT_DLP_NIGHTLY
 import com.chloemlla.seal.util.YT_DLP_STABLE
 import com.chloemlla.seal.util.YT_DLP_UPDATE_CHANNEL
@@ -145,6 +146,15 @@ fun YtdlpUpdateChannelDialog(modifier: Modifier = Modifier, onDismissRequest: ()
                         labelContainerColor = MaterialTheme.colorScheme.tertiary,
                     ) {
                         ytdlpUpdateChannel = YT_DLP_NIGHTLY
+                    }
+                }
+                item {
+                    DialogSingleChoiceItem(
+                        text = "yt-dlp-master-builds",
+                        selected = ytdlpUpdateChannel == YT_DLP_MASTER,
+                        label = "Master",
+                    ) {
+                        ytdlpUpdateChannel = YT_DLP_MASTER
                     }
                 }
                 item {

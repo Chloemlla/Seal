@@ -204,7 +204,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling)
 }
 
-// Bundle latest Stable yt-dlp over youtubedl-android res/raw/ytdlp at packaging time.
+// Bundle the newest yt-dlp build over youtubedl-android res/raw/ytdlp at packaging time.
+// Sourced from yt-dlp-master-builds (rolling master builds), not the official stable release.
 val skipYtDlpDownload: Boolean = project.hasProperty("skipYtDlpDownload")
 val ytDlpRawFile: File = file("src/main/res/raw/ytdlp")
 val ytDlpVersionFile: File = file("ytdlp.version") // keep outside res/raw (name would collide with ytdlp)
@@ -253,8 +254,14 @@ abstract class DownloadStableYtDlpTask : DefaultTask() {
             return
         }
 
-        val apiUrl = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
-        val assetUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp"
+        // yt-dlp-master-builds ships rolling builds of the master branch (tag looks like
+        // 2026.09.16.074918). Newer than the official release, but unreleased code: what
+        // `latest` points at moves with every upstream build, so one commit can produce
+        // different APKs at different times. Asset names match the official release
+        // (`yt-dlp` is the zipapp, starting with "#!/usr/bin/env python3" + PK), so the
+        // shebang/zip-magic checks below stay valid.
+        val apiUrl = "https://api.github.com/repos/yt-dlp/yt-dlp-master-builds/releases/latest"
+        val assetUrl = "https://github.com/yt-dlp/yt-dlp-master-builds/releases/latest/download/yt-dlp"
         val userAgent = "Seal-Gradle-YtDlp-Bundler"
 
         fun connect(url: String): java.net.URLConnection =
@@ -283,7 +290,7 @@ abstract class DownloadStableYtDlpTask : DefaultTask() {
         val tmp =
             File(ver.parentFile ?: project.layout.projectDirectory.asFile, "ytdlp.download.tmp")
         try {
-            logger.lifecycle("Downloading yt-dlp Stable (${tag}) ...")
+            logger.lifecycle("Downloading yt-dlp master build (${tag}) ...")
             connect(assetUrl).getInputStream().use { input ->
                 tmp.outputStream().use { output -> input.copyTo(output) }
             }
@@ -303,7 +310,7 @@ abstract class DownloadStableYtDlpTask : DefaultTask() {
             tmp.copyTo(out, overwrite = true)
             ver.writeText("${tag}\n")
             logger.lifecycle(
-                "Bundled yt-dlp Stable ${tag} -> ${out.absolutePath} (${out.length()} bytes)"
+                "Bundled yt-dlp master build ${tag} -> ${out.absolutePath} (${out.length()} bytes)"
             )
         } catch (t: Throwable) {
             if (out.isFile && out.length() > 100_000L) {
@@ -328,7 +335,7 @@ val downloadStableYtDlp by
     tasks.registering(DownloadStableYtDlpTask::class) {
         group = "build"
         description =
-            "Download latest Stable yt-dlp into res/raw/ytdlp (overrides library bundle)"
+            "Download the latest yt-dlp master build into res/raw/ytdlp (overrides library bundle)"
         outputFile.set(ytDlpRawFile)
         versionFile.set(ytDlpVersionFile)
         skipDownload.set(skipYtDlpDownload)

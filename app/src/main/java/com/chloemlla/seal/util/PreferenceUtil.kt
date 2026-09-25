@@ -156,6 +156,7 @@ const val PRE_RELEASE = 1
 
 const val YT_DLP_STABLE = 0
 const val YT_DLP_NIGHTLY = 1
+const val YT_DLP_MASTER = 2
 
 const val OPUS = 1
 const val M4A = 2
@@ -252,7 +253,7 @@ private val IntPreferenceDefaults =
         SHOW_SPONSOR_MSG to 0,
         CONVERT_SUBTITLE to NOT_SPECIFIED,
         DOWNLOAD_TYPE_INITIALIZATION to USE_PREVIOUS_SELECTION,
-        YT_DLP_UPDATE_CHANNEL to YT_DLP_STABLE,
+        YT_DLP_UPDATE_CHANNEL to YT_DLP_MASTER,
         DOWNLOAD_TYPE to DownloadType.Video.ordinal,
     )
 
