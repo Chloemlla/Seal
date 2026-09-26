@@ -15,7 +15,8 @@
 - 可选：请求仅音频、拉字幕
 - 可选：自动开始（需用户在 Seal 设置中允许）
 - 接收「已接受 / 需打开 UI / 拒绝」的即时结果（Activity Result + 可选定向广播）
-- 接收「完成 / 失败 / 取消」的终态定向广播；完成时可能拿到只读 `content://` 文件 URI
+- 接收等待、下载、暂停、完成、失败、取消状态及进度/字节数等实时元数据
+- 通过显式 Activity Result 控制自己创建的任务：暂停、继续、重试、删除
 
 ### 不能做
 - 静默把 yt-dlp 嵌进你的进程
@@ -67,7 +68,7 @@ FileProvider authority：`${applicationId}.provider`
 |------|------|--------|
 | L1 | 系统分享 `ACTION_SEND` / 打开链接 `ACTION_VIEW` | 用户主动分享、浏览器 Open with |
 | L2 | 自定义 `com.chloemlla.seal.action.DOWNLOAD` + extras | 应用内一键委托、带参数 |
-| L3 | 在 L2 基础上接 Activity Result + 状态广播 | 需要知道是否入队、是否下完、文件 URI |
+| L3 | Activity Result + 实时状态广播 + 调用方自有任务控制 | 需要队列面板、进度、暂停/继续/重试/删除、文件 URI |
 
 推荐新集成优先使用 **L2/L3 自定义 action**。
 
@@ -77,6 +78,7 @@ Manifest 已导出入口：
 
 - `QuickDownloadActivity`（对话框式配置 UI，`singleInstance`）
 - `MainActivity`（主界面 cold start / `onNewIntent`）
+- `ExternalDownloadControlActivity`（仅显式 component；标准 launch mode；任务控制）
 
 两者都注册了 `DOWNLOAD` / `SEND` / `VIEW`。
 
@@ -138,7 +140,8 @@ com.chloemlla.seal.action.DOWNLOAD
   - `cookies_required=true` → 拒绝 `cookie_denied` / `cookies_disabled`
   - `cookies_required=false`（推荐）→ **剥离 Cookie 后继续** 匿名/Seal 侧登录下载
 - Cookie 写入 **任务级** `cache/external_cookies/<id>.txt`，**不覆盖** 全局 `cookies.txt`，不写入 CookieProfile。
-- 任务终态（completed/failed/canceled）或 UI 取消时删除临时文件。
+- `completed` / `canceled` / 显式删除 / UI 入队前取消时删除临时 Cookie。
+- `paused` / `failed` 保留任务所有权与临时 Cookie，以便继续或重试；后续完成、取消或删除时再清理。
 - **禁止** 反向导出 Seal Cookie；状态广播永不含 Cookie 明文。
 
 #### 剥离与合成规则（v3）
@@ -184,6 +187,35 @@ URL 规则（`ExternalDownloadRequestParser.looksLikeHttpUrl`）：
 - UI 路径：整表交给配置页
 - 自动开始：每个 URL 各入一队任务，返回多个 `task_ids`
 
+### 4.4 调用方自有任务控制（v3）
+
+任务控制使用显式 Activity，不提供隐式 intent-filter：
+
+```text
+action:    com.chloemlla.seal.action.CONTROL_DOWNLOAD
+component: com.chloemlla.seal/.ExternalDownloadControlActivity
+```
+
+必须使用 Activity Result API / `startActivityForResult`。Seal **只信任**系统提供的
+`Activity.callingPackage`，不会信任 `caller_package` extra。
+
+| Extra | 类型 | 说明 |
+|-------|------|------|
+| `protocol_version` | Int | 填 `3` |
+| `control_action` | String | `pause` / `resume` / `retry` / `delete` |
+| `task_id` | String | 推荐；精确控制批量请求中的单个任务 |
+| `caller_request_id` | String | 可选校验；仅靠它查找时必须唯一 |
+
+控制约束：
+
+- 只有创建该外部任务的 package 可以控制它；caller 或 request id 不匹配 → `caller_denied`。
+- `pause` 仅支持等待/下载中的任务；结果状态 `paused`。
+- `resume` 仅支持由外部控制暂停的任务；结果状态 `waiting`。
+- `retry` 仅支持失败任务；结果状态 `waiting`。
+- `delete` 移除队列记录、停止监控并清理任务 Cookie；结果状态 `canceled`。
+- 不支持的状态转换 → `unsupported_action`；任务不存在或 request id 不唯一 → `task_not_found`。
+- Seal 持久化最多 256 条外部任务所有权记录，并在进程重启后恢复未完成任务监控；重启前处于等待/下载中的中断任务恢复为可继续的 `paused`。
+
 ---
 
 ## 5. 即时返回（Activity Result）
@@ -216,7 +248,7 @@ URL 规则（`ExternalDownloadRequestParser.looksLikeHttpUrl`）：
 
 ---
 
-## 6. 终态广播（L3）
+## 6. 实时状态广播（L3）
 
 ### Action
 
@@ -237,7 +269,7 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 | Key | 说明 |
 |-----|------|
 | `protocol_version` | 当前为 `3` |
-| `status` | `accepted` / `rejected` / `needs_ui` / `completed` / `failed` / `canceled` |
+| `status` | `accepted` / `rejected` / `needs_ui` / `waiting` / `downloading` / `paused` / `completed` / `failed` / `canceled` |
 | `error_code` | 见第 7 节 |
 | `error_message` | 可选 |
 | `task_id` | 当前任务 id |
@@ -249,13 +281,23 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 | `mime_type` | 完成时可选，MIME |
 | `strip_result` | v3 strip 终态：成功 `applied`；任务失败 `failed` |
 | `strip_message` | v3 可选失败说明；不得包含 Cookie 等敏感数据 |
+| `progress` | `Double`，范围 `0.0..1.0`；未知时不传 |
+| `downloaded_bytes` | 已下载字节数；未知时不传 |
+| `total_bytes` | 预计/实际总字节数；未知时不传 |
+| `title` | Seal 解析出的媒体标题 |
+| `quality` | 当前格式/清晰度标签（可选） |
+| `source_url` | 原始任务 URL |
+| `extract_audio` | 是否为仅音频任务 |
 
 ### 终态语义
 
 | status | 含义 |
 |--------|------|
+| `waiting` | 已在队列等待，允许暂停 |
+| `downloading` | 正在获取信息或下载；可能带进度与字节数 |
+| `paused` | 由外部控制暂停，可 `resume` |
 | `completed` | 该 task 下载完成；可尝试读 `content_uri`（文件缺失或路径不可映射时可能没有 URI） |
-| `failed` | 下载失败，`error_code` 多为 `download_failed` |
+| `failed` | 下载失败，`error_code` 多为 `download_failed`；保留所有权，可 `retry` |
 | `canceled` | 用户或系统取消，`error_code` 多为 `canceled` |
 
 > 若 `callingPackage` 为空：即时 `setResult` 仍可能成功，但**终态广播与 URI grant 都不会发出**（无目标 package / 无法 watch 任务）。
@@ -291,6 +333,8 @@ Seal 使用 `Intent.setPackage(callerPackage)` **定向发送**，不会全局�
 | `internal_error` | Seal 侧接受任务失败（如下载器不可用） |
 | `download_failed` | 终态任务失败 |
 | `canceled` | 终态取消 |
+| `task_not_found` | 任务不存在、已从队列移除，或仅凭 request id 无法唯一定位 |
+| `unsupported_action` | 当前任务状态不支持所请求的控制动作 |
 
 ---
 
@@ -409,7 +453,30 @@ val intent = Intent("com.chloemlla.seal.action.DOWNLOAD").apply {
 startActivityForResult(intent, REQUEST_SEAL_DOWNLOAD)
 ```
 
-### 8.7 注册终态 Receiver（AndroidManifest 示例）
+### 8.7 控制自己创建的任务
+
+```kotlin
+private val sealTaskActionLauncher =
+    registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+        val status = data?.getStringExtra("status")
+        val errorCode = data?.getStringExtra("error_code")
+        // RESULT_OK: paused / waiting / canceled
+        // RESULT_CANCELED: rejected，按 error_code 提示
+    }
+
+fun controlSealTask(sealPackage: String, taskId: String, action: String) {
+    val intent = Intent("com.chloemlla.seal.action.CONTROL_DOWNLOAD").apply {
+        setClassName(sealPackage, "com.chloemlla.seal.ExternalDownloadControlActivity")
+        putExtra("protocol_version", 3)
+        putExtra("task_id", taskId)
+        putExtra("control_action", action) // pause / resume / retry / delete
+    }
+    sealTaskActionLauncher.launch(intent)
+}
+```
+
+### 8.8 注册状态 Receiver（AndroidManifest 示例）
 
 ```xml
 <receiver
@@ -454,7 +521,7 @@ class SealDownloadStatusReceiver : BroadcastReceiver() {
 
 > 安全建议：校验 extras 来源与 `task_id` / `caller_request_id` 是否属于你发起的委托；不要盲目信任任意广播内容。
 
-### 8.8 读取完成文件（示意）
+### 8.9 读取完成文件（示意）
 
 ```kotlin
 fun openDelegatedFile(context: Context, contentUri: String) {
@@ -465,7 +532,7 @@ fun openDelegatedFile(context: Context, contentUri: String) {
 }
 ```
 
-### 8.9 检测 Seal 是否安装 / 是否支持协议
+### 8.10 检测 Seal 是否安装 / 是否支持协议
 
 ```kotlin
 fun isSealInstalled(context: Context, packageName: String = "com.chloemlla.seal"): Boolean {
@@ -492,7 +559,7 @@ Application meta-data：
 - `com.chloemlla.seal.external_download_protocol_version` = `3`
 - `com.chloemlla.seal.external_download_max_protocol_version` = `3`
 
-### 8.10 adb 快速自测
+### 8.11 adb 快速自测
 
 ```bash
 # 打开配置 UI（component 明确指向 QuickDownloadActivity）
@@ -567,6 +634,7 @@ A: 确认是 `completed` 广播里的 URI、仍持有临时读权限、文件未
 ```text
 ACTION_DOWNLOAD         = com.chloemlla.seal.action.DOWNLOAD
 ACTION_DOWNLOAD_STATUS  = com.chloemlla.seal.action.DOWNLOAD_STATUS
+ACTION_CONTROL_DOWNLOAD = com.chloemlla.seal.action.CONTROL_DOWNLOAD
 
 protocol_version        = 3  (MIN=1, MAX=3)
 
@@ -576,20 +644,27 @@ auto_start / open_ui / caller_request_id
 strip_segments / keep_sections  # v3；输出单一连续成品
 caller_package          # 兜底，优先系统 callingPackage
 
+# caller-owned task control (explicit Activity only)
+control_action / task_id / caller_request_id
+
 # response / status
 status / error_code / error_message
 task_id / task_ids
 content_uri / display_name / mime_type
 strip_result / strip_message
+progress / downloaded_bytes / total_bytes
+title / quality / source_url / extract_audio
 caller_request_id / caller_package
 
 # status values
-accepted / rejected / needs_ui / completed / failed / canceled
+accepted / rejected / needs_ui / waiting / downloading / paused
+completed / failed / canceled
 
 # error_code values
 ok / disabled / auto_start_denied / invalid_url
 unsupported_version / caller_denied / queue_rejected
 internal_error / download_failed / canceled / invalid_sections
+task_not_found / unsupported_action
 ```
 
 源码权威定义：
@@ -600,7 +675,10 @@ internal_error / download_failed / canceled / invalid_sections
 | `ExternalDownloadRequestParser.kt` | 解析 URL / extras |
 | `ExternalDownloadGate.kt` | 开关 / 白名单 / auto-start 决策 |
 | `ExternalDownloadEntry.kt` | Activity 共用入口 |
-| `ExternalDownloadCoordinator.kt` | 入队、限流、FileProvider grant、状态广播 |
+| `ExternalDownloadCoordinator.kt` | 外部会话、入队、限流 |
+| `ExternalDownloadTaskMonitor.kt` / `ExternalDownloadTaskSnapshot.kt` | 队列状态、进度与元数据监控 |
+| `ExternalDownloadOwnershipStore.kt` / `ExternalDownloadTaskController.kt` | 调用方所有权与任务控制 |
+| `ExternalDownloadStatusReporter.kt` / `ExternalDownloadTaskOutput.kt` | 定向广播、Activity Result、文件 URI |
 
 ---
 

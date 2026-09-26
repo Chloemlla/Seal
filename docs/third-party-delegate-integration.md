@@ -2,7 +2,7 @@ Chinese caller guide: [`third-party-call-guide.md`](./third-party-call-guide.md)
 
 # Seal third-party download delegation (L1–L3)
 
-Third-party apps may **only delegate** downloads to Seal. Seal always owns the queue, yt-dlp process, notifications, and saved files. There is no embeddable download SDK and no remote control API.
+Third-party apps may **only delegate** downloads to Seal. Seal always owns the queue, yt-dlp process, notifications, and saved files. There is no embeddable download SDK or network/bound-service remote API. Protocol v3 does expose a narrow explicit Activity for callers to control only the tasks they created.
 
 Related checklist: [`third-party-delegate-integration-TODO.md`](./third-party-delegate-integration-TODO.md)
 
@@ -22,7 +22,7 @@ FileProvider authority: `${applicationId}.provider`
 |------|----------------|--------|
 | L1 | Share / open URL → configure UI | Available |
 | L2 | Parameterized `DOWNLOAD` intent + optional auto-start | Available |
-| L3 | Activity result + directed status broadcast + content URI | Available |
+| L3 | Activity result + live directed status + caller-owned task control + content URI | Available |
 | L4 | Bound service / provider query API | Not implemented |
 
 ## User settings
@@ -61,7 +61,7 @@ Compatible legacy surfaces (still supported):
 
 Also accepted: `Intent.EXTRA_TEXT`, `intent.data` URL.
 
-**Inbound cookies (v2):** require External downloads → Accept cookies from external apps. Materialized under `cache/external_cookies/`; never export Seal cookies outbound.
+**Inbound cookies (v2):** require External downloads → Accept cookies from external apps. Materialized under `cache/external_cookies/`; never export Seal cookies outbound. Completed, canceled, or deleted tasks clean them up. Paused and failed tasks retain task-scoped cookies for resume/retry.
 
 **Strip concat (v3):** ordinary `videoClips` still export separate files. A strip request uses
 dedicated keep ranges and reports `strip_result=applied` only after producing one continuous file.
@@ -117,12 +117,40 @@ Returned on accept / reject / needs_ui:
 | `task_id` / `task_ids` | present when accepted |
 | `caller_request_id` | echo |
 
-## Terminal status broadcast (L3)
+## Caller-owned task control (v3)
+
+Use an explicit Activity Result launch; there is intentionally no implicit intent-filter:
+
+```text
+action:    com.chloemlla.seal.action.CONTROL_DOWNLOAD
+component: com.chloemlla.seal/.ExternalDownloadControlActivity
+```
+
+Extras: `protocol_version=3`, `control_action` (`pause` / `resume` / `retry` /
+`delete`), preferred `task_id`, and optional `caller_request_id` validation.
+Seal authorizes only the system-provided `Activity.callingPackage`; a
+`caller_package` extra is never trusted for control.
+
+- Pause supports waiting/running tasks and returns `paused`.
+- Resume supports externally paused tasks and returns `waiting`.
+- Retry supports failed tasks and returns `waiting`.
+- Delete removes the queue record, monitor, ownership, and task cookies, then returns `canceled`.
+- Invalid ownership returns `caller_denied`; missing/ambiguous identity returns
+  `task_not_found`; invalid state/action returns `unsupported_action`.
+- Ownership records are persisted and bounded to 256. Monitoring resumes for
+  non-terminal owned tasks after Seal process restart; interrupted waiting or
+  downloading tasks recover as resumable `paused` tasks.
+
+## Live status broadcast (L3)
 
 Action: `com.chloemlla.seal.action.DOWNLOAD_STATUS`  
 Seal sets `Intent.setPackage(callerPackage)` (directed only).
 
-Terminal statuses: `completed`, `failed`, `canceled`.
+Queue statuses: `waiting`, `downloading`, `paused`, `completed`, `failed`, `canceled`.
+
+Live payloads may include `progress` (`0.0..1.0`), `downloaded_bytes`,
+`total_bytes`, `title`, `quality`, `source_url`, and `extract_audio`, in addition
+to the existing task/request IDs and terminal file metadata.
 
 On `completed`, `content_uri` may be granted read-only via FileProvider.
 
@@ -158,6 +186,8 @@ class SealDownloadStatusReceiver : BroadcastReceiver() {
 | `internal_error` | Seal-side failure accepting task |
 | `download_failed` | terminal task failure |
 | `canceled` | terminal cancel |
+| `task_not_found` | task missing or request ID cannot uniquely identify one task |
+| `unsupported_action` | requested control action is invalid for the current task state |
 
 ## Non-goals (will not be exposed)
 
@@ -180,7 +210,10 @@ Application meta-data:
 - `com.chloemlla.seal.integration.ExternalDownloadProtocol`
 - `ExternalDownloadRequestParser` / `ExternalDownloadGate`
 - `ExternalDownloadEntry` / `ExternalDownloadCoordinator`
-- `QuickDownloadActivity`, `MainActivity`
+- `ExternalDownloadTaskMonitor` / `ExternalDownloadTaskSnapshotFactory`
+- `ExternalDownloadOwnershipStore` / `ExternalDownloadTaskController`
+- `ExternalDownloadStatusReporter` / `ExternalDownloadTaskOutput`
+- `QuickDownloadActivity`, `ExternalDownloadControlActivity`, `MainActivity`
 - Settings: `InteractionPreferencePage`
 
 
